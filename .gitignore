@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE
+.idea/
+.vscode/
+
+# 系统
+Thumbs.db
+.DS_Store
+
+# 输出物（生成文件不入库）
+*.log
+output/
+*.dxf.tmp
+
+# 安全钩子内部日志
+.mimosa/
