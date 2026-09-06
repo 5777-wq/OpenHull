@@ -25,3 +25,6 @@ output/
 
 # 安全钩子内部日志
 .mimosa/
+
+# Benchmark ship vendor packages (kept local only; see DATA_SOURCES.md)
+examples/data/vendor/
