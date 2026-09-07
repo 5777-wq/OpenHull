@@ -8,9 +8,28 @@ published benchmark ships (see AGENTS.md for the binding conventions).
 
 from importlib.metadata import PackageNotFoundError, version
 
+from .spec import (
+    SEAWATER_DENSITY,
+    Hydrostatics,
+    HydrostaticsTable,
+    ShipSpec,
+    SpecValidationError,
+    knots_to_ms,
+    ms_to_knots,
+)
+
 try:
     __version__ = version("openhull")
 except PackageNotFoundError:  # running from a source tree without install
     __version__ = "0.0.0.dev0"
 
-__all__ = ["__version__"]
+__all__ = [
+    "__version__",
+    "SEAWATER_DENSITY",
+    "Hydrostatics",
+    "HydrostaticsTable",
+    "ShipSpec",
+    "SpecValidationError",
+    "knots_to_ms",
+    "ms_to_knots",
+]
