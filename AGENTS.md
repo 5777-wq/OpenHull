@@ -156,7 +156,15 @@ source must not be merged.
 
 - Python ≥ 3.11, managed with uv, src layout (`src/openhull/`).
 - Type annotations on every public function; dataclasses validated at
-  construction (e.g. `Cb = 1.5` must raise).
+  construction (e.g. `Cb = 1.5` must raise, with an explanation of why
+  the value is invalid — constraint plus physical/mathematical reason).
+- **Selectable algorithms**: every computational module exposes its
+  methods as named algorithms behind a registry (strategy pattern).
+  Each algorithm carries a stable id, its whitelist citation, and its
+  applicability range as data, so task books and future frontends can
+  select algorithms per design step and grey out out-of-range choices.
+  The default algorithm per step is pinned in the task book or the
+  module default.
 - NumPy arrays for offsets, Bonjean tables, hydrostatic series.
 - Every public function docstring states: purpose, inputs, outputs, and
   the unit of every quantity.
