@@ -1,5 +1,7 @@
 # OpenHull
 
+English | [简体中文](README_zh.md) | [日本語](README_ja.md)
+
 > Design the shell that carries it all.
 
 Open-source parametric ship hull design toolchain, orchestrated by AI agents.
@@ -10,7 +12,8 @@ resistance / propulsion / stability estimates, and drawing outputs (DXF).
 
 ## Status
 
-🚧 Under construction — keel laying stage.
+🚧 Under construction — Stage 0 complete (constitution, task book,
+benchmarks, skeleton); calculation core in development.
 
 ## Roadmap
 
