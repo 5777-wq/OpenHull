@@ -1,0 +1,91 @@
+# =============================================================================
+# OpenHull Design Task Book TB-001 — Capesize Bulk Carrier (JBC-anchored)
+# =============================================================================
+# First design task for the OpenHull pipeline. All target quantities are
+# anchored to the Japan Bulk Carrier (JBC), the public benchmark ship of the
+# Tokyo 2015 Workshop on CFD in Ship Hydrodynamics (NMRI).
+#
+# Provenance tags used in comments:
+#   [NMRI]    value taken from the official JBC conditions table
+#             https://t2015.nmri.go.jp/jbc_gc.html (full scale, hull only)
+#   [DERIV]   derived from [NMRI] values by the formula stated inline
+#   [ASSUMED] engineering assumption - flagged for owner review (see status)
+#
+# JBC is a virtual benchmark ship: no full-scale vessel was ever built and
+# NMRI publishes no deadweight. The deadweight requirement below is therefore
+# an explicit, documented assumption rather than a published figure.
+# =============================================================================
+
+schema_version: 1
+taskbook_id: TB-001
+title: "Capesize bulk carrier preliminary design, JBC-anchored validation"
+status: "approved - owner ratified deadweight assumption on 2026-09-07"
+ship_type: bulk_carrier        # capesize, single screw, bulbous bow, stern
+                               # duct energy-saving device [NMRI]
+
+units:                         # SI convention (to be codified in AGENTS.md)
+  length: m
+  volume: m3
+  mass: t                      # metric tonnes
+  speed: kn
+  power: kW
+  angle: deg
+
+requirements:
+  deadweight_t: 149920         # [ASSUMED, approved] DW = displacement x
+                               # 0.82 deadweight ratio = 182829.1 t x 0.82.
+                               # NMRI publishes no deadweight for JBC; 0.82
+                               # is the midpoint of the bulk-carrier ratio
+                               # range 0.80-0.84 used by the Stage 1.2
+                               # estimation method. Owner ratified 0.82 on
+                               # 2026-09-07 (a higher ratio ~0.86 derived
+                               # from typical Capesize lightweight was
+                               # considered and not adopted).
+  service_speed_kn: 14.5       # [NMRI] design full load condition
+  trading_area: unrestricted   # [ASSUMED] ocean-going capesize service
+
+  drafts:
+    design_draft_m: 16.500     # [NMRI] even keel, full load condition
+    scantling_draft_m: 16.500  # [ASSUMED] set equal to design draft; JBC
+                               # publishes no separate scantling draft
+    ballast_condition:         # [NMRI] trimmed ballast condition (reference)
+      draft_aft_m: 10.015
+      draft_mid_m: 8.615
+      draft_fore_m: 7.215
+      service_speed_kn: 15.5
+
+constraints:
+  block_coefficient_design: 0.8580   # [NMRI] displacement volume/(Lpp*B*T)
+                                     # at design draft; reproduction target
+  freeboard:
+    actual_m: 8.500                  # [DERIV] depth - draft = 25.000 - 16.500
+    rule: "ICLL 1966 Type B (as amended)"  # computed minimum freeboard must
+                                           # not exceed actual; checked in
+                                           # plan task 1.6
+  stability:
+    rule: "IMO 2008 IS Code (complete stability)"  # checked in plan task 3.5
+    gm_reference_m: 5.30             # [NMRI] full load (KG 13.29 m); values
+                                     # added by NMRI in 2017 for reference
+
+validation_anchors:              # hard numbers the OpenHull test suite
+                                 # asserts against (tolerances as noted,
+                                 # recorded in examples/data/DATA_SOURCES.md)
+  lpp_m: 280.000                          # [NMRI]
+  beam_m: 45.000                          # [NMRI] max waterline beam
+  depth_m: 25.000                         # [NMRI]
+  displacement_volume_design_m3: 178369.9 # [NMRI] hull at design draft, ±1%
+  block_coefficient_design: 0.8580        # [NMRI] tolerance ±0.005
+  midship_coefficient_design: 0.9981      # [NMRI] Cm, full load
+  lcb_percent_lpp_design: 2.5475          # [NMRI] forward of midship (+fwd)
+  froude_number_design: 0.142             # [NMRI] at 14.5 kn on Lpp
+  displacement_volume_ballast_m3: 89185.9 # [NMRI] trimmed ballast (Stage 3)
+
+derived:
+  displacement_design_t: 182829.1  # [DERIV] 1.025 t/m3 seawater density
+                                   # x 178369.9 m3
+
+references:
+  - https://t2015.nmri.go.jp/jbc_gc.html                  # conditions table
+  - https://t2015.nmri.go.jp/jbc.html                     # test case page
+  - https://www.nmri.go.jp/en/study/intellectual/db/jbc/  # NMRI JBC database
+  - examples/data/DATA_SOURCES.md                         # local record
