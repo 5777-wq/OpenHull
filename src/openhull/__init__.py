@@ -8,6 +8,13 @@ published benchmark ships (see AGENTS.md for the binding conventions).
 
 from importlib.metadata import PackageNotFoundError, version
 
+from .main_dimensions import (
+    DEFAULT_ALGORITHM,
+    MAIN_DIMENSION_ALGORITHMS,
+    AlgorithmInfo,
+    RatioParameters,
+    estimate_main_dimensions,
+)
 from .spec import (
     SEAWATER_DENSITY,
     Hydrostatics,
@@ -26,10 +33,15 @@ except PackageNotFoundError:  # running from a source tree without install
 __all__ = [
     "__version__",
     "SEAWATER_DENSITY",
+    "DEFAULT_ALGORITHM",
+    "MAIN_DIMENSION_ALGORITHMS",
+    "AlgorithmInfo",
     "Hydrostatics",
     "HydrostaticsTable",
+    "RatioParameters",
     "ShipSpec",
     "SpecValidationError",
+    "estimate_main_dimensions",
     "knots_to_ms",
     "ms_to_knots",
 ]
