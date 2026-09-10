@@ -98,6 +98,29 @@ no page numbers from memory).
   (2nd ed., Butterworth-Heinemann) — statistical ranges of principal
   dimension ratios for merchant ships.
 
+**Weight estimation (lightweight) and weight-buoyancy balance**
+- Xie Yunping, Chen Yue, Zhang Ruirui & Liu Kefeng, *Ship Design
+  Principles* (National Defense Industry Press) — section 2.2.2:
+  Eqs.(2-3)/(2-4) deadweight-ratio method; Eq.(2-5) bulk-carrier
+  eta_DW regression (applicable DW 5,000–60,000 t only); Table 2-3
+  component shares of lightweight; Table 2-4 bulk-carrier steel-weight
+  exponents; Eqs.(2-13)/(2-22) cubic-modulus and exponent steel-weight
+  forms; Eq.(2-42) outfit area modulus; section 2.2.2 worked example
+  (35,000 t bulk carrier) used as the zero-circularity validation
+  anchor.
+- Lin Yan (ed.), *Ship Design Principles*, 4th ed. (Dalian University
+  of Technology Press) — section 2.1.3: Eqs.(2-6)/(2-7) deadweight-ratio
+  method (cross-checked against Xie, identical), Eqs.(2-11)/(2-29)
+  cubic-modulus steel/outfit weights, displacement margin 2–5 % of
+  lightweight (large ships take the low end); section 4.3.3 Table 4-3
+  eta_DW statistics (double-hull bulk carrier 0.78–0.86); section 4.3.4
+  gravity-buoyancy balance and the Norman coefficient (delta-Delta =
+  N * delta-DW).
+- Zhang Jian & Zhang Jing (eds.), *Ship Structural Strength* (National
+  Defense Industry Press, 2024) — section 3.2.2, Eq.(3-27) static
+  balance convergence criterion |W − B|/W ≤ (0.1–0.5) %, lower bound
+  adopted.
+
 **Hydrostatics / stability geometry**
 - Principles of Naval Architecture (SNAME), numerical-integration
   chapters — Simpson's-rule integration conventions.

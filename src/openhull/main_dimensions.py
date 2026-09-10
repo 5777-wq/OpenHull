@@ -143,6 +143,7 @@ def _chain_solve(
     spec: ShipSpec,
     ratios: RatioParameters,
     field_prefix: str,
+    displacement: float | None = None,
 ) -> ShipSpec:
     """Solve L, B, T, D from the displacement equation and ratios.
 
@@ -150,8 +151,15 @@ def _chain_solve(
     volume; the displacement equation grad = L*B*T*Cb together with the
     L/B and B/T ratios has the closed-form solution
     L = (grad * (B/T) * (L/B)^2 / Cb)^(1/3).
+
+    Args:
+        displacement: externally driven displacement, t.  When given
+            (weight_balance task 1.3 drives this loop), it replaces the
+            deadweight-ratio start value and the spec does not need a
+            deadweight; when omitted, displacement = DW / deadweight
+            ratio as before.
     """
-    if spec.deadweight is None:
+    if displacement is None and spec.deadweight is None:
         raise SpecValidationError(
             "deadweight", None, "required input",
             "every estimation algorithm starts from the deadweight "
@@ -175,7 +183,8 @@ def _chain_solve(
             "constraint, as TB-001 does with Cb = 0.8580.",
         )
 
-    displacement = spec.deadweight / ratios.deadweight_ratio
+    if displacement is None:
+        displacement = spec.deadweight / ratios.deadweight_ratio
     displacement_volume = displacement / SEAWATER_DENSITY
 
     l_est = (
