@@ -12,8 +12,7 @@ resistance / propulsion / stability estimates, and drawing outputs (DXF).
 
 ## Status
 
-🚧 Under construction — Stage 0 complete (constitution, task book,
-benchmarks, skeleton); calculation core in development.
+🚧 Under construction — Stage 1 in progress: core data structures and main-dimension estimation are done and validated against the JBC benchmark ship; hydrostatics core is next.
 
 ## Roadmap
 

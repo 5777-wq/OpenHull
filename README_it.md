@@ -14,9 +14,7 @@ propulsione / stabilità e output di disegni (DXF).
 
 ## Stato
 
-🚧 In costruzione — Fase 0 completata (costituzione del progetto,
-capitolato, navi di riferimento, scheletro del codice); nucleo di
-calcolo in sviluppo.
+🚧 In costruzione — Fase 1 in corso: strutture dati e stima delle dimensioni principali completate e validate sulla nave di riferimento JBC; nucleo idrostatico in sviluppo.
 
 ## Roadmap
 

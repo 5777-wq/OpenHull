@@ -15,9 +15,7 @@ plans (DXF).
 
 ## État d'avancement
 
-🚧 En construction — Étape 0 terminée (constitution du projet, cahier des
-charges, navires de référence, squelette du code) ; noyau de calcul en
-développement.
+🚧 En construction — Étape 1 en cours : structures de données et estimation des dimensions principales terminées et validées sur le navire de référence JBC ; noyau hydrostatique en cours.
 
 ## Feuille de route
 

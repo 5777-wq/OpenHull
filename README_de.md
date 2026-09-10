@@ -14,8 +14,7 @@ bewertungen und Zeichnungsausgaben (DXF).
 
 ## Status
 
-🚧 Im Aufbau — Stufe 0 abgeschlossen (Projektverfassung, Lastenheft,
-Benchmark-Schiffe, Codegerüst); Rechenkern in Entwicklung.
+🚧 Im Aufbau — Stufe 1 läuft: Kerndatenstrukturen und Hauptabmessungsschätzung sind fertig und gegen das Benchmark-Schiff JBC validiert; der hydrostatische Kern ist in Arbeit.
 
 ## Fahrplan
 

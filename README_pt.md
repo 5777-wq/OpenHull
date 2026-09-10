@@ -14,9 +14,7 @@ propulsão / estabilidade e desenhos de saída (DXF).
 
 ## Estado
 
-🚧 Em construção — Etapa 0 concluída (constituição do projeto, caderno
-de encargo, navios de referência, esqueleto do código); núcleo de
-cálculo em desenvolvimento.
+🚧 Em construção — Etapa 1 em andamento: estruturas de dados e estimativa das dimensões principais concluídas e validadas contra o navio de referência JBC; núcleo hidrostático em desenvolvimento.
 
 ## Roteiro
 
