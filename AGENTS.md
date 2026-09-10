@@ -165,6 +165,12 @@ source must not be merged.
   select algorithms per design step and grey out out-of-range choices.
   The default algorithm per step is pinned in the task book or the
   module default.
+- **Agent-facing contract**: every computation is a pure function over
+  validated dataclasses, and every result is JSON-serializable. The CLI
+  plus YAML task books form the stable invocation contract so that
+  future MCP servers, skills, or plugins wrap the toolkit without
+  touching the numerics (the end goal: an agent-native ship design
+  suite — "Codex/ZCode for ship engineers").
 - NumPy arrays for offsets, Bonjean tables, hydrostatic series.
 - Every public function docstring states: purpose, inputs, outputs, and
   the unit of every quantity.
