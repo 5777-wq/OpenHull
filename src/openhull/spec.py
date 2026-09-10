@@ -444,11 +444,14 @@ class Hydrostatics:
         for name, why in (("cb", _WHY_CB), ("cm", _WHY_CM), ("cw", _WHY_CW)):
             value = getattr(self, name)
             _check_finite(name, value)
-            _check(0.0 < value <= 1.0, name, value, "0.0 < coefficient <= 1.0", why)
+            _check(
+                0.0 < value <= 1.0 + 1e-9,
+                name, value, "0.0 < coefficient <= 1.0", why,
+            )
 
         _check_finite("cp", self.cp)
         _check(
-            0.0 < self.cp <= 1.0,
+            0.0 < self.cp <= 1.0 + 1e-9,
             "cp", self.cp, "0.0 < Cp <= 1.0",
             "the prismatic coefficient is defined as Cp = Cb / Cm: the "
             "ratio of the displacement volume to the prism Am * Lpp. "

@@ -136,6 +136,18 @@ no page numbers from memory).
 - Simpson's 1st/2nd-rule integration implemented in-package (no
   black-box quadrature).
 
+**Initial stability / floating attitude**
+- Sheng Zhenbang & Liu Yingzhong, *Ship Theory*, vol. 1, 2nd ed. —
+  section 4-3: Eqs.(4-10)/(4-11) initial-stability formula
+  (M_R = Δ·GM·sinφ ≈ Δ·GM·φ); Eqs.(4-19)/(4-20) GM = KB + BM − KG,
+  GM_L = KB + BM_L − KG; section 4-7: Eqs.(4-35)–(4-38) free-surface
+  corrections GM_1 = GM − Σw1·i_x/Δ (and Eq. 4-37 with i_y).
+- Zhang Jian & Zhang Jing (eds.), *Ship Structural Strength* (2024) —
+  also supplies the floating-attitude iteration of section 3.2.2:
+  Eqs.(3-25)/(3-26) successive approximation of the fore/aft drafts,
+  with the Eq.(3-27) balance criteria on both |W − B|/W and
+  |xg − xb|/L.
+
 **Lines plan**
 - Lackenby, H. (1950), "On the systematic geometrical variation of ship
   forms", Trans. INA, vol. 92 — parent-hull transformation.
