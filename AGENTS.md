@@ -122,6 +122,15 @@ no page numbers from memory).
   adopted.
 
 **Hydrostatics / stability geometry**
+- Sheng Zhenbang & Liu Yingzhong, *Ship Theory*, vol. 1, 2nd ed.
+  (Shanghai Jiao Tong University Press) — ch. 2: numerical integration
+  (trapezoidal rule Eqs.(2-8)/(2-14); Simpson's first rule, n even;
+  second rule, n a multiple of 3; integrand conventions y, y*x, y^3/3,
+  y*x^2); ch. 3: even-keel buoyancy by the vertical method
+  (∇ = ∫Aw dz, KB = ∫z·Aw dz/∇, Aw, centre of flotation xF, Cwp);
+  section 4-2: Eqs.(4-7)/(4-8)/(4-9) transverse and longitudinal
+  metacentric radii BMT = I_T/∇, BML = I_LF/∇, I_LF = I_L − Aw·xF²;
+  section 4-4: Eqs.(4-15)/(4-16) MTC = Δ·GML/(100·L) ≈ Δ·BML/(100·L).
 - Principles of Naval Architecture (SNAME), numerical-integration
   chapters — Simpson's-rule integration conventions.
 - Simpson's 1st/2nd-rule integration implemented in-package (no

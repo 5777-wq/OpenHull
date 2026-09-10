@@ -410,6 +410,8 @@ class Hydrostatics:
         bml: longitudinal metacentric radius, m.
         tpc: tonnes per centimetre immersion, t/cm.
         mtc: moment to change trim one centimetre, t*m/cm.
+        lcb: longitudinal centre of buoyancy, % of Lpp, forward positive
+            (optional; filled by the task-1.4 hydrostatics module).
     """
 
     draft: float
@@ -426,6 +428,7 @@ class Hydrostatics:
     bml: float
     tpc: float
     mtc: float
+    lcb: float | None = None
 
     def __post_init__(self) -> None:
         _check_positive("draft", self.draft, "m", "draft")
@@ -484,6 +487,16 @@ class Hydrostatics:
             "of the waterplane longitudinal moment of inertia (strictly "
             "positive for any real waterplane) to the displacement volume.",
         )
+
+        if self.lcb is not None:
+            _check_finite("lcb", self.lcb)
+            _check(
+                abs(self.lcb) < 50.0,
+                "lcb", self.lcb, "-50 % < LCB < +50 % of Lpp",
+                "the centre of buoyancy is the centroid of the immersed "
+                "volume and must lie within the ship's length; |LCB| >= "
+                "50 % would place it outside the hull.",
+            )
 
     @property
     def km(self) -> float:

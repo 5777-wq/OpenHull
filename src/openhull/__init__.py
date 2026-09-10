@@ -8,6 +8,19 @@ published benchmark ships (see AGENTS.md for the binding conventions).
 
 from importlib.metadata import PackageNotFoundError, version
 
+from .geometry import (
+    JBC_KM_TARGET_M,
+    OffsetsTable,
+    jbc_parent_offsets,
+)
+from .hydrostatics import (
+    bonjean_areas,
+    hydrostatics_at,
+    hydrostatics_table,
+    simpson,
+    trapezoid,
+    waterplane,
+)
 from .main_dimensions import (
     DEFAULT_ALGORITHM,
     MAIN_DIMENSION_ALGORITHMS,
@@ -64,12 +77,21 @@ __all__ = [
     "WeightAlgorithmInfo",
     "WeightBalanceResult",
     "BULK_CARRIER_STEEL_EXPONENTS",
+    "JBC_KM_TARGET_M",
+    "OffsetsTable",
     "bulkcarrier_deadweight_ratio_statistics",
+    "bonjean_areas",
     "estimate_main_dimensions",
+    "hydrostatics_at",
+    "hydrostatics_table",
+    "jbc_parent_offsets",
     "knots_to_ms",
     "ms_to_knots",
     "outfit_area_coefficient_from_parent",
+    "simpson",
     "solve_weight_balance",
     "steel_cubic_coefficient_from_parent",
     "steel_exponent_coefficient_from_parent",
+    "trapezoid",
+    "waterplane",
 ]
