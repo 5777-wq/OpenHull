@@ -38,15 +38,20 @@ standard benchmark for the Tokyo 2015 CFD workshop.
 > only (`vendor/` is git-ignored). The repository carries download links and
 > extracted parameters, not the vendor data itself.
 
-## Secondary validation ship — Series 60, Cb = 0.80
+## Secondary validation ship — Series 60, total prismatic coefficient = 0.805
 
-Classic systematic series parent form (Todd & Frick, DTMB Report 1712,
-"Series 60 — Methodical Experiments with Models of Single-Screw Merchant
-Ships"). Station-by-station offsets are published in the report and used as
-the mother hull for Stage-2 lines-plan generation.
+Classic systematic series parent form — Model 4214W-B4 — from
+F.H. Todd, "Series 60 — Methodical Experiments with Models of
+Single-Screw Merchant Ships", DTMB Report 1712 (July 1963).
+(In the literature the series parents are customarily labelled by
+their prismatic coefficient; "Series 60, Cb = 0.80" refers to the
+0.805-prismatic parent digitized here.)
 
-- Report record: <https://trid.trb.org/View/394439>
-- Offsets availability: DTMB 1712 (public report; copies commonly accessible
-  via university libraries and technical archives)
+- Digitized offsets: [`parent_hull_offsets.csv`](parent_hull_offsets.csv)
+  (Table 7 of the report, page V-10; text layer cross-checked visually
+  against the rendered page at 300 dpi).
+- Full report (public domain, US Government): DTIC accession
+  [AD0419990](https://apps.dtic.mil/sti/citations/ADA419990), mirrored
+  at [archive.org/items/DTIC_AD0419990](https://archive.org/details/DTIC_AD0419990).
 - Role: mother hull for Lackenby transformation (Stage 2) and second
   validation ship for the v1.0 release gate
