@@ -127,8 +127,18 @@
   （|W−B|/W 与 |xg−xb|/L）。
 
 **型线**
+- 林焰 主编，《船舶设计原理》第 4 版（大连理工大学出版社），第 5 章
+  型线设计，"②勒根贝尔(Lackenby)法"（第 211–212 页）——母型变换的
+  转录源：式(5-35) 二次变换函数 dx=c(1−x)(x+d)；式(5-36) 边界条件
+  dx(l_pf)=dl_pf、∫dx·dy=dCp；式(5-37) 显式 dx；式(5-40)~(5-43)
+  矩臂 h=B−C·dl/dCp 与二次矩臂 K²=∫x²y dx/Cp（按 dx 普通积分——
+  由抛物线闭合检验钉死：Cp=2/3、x_bf=3/8、K²=1/5、B_f=3/5）；
+  式(5-44)(5-45) 前后体分配（含平行中体变化），(5-46)(5-47) 为
+  dl=0 特例；式(5-31)~(5-34) 浮力/力矩平衡。全部公式的 OCR 已对
+  扫描页 211–212 视觉核对。
 - Lackenby, H. (1950), "On the systematic geometrical variation of
-  ship forms", Trans. INA, vol. 92 —— 母型船变换。
+  ship forms", Trans. INA, vol. 92 —— 原始方法（可选交叉引证，
+  非实现必需）。
 - Todd, F.H. & Frick, C.A., DTMB Report 1712, "Series 60 — Methodical
   Experiments with Models of Single-Screw Merchant Ships" ——
   母型船型值表与船型系数。

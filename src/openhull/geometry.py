@@ -397,3 +397,101 @@ def jbc_parent_offsets(
         centroid_fit -= delta / 100.0
         table = build_once(centroid_fit)
     return table
+
+
+# ---------------------------------------------------------------------------
+# Digitised Series 60 parent (plan task 2.1) loader
+# ---------------------------------------------------------------------------
+
+#: expected form coefficients of the digitised parent (DTMB 1712 report
+#: values for Model 4214W-B4, "Series 60, Cb = 0.80" = Cp 0.805)
+SERIES60_CP_TOTAL = 0.805
+SERIES60_CP_FORE = 0.861
+SERIES60_CP_AFT = 0.750
+
+
+def load_offsets_csv(
+    path: str,
+    *,
+    lpp: float,
+    beam: float,
+    draft: float,
+    n_stations: int = 21,
+    n_waterlines: int = 27,
+) -> OffsetsTable:
+    """Load the digitised DTMB 1712 Table-7 offsets into an OffsetsTable.
+
+    The CSV layout (examples/data/parent_hull_offsets.csv) follows the
+    report's Table 7: half-breadths are FRACTIONS of each waterline's
+    maximum half-breadth, the ``max_half_beam`` row holds each
+    waterline's maximum half-breadth as a fraction of B/2, and the
+    ``tan_line`` column is the baseline tangent half-breadth as a
+    fraction of B/2.  Stations run FP..AP in twentieths of Lpp with
+    extra half-stations, so the grid is NOT equally spaced; it is
+    resampled onto ``n_stations`` equal stations (Simpson-compatible)
+    by linear interpolation per waterline, and the five tabulated
+    waterline fractions (0.075..1.00) plus the baseline are resampled
+    onto ``n_waterlines`` equal intervals of draft.
+
+    Acceptance anchors (validated in the test suite): the rebuilt table
+    reproduces the report's Cp = 0.805 total / 0.861 fore / 0.750 aft.
+    """
+    import csv
+
+    rows: list[list[str]] = []
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        for row in csv.reader(line for line in fh if not line.startswith("#")):
+            if row:
+                rows.append([cell.strip() for cell in row])
+
+    header = rows[0]
+    body = {r[0]: r for r in rows[1:]}
+    for name, row in body.items():  # fail loudly on ragged rows: a
+        if len(row) != len(header):  # missing cell would silently shift
+            raise ValueError(        # every later column of the row
+                f"row '{name}' in {path} has {len(row)} fields, "
+                f"expected {len(header)}"
+            )
+    wl_names = [name for name in header if name.startswith("wl_")]
+    wl_fracs = [float(name.removeprefix("wl_")) for name in wl_names]
+    wl_cols = [header.index(name) for name in wl_names]
+    tan_col = header.index("tan_line")
+    # "Max. half beam" row: per-column maxima as fractions of B/2 —
+    # first value belongs to the Tan. column, the rest to the waterlines
+    mh_row = [float(v) for v in body["max_half_beam"][1:] if v != ""]
+    tan_max, wl_max = mh_row[0], mh_row[1:]
+
+    # absolute half-breadths (m) at the tabulated levels, station-major
+    tab_stations: list[float] = []
+    tab_y: list[list[float]] = []  # (station, level)
+    for name, row in body.items():
+        if name == "max_half_beam":
+            continue
+        xi = 1.0 if name == "FP" else (0.0 if name == "AP"
+                                       else 1.0 - float(name) / 20.0)
+        abs_wl = [float(row[c]) * mh * beam / 2.0
+                  for c, mh in zip(wl_cols, wl_max)]
+        tan_abs = float(row[tan_col]) * tan_max * beam / 2.0
+        tab_stations.append(xi * lpp)
+        # levels: baseline (tan line), then the tabulated waterlines
+        tab_y.append([tan_abs] + abs_wl)
+
+    order = sorted(range(len(tab_stations)), key=lambda i: tab_stations[i])
+    tab_stations = [tab_stations[i] for i in order]
+    tab_y = [tab_y[i] for i in order]
+
+    levels = [0.0] + [f * draft for f in wl_fracs]  # z heights, m
+    stations_q = np.linspace(0.0, lpp, n_stations)
+    zeta_q = np.linspace(0.0, draft, n_waterlines)
+    # the tabulated grid is NOT equally spaced (extra half stations),
+    # so resample BOTH directions: vertical per station, then
+    # longitudinal per waterline
+    vert = np.array([np.interp(zeta_q, levels, row) for row in tab_y])
+    grid = np.column_stack([
+        np.interp(stations_q, tab_stations, vert[:, j])
+        for j in range(n_waterlines)
+    ])
+    return OffsetsTable(
+        lpp=lpp, beam=beam, stations=stations_q,
+        waterlines=zeta_q, half_breadths=grid,
+    )

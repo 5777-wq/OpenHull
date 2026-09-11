@@ -149,8 +149,21 @@ no page numbers from memory).
   |xg − xb|/L.
 
 **Lines plan**
+- Lin Yan (ed.), *Ship Design Principles* (船舶设计原理), 4th ed.
+  (Dalian University of Technology Press), chapter 5 lines design,
+  "②勒根贝尔(Lackenby)法" pp. 211–212 — the Lackenby transform as
+  transcribed in the textbook: Eq.(5-35) quadratic transform function
+  dx = c(1−x)(x+d); Eq.(5-36) boundary conditions dx(l_pf) = dl_pf,
+  ∫dx·dy = dCp; Eq.(5-37) explicit dx; Eqs.(5-40)–(5-43) moment arms
+  h = B − C·dl/dCp with B, C and the second-moment arm K² = ∫x²y dx/Cp
+  (plain dx integral — pinned by the parabolic closure check Cp = 2/3,
+  x_bf = 3/8, K² = 1/5, B_f = 3/5); Eqs.(5-44)/(5-45) fore/aft split
+  with parallel-body changes, (5-46)/(5-47) the dl = 0 case;
+  Eqs.(5-31)–(5-34) buoyancy/moment balance. OCR of every formula
+  visually verified against the scanned pages 211–212.
 - Lackenby, H. (1950), "On the systematic geometrical variation of ship
-  forms", Trans. INA, vol. 92 — parent-hull transformation.
+  forms", Trans. INA, vol. 92 — original method (optional cross
+  reference; not required for implementation).
 - Todd, F.H. & Frick, C.A., DTMB Report 1712, "Series 60 — Methodical
   Experiments with Models of Single-Screw Merchant Ships" — offsets and
   form coefficients of the mother hull.

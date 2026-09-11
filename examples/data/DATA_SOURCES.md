@@ -49,7 +49,18 @@ their prismatic coefficient; "Series 60, Cb = 0.80" refers to the
 
 - Digitized offsets: [`parent_hull_offsets.csv`](parent_hull_offsets.csv)
   (Table 7 of the report, page V-10; text layer cross-checked visually
-  against the rendered page at 300 dpi).
+  against the rendered page at 300 dpi; the whole table re-verified
+  row-by-row against the 300-dpi render during task 2.3 — one
+  transposed-cell suspicion on the AP row investigated and cleared).
+- Loading conventions (`openhull.geometry.load_offsets_csv`): each
+  waterline column holds half-breadths as fractions of THAT waterline's
+  maximum half-breadth; the `max_half_beam` row holds per-column maxima
+  as fractions of B/2 — its FIRST value (0.850) belongs to the `Tan.`
+  column (baseline tangent), the rest to the waterlines. Absolute
+  half-breadth = value × column maximum × B/2. The grid is resampled
+  to 21 equal stations / 27 equal waterline fractions (Simpson-ready).
+  Acceptance anchors: rebuilt Cp total/fore/aft = 0.8033/0.8564/0.7501
+  vs printed 0.805/0.861/0.750 (±0.005 band, see VALIDATION.md).
 - Full report (public domain, US Government): DTIC accession
   [AD0419990](https://apps.dtic.mil/sti/citations/ADA419990), mirrored
   at [archive.org/items/DTIC_AD0419990](https://archive.org/details/DTIC_AD0419990).

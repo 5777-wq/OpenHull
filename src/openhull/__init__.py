@@ -12,6 +12,13 @@ from .geometry import (
     JBC_KM_TARGET_M,
     OffsetsTable,
     jbc_parent_offsets,
+    load_offsets_csv,
+)
+from .linesplan import (
+    LackenbyReport,
+    TRANSFORM_ALGORITHMS,
+    area_curve,
+    lackenby_transform,
 )
 from .freeboard import (
     FreeboardResult,
@@ -100,9 +107,11 @@ __all__ = [
     "FreeboardResult",
     "InitialStability",
     "LCG_TOLERANCE",
+    "LackenbyReport",
     "OffsetsTable",
     "TABLE_3_9_BASIC_FREEBOARD",
     "Tank",
+    "TRANSFORM_ALGORITHMS",
     "TrimStep",
     "bulkcarrier_deadweight_ratio_statistics",
     "bonjean_areas",
@@ -114,6 +123,9 @@ __all__ = [
     "initial_stability",
     "jbc_parent_offsets",
     "knots_to_ms",
+    "lackenby_transform",
+    "area_curve",
+    "load_offsets_csv",
     "minimum_freeboard",
     "ms_to_knots",
     "outfit_area_coefficient_from_parent",

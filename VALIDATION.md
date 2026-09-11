@@ -75,6 +75,28 @@ Table 3-9 was visually verified against the scanned original (rendered
 PDF page) before implementation: all 36 rows × 2 columns match, zero
 OCR errors.
 
+### Parent-hull transform (task 2.3, Lackenby method)
+
+| Check | Result | Criterion |
+|---|---|---|
+| Loader: Series 60 parent Cp total / fore / aft (DTMB 1712 printed values 0.805 / 0.861 / 0.750) | 0.8033 / 0.8564 / 0.7501 | ±0.005 each |
+| Identity: zero request returns the parent bit-for-bit | exact (array equality) | diff = 0 |
+| Transform function closure (parabolic curve y = 1−u²) | Cp 2/3, x_bf 3/8, K² 1/5, B_f 3/5 — printed B_f formula (5-41) equals the moment integral of the shift field | analytic |
+| Parallel body fixed at dl = 0 | shift field ≡ 0 on the detected parallel body | by construction (tested) |
+| ΔCb = +0.02 on the carried table (acceptance case) | +0.0200 achieved, LCB drift 0.0017 %L | ±0.005 / ±0.02 %L |
+| Pure LCB shift +0.5 %L | volume drift −0.00005 Cb | ±0.001 |
+| Hydrostatics module re-check on the transformed table | agrees with the table-layer Cb | ±5e-4 |
+| Series 60 → JBC demonstration (Cb 0.8580, LCB +2.5475 %L) | lands at 0.8579 / +2.5429 %L in two serial sub-transforms (14 iterations) | demonstration, loose band |
+| Cm held through every transform | 0.990582 unchanged | exact |
+
+**How to read the anchors**: the DTMB 1712 prismatic coefficients are a
+genuine non-circular anchor (printed in 1963, never entered the code);
+the parabolic closure pins the textbook formulas against transcription
+errors; the identity check is the natural regression test of a shift
+method. The Series 60 → JBC run demonstrates the pipeline reaches an
+independent modern benchmark from a 1963 parent without refitting
+anything.
+
 ## Declared circularities and approximations
 
 These are features of the current stage, not hidden weaknesses:
@@ -98,10 +120,28 @@ These are features of the current stage, not hidden weaknesses:
 6. **Freeboard v0.1** assumes flush deck, standard sheer, no
    Regulation-27 reductions (the conservative side); the Cb at 0.85 Ds
    uses the design Cb (the waterline table stops at the design draft).
+7. **First-order algebra, table-layer convergence.** The Lackenby
+   transform neglects second-order terms (as the textbook does); the
+   achieved Cb/LCB are therefore measured on the carried offsets table
+   after each pass and the requested increments are corrected
+   iteratively (≤ 8 passes per sub-transform, 0.8 damped). Large
+   changes (|dCp| > 0.035) are split automatically into serial
+   sub-transforms. Residual vs goal at convergence: ≤ 1e-4.
+8. **Linear interpolation when carrying sections.** Sections are moved
+   by interpolating the parent offsets at the shifted station (the
+   textbook's higher-precision method); the digitised grid is 21
+   equal stations over a table published at 20 + half-stations, and
+   the transom-stern AP section (non-linear between waterlines) is
+   under-integrated by linear interpolation — visible in the loader
+   anchor margin (−0.0017 Cp) and accepted at ±0.005.
+9. **Parallel-body detection** uses a 0.05 % band on the area curve
+   peak (Series 60: l_pf 0.42, l_pa 0.20 of the half length); it can
+   be overridden by explicit dl targets only.
 
 ## Reproducing
 
 ```bash
-uv run pytest                        # 113 tests
+uv run pytest                        # 138 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
+
