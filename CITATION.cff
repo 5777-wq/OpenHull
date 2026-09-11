@@ -1,0 +1,27 @@
+# This CITATION.cff file was generated with the citable code project.
+# For v1.0, regenerate with the final metadata.
+cff-version: 1.2.0
+title: OpenHull
+message: >-
+  If you use OpenHull in your research, please cite it using this
+  metadata.
+type: software
+authors:
+  - alias: 5777-wq
+version: 0.1.0
+date-released: "2026-09-11"
+license: MIT
+repository-code: "https://github.com/5777-wq/OpenHull"
+abstract: >-
+  OpenHull is an open-source, agent-orchestrated parametric ship
+  preliminary-design toolchain. From a task book (ship type, deadweight,
+  service speed) it computes the weight-buoyancy balance, principal
+  dimensions, hydrostatics, initial stability and trim, and the
+  load-line freeboard check - every quantity validated against the
+  public JBC benchmark ship and whitelisted textbook formulas.
+keywords:
+  - ship-design
+  - naval-architecture
+  - hydrostatics
+  - preliminary-design
+  - agent-native

@@ -14,15 +14,15 @@ propulsión / estabilidad y planos de salida (DXF).
 
 ## Estado
 
-🚧 En construcción — Etapa 1 en curso: estructuras de datos y estimación de dimensiones principales completadas y validadas contra el buque de referencia JBC; núcleo hidrostático en desarrollo.
+**v0.1 publicado** — etapa 1 completada: balance peso-empuje guiado por libro de tareas, dimensiones principales, hidrostática, estabilidad inicial y asiento, francobordo — todo validado contra el buque de referencia JBC (véase [VALIDATION.md](VALIDATION.md)). Ejecutar: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Hoja de ruta
 
-- [ ] Etapa 1 — Iteración de dimensiones principales y núcleo hidrostático
+- [x] Etapa 1 — Iteración de dimensiones principales y núcleo hidrostático (**v0.1**)
 - [ ] Etapa 2 — Generación paramétrica de formas (transformación del buque madre)
 - [ ] Etapa 3 — Bucle de rendimiento: resistencia / propulsión / estabilidad
 - [ ] Etapa 4 — Planos de salida (DXF) e informes de diseño
-- [ ] Etapa 5 — Lanzamiento público v0.1
+- [ ] Etapa 5 — Documentación y lanzamiento comunitario (v1.0)
 
 ## Principios de diseño
 

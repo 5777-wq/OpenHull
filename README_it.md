@@ -14,15 +14,15 @@ propulsione / stabilità e output di disegni (DXF).
 
 ## Stato
 
-🚧 In costruzione — Fase 1 in corso: strutture dati e stima delle dimensioni principali completate e validate sulla nave di riferimento JBC; nucleo idrostatico in sviluppo.
+**v0.1 pubblicato** — fase 1 completata: bilanciamento peso-spinta dal libretto di progetto, dimensioni principali, idrostatica, stabilità iniziale ed assetto, franco bordo — tutto validato sulla nave di riferimento JBC (vedi [VALIDATION.md](VALIDATION.md)). Esecuzione: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Roadmap
 
-- [ ] Fase 1 — Iterazione delle dimensioni principali e nucleo idrostatico
+- [x] Fase 1 — Iterazione delle dimensioni principali e nucleo idrostatico (**v0.1**)
 - [ ] Fase 2 — Generazione parametrica della carena (trasformazione della nave madre)
 - [ ] Fase 3 — Ciclo delle prestazioni: resistenza / propulsione / stabilità
 - [ ] Fase 4 — Output di disegni (DXF) e relazioni di progetto
-- [ ] Fase 5 — Rilascio pubblico v0.1
+- [ ] Fase 5 — Documentazione e rilascio di comunità (v1.0)
 
 ## Principi di progettazione
 

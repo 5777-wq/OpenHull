@@ -15,15 +15,15 @@ plans (DXF).
 
 ## État d'avancement
 
-🚧 En construction — Étape 1 en cours : structures de données et estimation des dimensions principales terminées et validées sur le navire de référence JBC ; noyau hydrostatique en cours.
+**v0.1 publié** — étape 1 terminée : équilibre poids-poussée piloté par cahier des charges, dimensions principales, hydrostatique, stabilité initiale et assiette, franc-bord — le tout validé sur le navire de référence JBC (voir [VALIDATION.md](VALIDATION.md)). Exécution : `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Feuille de route
 
-- [ ] Étape 1 — Itération des dimensions principales & noyau hydrostatique
+- [x] Étape 1 — Itération des dimensions principales & noyau hydrostatique (**v0.1**)
 - [ ] Étape 2 — Génération paramétrique de carène (transformation du navire mère)
 - [ ] Étape 3 — Boucle performance : résistance / propulsion / stabilité
 - [ ] Étape 4 — Sorties graphiques (DXF) & rapports de conception
-- [ ] Étape 5 — Publication v0.1
+- [ ] Étape 5 — Documentation et publication communautaire (v1.0)
 
 ## Principes de conception
 

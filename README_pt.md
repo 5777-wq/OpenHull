@@ -14,15 +14,15 @@ propulsão / estabilidade e desenhos de saída (DXF).
 
 ## Estado
 
-🚧 Em construção — Etapa 1 em andamento: estruturas de dados e estimativa das dimensões principais concluídas e validadas contra o navio de referência JBC; núcleo hidrostático em desenvolvimento.
+**v0.1 publicado** — etapa 1 concluída: equilíbrio peso-empuxo por livro de tarefas, dimensões principais, hidrostática, estabilidade inicial e aparado, borda livre — tudo validado contra o navio de referência JBC (veja [VALIDATION.md](VALIDATION.md)). Executar: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Roteiro
 
-- [ ] Etapa 1 — Iteração das dimensões principais e núcleo hidrostático
+- [x] Etapa 1 — Iteração das dimensões principais e núcleo hidrostático (**v0.1**)
 - [ ] Etapa 2 — Geração paramétrica de formas (transformação do navio-mãe)
 - [ ] Etapa 3 — Ciclo de desempenho: resistência / propulsão / estabilidade
 - [ ] Etapa 4 — Desenhos de saída (DXF) e relatórios de projeto
-- [ ] Etapa 5 — Lançamento público v0.1
+- [ ] Etapa 5 — Documentação e lançamento comunitário (v1.0)
 
 ## Princípios de projeto
 

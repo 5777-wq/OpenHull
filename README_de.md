@@ -14,15 +14,15 @@ bewertungen und Zeichnungsausgaben (DXF).
 
 ## Status
 
-🚧 Im Aufbau — Stufe 1 läuft: Kerndatenstrukturen und Hauptabmessungsschätzung sind fertig und gegen das Benchmark-Schiff JBC validiert; der hydrostatische Kern ist in Arbeit.
+**v0.1 veröffentlicht** — Stufe 1 abgeschlossen: aufgabenbuchgetriebene Gewicht-Auftrieb-Balance, Hauptabmessungen, Hydrostatik, Anfangsstabilität & Trimm sowie Freibordnachweis — alle gegen das Referenzschiff JBC validiert (siehe [VALIDATION.md](VALIDATION.md)). Ausführen: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Fahrplan
 
-- [ ] Stufe 1 — Iteration der Hauptabmessungen & hydrostatischer Kern
+- [x] Stufe 1 — Iteration der Hauptabmessungen & hydrostatischer Kern (**v0.1**)
 - [ ] Stufe 2 — Parametrische Rumpfformgenerierung (Mutterschiff-Transformation)
 - [ ] Stufe 3 — Leistungsschleife: Widerstand / Antrieb / Stabilität
 - [ ] Stufe 4 — Zeichnungsausgabe (DXF) & Entwurfsberichte
-- [ ] Stufe 5 — v0.1-Veröffentlichung
+- [ ] Stufe 5 — Dokumentation & Community-Release (v1.0)
 
 ## Entwurfsgrundsätze
 

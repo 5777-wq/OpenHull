@@ -12,15 +12,15 @@ resistance / propulsion / stability estimates, and drawing outputs (DXF).
 
 ## Status
 
-🚧 Under construction — Stage 1 in progress: core data structures and main-dimension estimation are done and validated against the JBC benchmark ship; hydrostatics core is next.
+**v0.1 released** — stage 1 complete: task-book weight-buoyancy balance, principal dimensions, hydrostatics, initial stability & trim, and freeboard checks — all validated against the JBC benchmark ship (see [VALIDATION.md](VALIDATION.md)). One command: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Roadmap
 
-- [ ] Stage 1 — Principal dimension iteration & hydrostatics core
+- [x] Stage 1 — Principal dimension iteration & hydrostatics core (**v0.1**)
 - [ ] Stage 2 — Parametric hull form generation (mother-ship transformation)
 - [ ] Stage 3 — Performance loop: resistance / propulsion / stability
 - [ ] Stage 4 — Drawing output (DXF) & design reports
-- [ ] Stage 5 — v0.1 public release
+- [ ] Stage 5 — Documentation & community release (v1.0)
 
 ## Design principles
 
