@@ -164,6 +164,16 @@ no page numbers from memory).
 **Freeboard**
 - International Convention on Load Lines, 1966, as amended by the 1988
   Protocol and subsequent IMO resolutions — Type B tabular freeboard.
+- Lin Yan, *Ship Design Principles*, 4th ed., section 3.4.2 — the
+  ICLL computation as transcribed in a textbook: Eq.(3-15)
+  F = F0 + f1 + ... + f5; Table 3-9 standard-ship basic freeboard
+  (L = 24-365 m, types A/B; transcribed values visually verified
+  against the scanned original, PDF part 1 page 71 / book page 60);
+  Eqs.(3-16)-(3-20) the f1...f5 corrections with Tables 3-10/3-11/3-12.
+  The domestic-rules variant (Xie Yunping section 2-9, Tables 2-7/2-8)
+  is transcribed in the knowledge base but not implemented - its
+  length range (20-230 m) does not reach the benchmark ships, and its
+  Table 2-8 carries known OCR-suspect values pending visual check.
 
 **Intact stability criteria**
 - IMO Resolution MSC.267(85), International Code on Intact Stability,

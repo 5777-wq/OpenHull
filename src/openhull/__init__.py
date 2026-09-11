@@ -13,6 +13,12 @@ from .geometry import (
     OffsetsTable,
     jbc_parent_offsets,
 )
+from .freeboard import (
+    FreeboardResult,
+    TABLE_3_9_BASIC_FREEBOARD,
+    minimum_freeboard,
+    tabular_basic_freeboard,
+)
 from .hydrostatics import (
     bonjean_areas,
     hydrostatics_at,
@@ -91,9 +97,11 @@ __all__ = [
     "BUOYANCY_TOLERANCE",
     "JBC_KM_TARGET_M",
     "FloatingPosition",
+    "FreeboardResult",
     "InitialStability",
     "LCG_TOLERANCE",
     "OffsetsTable",
+    "TABLE_3_9_BASIC_FREEBOARD",
     "Tank",
     "TrimStep",
     "bulkcarrier_deadweight_ratio_statistics",
@@ -106,12 +114,14 @@ __all__ = [
     "initial_stability",
     "jbc_parent_offsets",
     "knots_to_ms",
+    "minimum_freeboard",
     "ms_to_knots",
     "outfit_area_coefficient_from_parent",
     "simpson",
     "solve_weight_balance",
     "steel_cubic_coefficient_from_parent",
     "steel_exponent_coefficient_from_parent",
+    "tabular_basic_freeboard",
     "trapezoid",
     "waterplane",
 ]
