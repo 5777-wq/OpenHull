@@ -64,6 +64,115 @@ def _waterlines_at(table: OffsetsTable) -> tuple:
     return heights, np.column_stack(cols)
 
 
+def pchip(x: np.ndarray, y: np.ndarray, factor: int = 8) -> tuple:
+    """Fritsch–Carlson monotone cubic interpolation, dense output.
+
+    Passes exactly through every data point and connects the points
+    with C1 arcs that do not overshoot between them — the drawing-board
+    definition of a fair line: exact at the offsets, fair between them.
+    No scipy dependency (AGENTS.md §8).
+
+    Returns (xq, yq) with `factor` sub-intervals per original segment.
+    """
+    x = np.asarray(x, dtype=float)
+    y = np.asarray(y, dtype=float)
+    keep = np.concatenate(([True], np.diff(x) > 0.0))
+    x, y = x[keep], y[keep]          # drop duplicated abscissae
+    h = np.diff(x)
+    delta = np.diff(y) / h
+
+    m = np.empty_like(y)
+    # interior tangents: weighted harmonic mean where the slope sign
+    # holds, zero at local extrema (keeps the curve from overshooting)
+    for k in range(1, y.size - 1):
+        if delta[k - 1] * delta[k] <= 0.0:
+            m[k] = 0.0
+        else:
+            w1 = 2.0 * h[k - 1] + h[k]
+            w2 = h[k - 1] + 2.0 * h[k]
+            m[k] = (w1 + w2) / (w1 / delta[k - 1] + w2 / delta[k])
+    # end tangents: one-sided three-point formula, clamped to the sign
+    # of the adjacent slope and limited to 3*delta (FC paper eqs.)
+    m[0] = ((2.0 * h[0] + h[1]) * delta[0] - h[1] * delta[1]) \
+        / (h[0] + h[1])
+    if m[0] * delta[0] <= 0.0:
+        m[0] = 0.0
+    elif delta[0] * delta[1] <= 0.0 and abs(m[0]) > abs(3.0 * delta[0]):
+        m[0] = 3.0 * delta[0]
+    m[-1] = ((2.0 * h[-1] + h[-2]) * delta[-1] - h[-2] * delta[-2]) \
+        / (h[-1] + h[-2])
+    if m[-1] * delta[-1] <= 0.0:
+        m[-1] = 0.0
+    elif delta[-1] * delta[-2] <= 0.0 and \
+            abs(m[-1]) > abs(3.0 * delta[-1]):
+        m[-1] = 3.0 * delta[-1]
+
+    xq = np.empty(y.size + (y.size - 1) * (factor - 1))
+    yq = np.empty_like(xq)
+    xq[0], yq[0] = x[0], y[0]
+    pos = 1
+    for k in range(y.size - 1):
+        t = np.linspace(0.0, 1.0, factor + 1)[1:]
+        t2, t3 = t * t, t * t * t
+        h00 = 2.0 * t3 - 3.0 * t2 + 1.0
+        h10 = t3 - 2.0 * t2 + t
+        h01 = -2.0 * t3 + 3.0 * t2
+        h11 = t3 - t2
+        xq[pos:pos + factor] = x[k] + t * h[k]
+        yq[pos:pos + factor] = (h00 * y[k] + h10 * m[k] * h[k]
+                                + h01 * y[k + 1] + h11 * m[k + 1] * h[k])
+        pos += factor
+    return xq, yq
+
+
+def _dense_section(z: np.ndarray, y: np.ndarray, factor: int = 5):
+    """Dense (half-breadth, height) pairs of one station section.
+
+    Transom-stern sections have a genuine gap (no hull) between keel
+    and the lower tangency: the zero run at the bottom is kept as a
+    vertical rise, the curved part above it is spline-faired."""
+    nz = np.nonzero(y > 1e-12)[0]
+    if nz.size < 3:
+        return y, z
+    i0, i1 = nz[0], nz[-1]
+    yq, zq = pchip(y[i0:i1 + 1], z[i0:i1 + 1], factor=factor)
+    if i0 > 0:
+        yq = np.concatenate(([0.0], yq))
+        zq = np.concatenate(([z[i0 - 1]], zq))
+    return yq, zq
+
+
+def _dense_buttock(x: np.ndarray, z_at: np.ndarray, factor: int = 6):
+    """Dense (x, z) pairs of one buttock line over its valid span.
+
+    A buttock exists only where the sections actually reach the target
+    half-breadth; outside that span the line is not drawn (the NaN
+    behaviour of the tabulated data is preserved)."""
+    valid = ~np.isnan(z_at)
+    if valid.sum() < 3:
+        return x, z_at
+    i0, i1 = np.argmax(valid), x.size - 1 - np.argmax(valid[::-1])
+    xq, zq = pchip(x[i0:i1 + 1], z_at[i0:i1 + 1], factor=factor)
+    return xq, zq
+
+
+def _buttock_heights(table: OffsetsTable, target: float) -> np.ndarray:
+    """Height of one buttock line at every station.
+
+    A section already WIDER than the target at its base puts the
+    buttock on the baseline (z = 0); a section that never reaches the
+    target breadth has no buttock there (NaN, line not drawn).
+    """
+    z_at = np.full(table.stations.size, np.nan)
+    for i in range(table.stations.size):
+        y_sec = table.half_breadths[i]
+        if target <= y_sec[0] + 1e-12:
+            z_at[i] = 0.0
+        elif target <= y_sec[-1]:
+            z_at[i] = float(np.interp(target, y_sec, table.waterlines))
+    return z_at
+
+
 def draw_lines_plan(table: OffsetsTable, path: str, *,
                     title: str = "Lines plan",
                     dpi: int = 300) -> str:
@@ -110,11 +219,12 @@ def draw_lines_plan(table: OffsetsTable, path: str, *,
             spine.set_linewidth(0.7)
         ax.tick_params(colors="black", labelsize=7, length=2.5)
 
-    # ---- body plan (upper left) ----
+    # ---- body plan (upper left): spline-faired sections ----
     for i in range(1, x.size - 1):
+        y_sec, z_sec = _dense_section(table.waterlines,
+                                      table.half_breadths[i])
         side = 1.0 if i >= mid else -1.0
-        ax_body.plot(side * table.half_breadths[i], table.waterlines,
-                     color="black", linewidth=0.8)
+        ax_body.plot(side * y_sec, z_sec, color="black", linewidth=0.8)
     ax_body.axhline(z_top, color="black", linewidth=1.1)
     ax_body.axvline(0.0, color="black", linewidth=0.8)
     for h in heights[:-1]:   # waterline reference lines
@@ -133,20 +243,20 @@ def draw_lines_plan(table: OffsetsTable, path: str, *,
     # ---- sheer view (upper right): DWL, perpendiculars, buttocks ----
     ax_sheer.plot([0.0, lpp], [z_top, z_top], color="black",
                   linewidth=1.2)
+    ax_sheer.annotate("DWL", (0.35 * lpp, z_top), xytext=(0, 3),
+                      textcoords="offset points", fontsize=6.5,
+                      color="black", ha="center")
     ax_sheer.plot([0.0, 0.0], [0.0, float(table.half_breadths[0, -1])],
                   color="black", linewidth=1.0)
     ax_sheer.plot([lpp, lpp], [0.0, float(table.half_breadths[-1, -1])],
                   color="black", linewidth=1.0)
     for frac, ls in ((0.25, (0, (5, 2))), (0.50, (0, (2, 1.5))),
                      (0.75, (0, (7, 2, 1, 2)))):
-        target = frac * half
-        zs = [float(np.interp(target, table.half_breadths[i],
-                              table.waterlines,
-                              left=np.nan, right=np.nan))
-              for i in range(x.size)]
-        ax_sheer.plot(x, zs, color="black", linewidth=0.8, linestyle=ls)
-        if not np.isnan(zs[-1]):
-            ax_sheer.annotate(f"{int(frac * 100)}%", (lpp, zs[-1]),
+        z_at = _buttock_heights(table, frac * half)
+        xq, zq = _dense_buttock(x, z_at)
+        ax_sheer.plot(xq, zq, color="black", linewidth=0.8, linestyle=ls)
+        if not np.isnan(z_at[-1]):
+            ax_sheer.annotate(f"{int(frac * 100)}%", (lpp, z_at[-1]),
                               xytext=(4, 0), textcoords="offset points",
                               fontsize=6.5, color="black")
     ax_sheer.set_xlim(-lpp * 0.02, lpp * 1.06)
@@ -156,14 +266,17 @@ def draw_lines_plan(table: OffsetsTable, path: str, *,
     ax_sheer.set_xlabel("x from AP (m)", fontsize=8)
     ax_sheer.set_ylabel("height above keel (m)", fontsize=8)
 
-    # ---- half-breadth plan (bottom right): tabulated waterlines ----
-    x_lab = 0.82 * lpp   # annotations where the waterlines fan apart
+    # ---- half-breadth plan (bottom right): faired waterlines ----
+    xq_long, _ = pchip(x, yw[:, -1], factor=8)   # dense x along the ship
+    x_lab = 0.90 * lpp   # annotations where the waterlines fan apart
     for j, h in enumerate(heights):
-        ax_plan.plot(x, yw[:, j], color="black", linewidth=0.9)
-        y_lab = float(np.interp(x_lab, x, yw[:, j]))
-        ax_plan.annotate(_WL_LABELS[round(h / z_top, 3)], (x_lab, y_lab),
-                         xytext=(0, 3), textcoords="offset points",
-                         fontsize=6.5, color="black", ha="center")
+        _xq, yq = pchip(x, yw[:, j], factor=8)
+        ax_plan.plot(xq_long, yq, color="black", linewidth=0.9)
+        y_lab = float(np.interp(x_lab, xq_long, yq))
+        ax_plan.annotate(_WL_LABELS[round(h / z_top, 3)],
+                         (x_lab, y_lab), xytext=(0, 3),
+                         textcoords="offset points", fontsize=6.5,
+                         color="black", ha="center")
     ax_plan.axhline(half, color="black", linewidth=0.5)
     ax_plan.set_xlim(-lpp * 0.02, lpp * 1.08)
     ax_plan.set_ylim(-half * 0.14, half * 1.12)

@@ -50,3 +50,29 @@ def test_transformed_table_round_trips_through_export(tmp_path):
     assert body.shape == (table.stations.size, table.waterlines.size + 1)
     # sections stay inside the moulded beam after the transform
     assert body[:, 1:].max() <= table.beam / 2 + 1e-9
+
+
+def test_pchip_passes_through_knots_without_overshoot():
+    """The faired curve is exact at the offsets and stays in range."""
+    from openhull.drawing import pchip
+    u = np.linspace(0.0, 1.0, 21)
+    y = 1.0 - u**2
+    xq, yq = pchip(u, y, factor=10)
+    assert np.all(np.diff(xq) > 0)
+    for ui, yi in zip(u, y):
+        assert abs(np.interp(ui, xq, yq) - yi) < 1e-12
+    assert yq.min() > -1e-12 and yq.max() < 1.0 + 1e-12
+    # monotone data stay monotone (no false wiggles between offsets)
+    assert np.all(np.diff(yq) <= 1e-12)
+
+
+def test_buttock_rides_the_baseline_where_the_hull_is_wider():
+    """Sections already wider than the target at the base put the
+    buttock on the baseline (z = 0), not NaN."""
+    from openhull.drawing import _buttock_heights
+    table = series60()
+    z_at = _buttock_heights(table, 0.25 * table.beam / 2)
+    mid = table.stations.size // 2
+    assert z_at[mid] == 0.0                       # parallel body: baseline
+    assert np.isnan(z_at[0])                      # transom AP: no line
+    assert not np.isnan(z_at[-2])                 # fore body: exists
