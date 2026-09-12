@@ -157,9 +157,16 @@ def draw_lines_plan(raw: dict, path: str, *,
     heights = np.asarray(raw["heights"], dtype=float)
     yw = np.asarray(raw["half_breadths"], dtype=float)
     lpp = float(x[-1])
-    z_top = float(heights[5])            # 1.00 T = design waterline
-    z_max = float(heights[-1])           # 1.50 T = top drawn waterline
-    half = float(np.nanmax(yw[:, 5]))    # maximum half breadth on the DWL
+    # locate the design waterline by its fraction, never by column
+    # position (dense grids have different layer counts)
+    fr = raw.get("fractions")
+    if fr is not None:
+        i_dwl = int(np.argmin(np.abs(np.asarray(fr, dtype=float) - 1.0)))
+    else:
+        i_dwl = 5
+    z_top = float(heights[i_dwl])        # 1.00 T = design waterline
+    z_max = float(heights[-1])           # top drawn waterline
+    half = float(np.nanmax(yw[:, i_dwl]))  # max half breadth on the DWL
     mid = 0.5 * (lpp)                    # midship
     xi = x / lpp
 
