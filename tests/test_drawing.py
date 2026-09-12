@@ -5,8 +5,8 @@ from pathlib import Path
 
 import numpy as np
 
-from openhull.drawing import draw_lines_plan, save_offsets_csv
-from openhull.geometry import load_offsets_csv
+from openhull.drawing import draw_lines_plan, pchip, save_offsets_csv
+from openhull.geometry import load_offsets_csv, load_raw_offsets
 
 CSV = Path(__file__).resolve().parents[1] / "examples" / "data" / \
     "parent_hull_offsets.csv"
@@ -16,14 +16,24 @@ def series60():
     return load_offsets_csv(str(CSV), lpp=280.0, beam=45.0, draft=16.5)
 
 
+def raw60():
+    return load_raw_offsets(str(CSV), lpp=280.0, beam=45.0, draft=16.5)
+
+
 def test_draw_lines_plan_writes_png(tmp_path):
-    table = series60()
     out = tmp_path / "lines.png"
-    written = draw_lines_plan(table, str(out), title="test sheet")
+    written = draw_lines_plan(raw60(), str(out), title="test sheet")
     assert Path(written) == out
     assert out.stat().st_size > 50_000   # a real sheet, not a blank canvas
     with open(out, "rb") as fh:
         assert fh.read(8) == b"\x89PNG\r\n\x1a\n"
+
+
+def test_raw_loader_keeps_half_stations_and_upper_layers():
+    raw = raw60()
+    assert raw["stations"].size == 25            # half stations retained
+    assert raw["heights"].size == 8              # baseline + 7 WLs
+    assert raw["heights"][-1] > raw["heights"][5]  # flare layers above DWL
 
 
 def test_save_offsets_csv_layout(tmp_path):
@@ -69,10 +79,19 @@ def test_pchip_passes_through_knots_without_overshoot():
 def test_buttock_rides_the_baseline_where_the_hull_is_wider():
     """Sections already wider than the target at the base put the
     buttock on the baseline (z = 0), not NaN."""
-    from openhull.drawing import _buttock_heights
-    table = series60()
-    z_at = _buttock_heights(table, 0.25 * table.beam / 2)
-    mid = table.stations.size // 2
+    raw = raw60()
+    half = raw["half_breadths"][:, 5].max() / 2.0
+    target = 0.25 * 2.0 * half
+    z_at = np.full(raw["stations"].size, np.nan)
+    for i in range(raw["stations"].size):
+        y_sec = raw["half_breadths"][i]
+        if target <= y_sec[0] + 1e-12:
+            z_at[i] = 0.0
+        elif target <= y_sec[-1]:
+            z_at[i] = float(np.interp(target, y_sec, raw["heights"]))
+    mid = raw["stations"].size // 2
     assert z_at[mid] == 0.0                       # parallel body: baseline
-    assert np.isnan(z_at[0])                      # transom AP: no line
+    # transom AP: the 25 % target breadth is only reached high on the
+    # flaring stern section (above the DWL) - a valid height, not NaN
+    assert z_at[0] >= raw["heights"][5]
     assert not np.isnan(z_at[-2])                 # fore body: exists

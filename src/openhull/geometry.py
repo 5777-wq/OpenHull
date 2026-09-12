@@ -497,6 +497,66 @@ def load_offsets_csv(
     )
 
 
+def load_raw_offsets(path: str, *, lpp: float, beam: float,
+                     draft: float) -> dict:
+    """The tabulated offsets EXACTLY as printed, for drawing.
+
+    Drawing wants every scrap of information in the source table: the
+    25 tabulated stations (including the half stations at 0.5, 1.5,
+    18.5, 19.5 — exactly where fore/aft-body shape changes fastest)
+    and ALL eight data columns (baseline tangent plus seven waterlines
+    0.075 T .. 1.50 T).  The equal-station OffsetsTable used for
+    hydrostatics necessarily discards the half stations; drawing should
+    not.  Returns a dict with 'stations' (m from AP), 'heights' (m),
+    'half_breadths' (m, stations x levels).
+    """
+    import csv
+
+    rows: list[list[str]] = []
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        for row in csv.reader(line for line in fh if not line.startswith("#")):
+            if row:
+                rows.append([cell.strip() for cell in row])
+
+    header = rows[0]
+    body = {r[0]: r for r in rows[1:]}
+    for name, row in body.items():
+        if len(row) != len(header):
+            raise ValueError(
+                f"row '{name}' in {path} has {len(row)} fields, "
+                f"expected {len(header)}"
+            )
+    wl_names = [name for name in header if name.startswith("wl_")]
+    wl_cols = [header.index(name) for name in wl_names]
+    wl_fracs = [float(name.removeprefix("wl_")) for name in wl_names]
+    tan_col = header.index("tan_line")
+    mh_row = [float(v) for v in body["max_half_beam"][1:] if v != ""]
+    tan_max, wl_max = mh_row[0], mh_row[1:]
+
+    tab_stations: list[float] = []
+    tab_y: list[list[float]] = []
+    for name, row in body.items():
+        if name == "max_half_beam":
+            continue
+        xi = 1.0 if name == "FP" else (0.0 if name == "AP"
+                                       else 1.0 - float(name) / 20.0)
+        abs_wl = [float(row[c]) * mh * beam / 2.0
+                  for c, mh in zip(wl_cols, wl_max)]
+        tan_abs = float(row[tan_col]) * tan_max * beam / 2.0
+        tab_stations.append(xi * lpp)
+        tab_y.append([tan_abs] + abs_wl)
+
+    order = sorted(range(len(tab_stations)), key=lambda i: tab_stations[i])
+    tab_stations = [tab_stations[i] for i in order]
+    tab_y = [tab_y[i] for i in order]
+    heights = [0.0] + [f * draft for f in wl_fracs]
+    return {
+        "stations": np.array(tab_stations),
+        "heights": np.array(heights),
+        "half_breadths": np.array(tab_y),
+    }
+
+
 def load_upper_offsets(
     path: str,
     *,
