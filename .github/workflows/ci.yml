@@ -8,6 +8,11 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      # uv.lock records wheel URLs from the maintainer's local mirror
+      # (Tsinghua), which rejects GitHub runners; force the official
+      # index on CI
+      UV_INDEX_URL: https://pypi.org/simple
     steps:
       - uses: actions/checkout@v4
 
