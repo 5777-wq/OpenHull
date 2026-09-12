@@ -42,7 +42,7 @@ Declared first-order approximations (validated in VALIDATION.md):
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import numpy as np
 
@@ -313,6 +313,7 @@ class LackenbyReport:
     achieved: dict
     iterations: int
     identity: bool
+    shift_x_m: list = field(default_factory=list)  # station dx field, m
 
     def to_dict(self) -> dict:
         return {
@@ -325,6 +326,7 @@ class LackenbyReport:
             "achieved": dict(self.achieved),
             "iterations": self.iterations,
             "identity": self.identity,
+            "shift_x_m": list(self.shift_x_m),
         }
 
 
@@ -455,11 +457,12 @@ def lackenby_transform(
         corr_cp = (goal_cb_s - _table_cb(work)) / cm_cur
         corr_xb = goal_xb_s - 2.0 * _table_lcb_pct(work) / 100.0
         new_table = work
+        dx_last = np.zeros_like(work.stations)
         passes = 0
         for passes in range(1, min(max_passes, MAX_PASSES) + 1):
             new_fore, new_aft = _run_once(f_cur, a_cur, corr_cp, corr_xb,
                                           dl_f, dl_a)
-            new_table = _carry_table(work, new_fore, new_aft)
+            new_table, dx_last = _carry_table(work, new_fore, new_aft)
             err_cp = (goal_cb_s - _table_cb(new_table)) / cm_cur
             err_xb = goal_xb_s - 2.0 * _table_lcb_pct(new_table) / 100.0
             if abs(err_cp) < CP_TOL and abs(err_xb) < XB_TOL:
@@ -482,6 +485,7 @@ def lackenby_transform(
                   "lcb_pct_lpp": round(_table_lcb_pct(work), 4),
                   "cm_held": round(cm, 6)},
         iterations=passes_total, identity=False,
+        shift_x_m=[round(float(v), 4) for v in dx_last],
     )
     return work, report
 
@@ -579,7 +583,11 @@ def _carry_table(table: OffsetsTable, fore, aft) -> OffsetsTable:
     new_breadths = np.empty_like(table.half_breadths)
     for j in range(table.waterlines.size):
         new_breadths[:, j] = np.interp(x_src, x, table.half_breadths[:, j])
-    return OffsetsTable(
+    new_table = OffsetsTable(
         lpp=table.lpp, beam=table.beam, stations=x.copy(),
         waterlines=table.waterlines.copy(), half_breadths=new_breadths,
     )
+    return new_table, dx
+
+
+# ---------------------------------------------------------------------------

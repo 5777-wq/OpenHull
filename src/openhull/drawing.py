@@ -24,12 +24,16 @@ import numpy as np
 
 from .geometry import OffsetsTable
 
-#: tabulated waterline fractions of the source table
+#: tabulated waterline fractions of the source table (below the DWL)
 _DRAUGHT_FRACTIONS = (0.075, 0.25, 0.50, 0.75, 1.00)
 
 #: labels for those fractions on the half-breadth plan
 _WL_LABELS = {1.0: "DWL", 0.75: "0.75T", 0.5: "0.50T", 0.25: "0.25T",
               0.075: "0.075T"}
+
+#: tabulated waterline fractions ABOVE the design waterline (fore-body
+#: flare); drawn dashed when the caller supplies them
+_UPPER_FRACTIONS = (1.25, 1.50)
 
 
 def save_offsets_csv(table: OffsetsTable, path: str) -> str:
@@ -173,16 +177,26 @@ def _buttock_heights(table: OffsetsTable, target: float) -> np.ndarray:
     return z_at
 
 
-def draw_lines_plan(table: OffsetsTable, path: str, *,
-                    title: str = "Lines plan",
-                    dpi: int = 300) -> str:
+def draw_lines_plan(table: OffsetsTable, path: str, *, title: str =
+                    "Lines plan", dpi: int = 300,
+                    upper: np.ndarray | None = None,
+                    upper_shift_x_m: np.ndarray | None = None) -> str:
     """Draw the classic three-view lines plan as a monochrome PNG.
 
     Body plan upper left (fore body right / aft body left of the
     centreline), sheer view with 25/50/75 % buttock lines upper right,
-    half-breadth plan with the tabulated waterlines at the bottom; the
-    three views are geometrically aligned.  Station numbering on the
-    plan: 0 = AP, 20 = FP.  Returns the written path.
+    half-breadth plan with the tabulated waterlines at the bottom.
+    Station numbering on the plan: 0 = AP, 20 = FP.
+
+    ``upper`` carries the tabulated waterline layers ABOVE the design
+    waterline (DTMB Table 7: 1.25 T and 1.50 T) as an
+    (n_stations, len(upper)) matrix of half-breadths in metres; they
+    show the fore-body flare that a DWL-truncated table hides.
+    ``upper_shift_x_m`` is the station shift field of a transform (from
+    ``LackenbyReport.shift_x_m``) applied to those layers so a
+    transformed hull draws its flare at the shifted stations.
+
+    Returns the written path.
     """
     import matplotlib
     matplotlib.use("Agg")
@@ -194,6 +208,20 @@ def draw_lines_plan(table: OffsetsTable, path: str, *,
     mid = x.size // 2
     half = beam / 2.0
     heights, yw = _waterlines_at(table)
+
+    # upper (above-DWL) layers, shifted by the transform field if given
+    upper_layers: list[tuple[float, np.ndarray]] = []
+    if upper is not None:
+        upper = np.asarray(upper, dtype=float)
+        for j, f in enumerate(_UPPER_FRACTIONS):
+            col = upper[:, j]
+            if upper_shift_x_m is not None:
+                shift = np.asarray(upper_shift_x_m, dtype=float)
+                col = np.interp(np.clip(x - shift, 0.0, lpp), x, col)
+            upper_layers.append((f * z_top, col))
+
+    # body-plan sections extend to the topmost available layer
+    z_draw_top = upper_layers[-1][0] if upper_layers else z_top
 
     # The body plan keeps a 1:1 aspect (section shapes must not distort);
     # the sheer and half-breadth views decouple the axis scales the way
@@ -221,8 +249,12 @@ def draw_lines_plan(table: OffsetsTable, path: str, *,
 
     # ---- body plan (upper left): spline-faired sections ----
     for i in range(1, x.size - 1):
-        y_sec, z_sec = _dense_section(table.waterlines,
-                                      table.half_breadths[i])
+        z_col = np.concatenate((table.waterlines,
+                                np.array([h for h, _ in upper_layers])))
+        y_col = np.concatenate((table.half_breadths[i],
+                                np.array([col[i] for _, col in upper_layers])
+                                if upper_layers else np.empty(0)))
+        y_sec, z_sec = _dense_section(z_col, y_col)
         side = 1.0 if i >= mid else -1.0
         ax_body.plot(side * y_sec, z_sec, color="black", linewidth=0.8)
     ax_body.axhline(z_top, color="black", linewidth=1.1)
@@ -234,7 +266,7 @@ def draw_lines_plan(table: OffsetsTable, path: str, *,
                      color="black", ha="left")
     ax_body.set_aspect("equal")
     ax_body.set_xlim(-half * 1.10, half * 1.10)
-    ax_body.set_ylim(-z_top * 0.05, z_top * 1.06)
+    ax_body.set_ylim(-z_top * 0.05, z_draw_top * 1.05)
     ax_body.set_title("Body plan  (fore right / aft left)",
                       fontsize=9.5, color="black", pad=4)
     ax_body.set_xlabel("half breadth (m)", fontsize=8)
@@ -260,7 +292,7 @@ def draw_lines_plan(table: OffsetsTable, path: str, *,
                               xytext=(4, 0), textcoords="offset points",
                               fontsize=6.5, color="black")
     ax_sheer.set_xlim(-lpp * 0.02, lpp * 1.06)
-    ax_sheer.set_ylim(-z_top * 0.08, z_top * 1.12)
+    ax_sheer.set_ylim(-z_top * 0.08, z_draw_top * 1.08)
     ax_sheer.set_title("Sheer view  (buttocks 25/50/75 % B/2)",
                        fontsize=9.5, color="black", pad=4)
     ax_sheer.set_xlabel("x from AP (m)", fontsize=8)
@@ -277,6 +309,14 @@ def draw_lines_plan(table: OffsetsTable, path: str, *,
                          (x_lab, y_lab), xytext=(0, 3),
                          textcoords="offset points", fontsize=6.5,
                          color="black", ha="center")
+    for h, col in upper_layers:   # above-DWL flare lines, dashed
+        _xq, yq = pchip(x, col, factor=8)
+        ax_plan.plot(xq_long, yq, color="black", linewidth=0.6,
+                     linestyle=(0, (3, 2)))
+        y_lab = float(np.interp(x_lab, xq_long, yq))
+        ax_plan.annotate(f"{h / z_top:.2f}T", (x_lab, y_lab),
+                         xytext=(0, 3), textcoords="offset points",
+                         fontsize=6.5, color="black", ha="center")
     ax_plan.axhline(half, color="black", linewidth=0.5)
     ax_plan.set_xlim(-lpp * 0.02, lpp * 1.08)
     ax_plan.set_ylim(-half * 0.14, half * 1.12)

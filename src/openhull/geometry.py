@@ -495,3 +495,69 @@ def load_offsets_csv(
         lpp=lpp, beam=beam, stations=stations_q,
         waterlines=zeta_q, half_breadths=grid,
     )
+
+
+def load_upper_offsets(
+    path: str,
+    *,
+    lpp: float,
+    beam: float,
+    draft: float,
+    fractions: tuple = (1.25, 1.5),
+    n_stations: int = 21,
+) -> np.ndarray:
+    """Tabulated half-breadths ABOVE the design waterline, metres.
+
+    DTMB Table 7 lists two waterlines above the DWL (1.25 T, 1.50 T);
+    they carry the flare of the fore-body sections and are needed for
+    drawing the lines plan up to its upper limit.  The OffsetsTable
+    itself stops at the design draft (hydrostatics integrate below the
+    waterline only), so the upper layers travel separately as an
+    (n_stations, len(fractions)) matrix on the same equal station grid.
+    """
+    import csv
+
+    rows: list[list[str]] = []
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        for row in csv.reader(line for line in fh if not line.startswith("#")):
+            if row:
+                rows.append([cell.strip() for cell in row])
+
+    header = rows[0]
+    body = {r[0]: r for r in rows[1:]}
+    for name, row in body.items():
+        if len(row) != len(header):
+            raise ValueError(
+                f"row '{name}' in {path} has {len(row)} fields, "
+                f"expected {len(header)}"
+            )
+    wl_names = [name for name in header if name.startswith("wl_")]
+    wl_cols = [header.index(name) for name in wl_names]
+    wl_fracs = [float(name.removeprefix("wl_")) for name in wl_names]
+    mh_row = [float(v) for v in body["max_half_beam"][1:] if v != ""]
+    wl_max = mh_row[1:]
+
+    tab_stations: list[float] = []
+    tab_cols: list[list[float]] = []   # requested fractions, per station
+    for name, row in body.items():
+        if name == "max_half_beam":
+            continue
+        xi = 1.0 if name == "FP" else (0.0 if name == "AP"
+                                       else 1.0 - float(name) / 20.0)
+        vals = []
+        for f in fractions:
+            col = wl_fracs.index(f)
+            vals.append(float(row[wl_cols[col]]) * wl_max[col] * beam / 2.0)
+        tab_stations.append(xi * lpp)
+        tab_cols.append(vals)
+
+    order = sorted(range(len(tab_stations)), key=lambda i: tab_stations[i])
+    tab_stations = [tab_stations[i] for i in order]
+    tab_cols = [tab_cols[i] for i in order]
+
+    stations_q = np.linspace(0.0, lpp, n_stations)
+    grid = np.column_stack([
+        np.interp(stations_q, tab_stations, [row[j] for row in tab_cols])
+        for j in range(len(fractions))
+    ])
+    return grid
