@@ -1,0 +1,27 @@
+{
+  "ship": "116.6m coastal cargo (型线图116.6m.dxf)",
+  "source": "owner screenshot of DXF 主要参数 table, 2026-09-12",
+  "loa_m": 116.6,
+  "lwl_m": 110.65,
+  "lpp_m": 108.0,
+  "beam_m": 16.5,
+  "depth_m": 9.0,
+  "design_draft_m": 7.0,
+  "station_spacing_m": 5.4,
+  "cb": 0.82,
+  "displacement_t": 10530.0,
+  "lcb_fwd_of_mid_m": 1.44,
+  "cwp": 0.927,
+  "cm": 0.933,
+  "frame_spacing": {
+    "stern_to_#9": 0.6,
+    "9_to_152": 0.65,
+    "152_to_bow": 0.6,
+    "unit": "m"
+  },
+  "consistency_checks": {
+    "stations_x_spacing": "5.40 x 20 = 108.0 = Lpp OK",
+    "half_breadth_max": "8250 mm x 2 = 16.50 = Beam OK",
+    "cb_vs_displacement": "0.82 x 108 x 16.5 x 7.0 = 10236 m3; 10530/1.025 = 10273 m3 -> Cb 0.825 OK"
+  }
+}
