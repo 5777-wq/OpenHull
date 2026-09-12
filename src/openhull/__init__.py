@@ -12,6 +12,11 @@ from .drawing import (
     draw_lines_plan,
     save_offsets_csv,
 )
+from .fairness import (
+    FairnessIssue,
+    FairnessReport,
+    check_fairness,
+)
 from .geometry import (
     JBC_KM_TARGET_M,
     OffsetsTable,
@@ -109,6 +114,8 @@ __all__ = [
     "JBC_KM_TARGET_M",
     "FloatingPosition",
     "FreeboardResult",
+    "FairnessIssue",
+    "FairnessReport",
     "InitialStability",
     "LCG_TOLERANCE",
     "LackenbyReport",
@@ -120,6 +127,7 @@ __all__ = [
     "bulkcarrier_deadweight_ratio_statistics",
     "bonjean_areas",
     "estimate_main_dimensions",
+    "check_fairness",
     "floating_position",
     "free_surface_correction",
     "hydrostatics_at",

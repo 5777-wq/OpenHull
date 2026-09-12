@@ -122,6 +122,36 @@ def _dense_section(z: np.ndarray, y: np.ndarray, factor: int = 5):
     return yq, zq
 
 
+def _buttock_height(y_col: np.ndarray, heights: np.ndarray,
+                    target: float) -> float:
+    """Height where one station's section is ``target`` wide, m.
+
+    Convention: the TOPMOST crossing wins.  A bulbous section is wider
+    at the bulb than at the neck above it, so half-breadths are NOT
+    monotone in height and a section can cross the target more than
+    once; the sheer-view buttock is the visible upper limit of the
+    offset line, i.e. the highest intersection.  Returns 0.0 when the
+    section is at least ``target`` wide at its lowest tabulated level
+    (the offset line runs on the shell, effectively along the flat
+    bottom), and NaN when the section never reaches ``target`` or has
+    no usable (finite) entries.
+    """
+    m = ~np.isnan(y_col)
+    if m.sum() < 1:
+        return float("nan")
+    z, y = heights[m], y_col[m]
+    if target <= y.min() + 1e-12:
+        return 0.0          # whole section wider: line runs on the bottom
+    if target > y.max():
+        return float("nan")
+    for k in range(y.size - 1, 0, -1):      # topmost crossing first
+        if y[k - 1] < target <= y[k] or y[k] < target <= y[k - 1]:
+            # linear interpolation between the two bracketing levels
+            z0, z1, y0, y1 = z[k - 1], z[k], y[k - 1], y[k]
+            return float(z0 + (target - y0) * (z1 - z0) / (y1 - y0))
+    return float("nan")
+
+
 def _dense_buttock(x: np.ndarray, z_at: np.ndarray, factor: int = 6):
     """Dense (x, z) pairs of one buttock line over its valid span."""
     valid = ~np.isnan(z_at)
@@ -232,12 +262,8 @@ def draw_lines_plan(raw: dict, path: str, *,
     for frac, ls in ((0.25, (0, (5, 2))), (0.50, (0, (2, 1.5))),
                      (0.75, (0, (7, 2, 1, 2)))):
         target = frac * half
-        z_at = np.full(x.size, np.nan)
-        for i in range(x.size):
-            if target <= yw[i, 0] + 1e-12:
-                z_at[i] = 0.0            # hull wider than target at base
-            elif target <= yw[i, -1]:
-                z_at[i] = float(np.interp(target, yw[i], heights))
+        z_at = np.array([_buttock_height(yw[i], heights, target)
+                         for i in range(x.size)])
         xq, zq = _dense_buttock(x, z_at)
         ax_sheer.plot(xq, zq, color="black", linewidth=0.8, linestyle=ls)
         if not np.isnan(z_at[-1]):

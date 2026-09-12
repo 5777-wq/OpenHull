@@ -5,7 +5,8 @@ from pathlib import Path
 
 import numpy as np
 
-from openhull.drawing import draw_lines_plan, pchip, save_offsets_csv
+from openhull.drawing import (_buttock_height, draw_lines_plan, pchip,
+                              save_offsets_csv)
 from openhull.geometry import load_offsets_csv, load_raw_offsets
 
 CSV = Path(__file__).resolve().parents[1] / "examples" / "data" / \
@@ -18,6 +19,23 @@ def series60():
 
 def raw60():
     return load_raw_offsets(str(CSV), lpp=280.0, beam=45.0, draft=16.5)
+
+
+def test_buttock_height_bulb_section_takes_topmost_crossing():
+    # a bulbous section is wider low than at the neck above it: two
+    # crossings for the same target; the visible sheer-view buttock is
+    # the upper one (regression: np.interp silently misanswers on the
+    # non-monotone column)
+    heights = np.array([0.0, 1.0, 2.0, 3.0])
+    y = np.array([8.0, 3.0, 2.0, 1.5])
+    assert _buttock_height(y, heights, 2.5) == 1.5   # between z=1 and 2
+    assert _buttock_height(np.array([4.0, 3.5, 3.2, 3.0]), heights,
+                           3.0) == 0.0      # whole section wider: bottom
+    assert np.isnan(_buttock_height(y, heights, 99.0))
+    # sparse column: two finite entries bracketing the target are usable
+    assert _buttock_height(np.array([np.nan, 1.0, np.nan, 2.0]),
+                           heights, 1.5) == 2.0
+    assert np.isnan(_buttock_height(np.array([np.nan] * 4), heights, 1.0))
 
 
 def test_draw_lines_plan_writes_png(tmp_path):
