@@ -63,6 +63,9 @@ def pchip(x: np.ndarray, y: np.ndarray, factor: int = 8) -> tuple:
     y = np.asarray(y, dtype=float)
     keep = np.concatenate(([True], np.diff(x) > 0.0))
     x, y = x[keep], y[keep]          # drop duplicated abscissae
+    if y.size < 3:                   # too few points: fall back to linear
+        xq = np.linspace(x[0], x[-1], (max(y.size - 1, 1)) * factor + 1)
+        return xq, np.interp(xq, x, y)
     h = np.diff(x)
     delta = np.diff(y) / h
 
@@ -130,7 +133,9 @@ def _dense_buttock(x: np.ndarray, z_at: np.ndarray, factor: int = 6):
 
 def draw_lines_plan(raw: dict, path: str, *,
                     title: str = "Lines plan",
-                    dpi: int = 300) -> str:
+                    dpi: int = 300,
+                    wl_polylines: list | None = None,
+                    sec_polylines: list | None = None) -> str:
     """Draw the classic three-view lines plan as a monochrome PNG.
 
     ``raw`` is the drawing-grade grid from
@@ -154,7 +159,7 @@ def draw_lines_plan(raw: dict, path: str, *,
     lpp = float(x[-1])
     z_top = float(heights[5])            # 1.00 T = design waterline
     z_max = float(heights[-1])           # 1.50 T = top drawn waterline
-    half = float(yw[:, 5].max())         # maximum half breadth on the DWL
+    half = float(np.nanmax(yw[:, 5]))    # maximum half breadth on the DWL
     mid = 0.5 * (lpp)                    # midship
     xi = x / lpp
 
@@ -181,6 +186,14 @@ def draw_lines_plan(raw: dict, path: str, *,
 
     # ---- body plan (upper left): every station, spline-faired ----
     for i in range(1, x.size - 1):
+        if sec_polylines is not None:
+            z_sec, y_sec = sec_polylines[i]
+            if z_sec.size == 0:
+                continue
+            side = 1.0 if x[i] >= lpp / 2 else -1.0
+            ax_body.plot(side * y_sec, z_sec, color="black",
+                         linewidth=0.8)
+            continue
         y_sec, z_sec = _dense_section(heights, yw[i])
         side = 1.0 if xi[i] >= 0.5 else -1.0
         ax_body.plot(side * y_sec, z_sec, color="black", linewidth=0.8)
@@ -233,18 +246,41 @@ def draw_lines_plan(raw: dict, path: str, *,
 
     # ---- half-breadth plan (bottom right): all tabulated waterlines ----
     x_lab = 0.90 * lpp
-    for j in range(1, heights.size):
-        h = heights[j]
-        xq, yq = pchip(x, yw[:, j], factor=8)
-        dashed = h > z_top + 1e-9        # above-waterline layers
-        ax_plan.plot(xq, yq, color="black",
-                     linewidth=0.9 if not dashed else 0.6,
-                     linestyle="-" if not dashed else (0, (3, 2)))
-        y_lab = float(np.interp(x_lab, xq, yq))
-        ax_plan.annotate(_WL_LABELS[round(h / z_top, 3)],
-                         (x_lab, y_lab), xytext=(0, 3),
-                         textcoords="offset points", fontsize=6.5,
-                         color="black", ha="center")
+    if wl_polylines is not None:
+        for j, (u, v) in enumerate(wl_polylines):
+            if u.size == 0:
+                continue
+            h = heights[j]
+            dashed = h > z_top + 1e-9
+            ax_plan.plot(u, v, color="black",
+                         linewidth=0.9 if not dashed else 0.55,
+                         linestyle="-" if not dashed else (0, (3, 2)))
+        for frac in (0.075, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5):
+            j = int(np.argmin(np.abs(heights - frac * z_top)))
+            u_l, v_l = wl_polylines[j]
+            if u_l.size == 0:
+                continue
+            x_lab_j = min(x_lab, float(u_l[-1]) - 2.0)
+            y_lab = float(np.interp(x_lab_j, u_l, v_l))
+            if np.isnan(y_lab) or y_lab <= 0.0:
+                continue
+            ax_plan.annotate(_WL_LABELS[frac], (x_lab_j, y_lab),
+                             xytext=(0, 3), textcoords="offset points",
+                             fontsize=6.5, color="black", ha="center")
+    else:
+        for j in range(1, heights.size):
+            h = heights[j]
+            xq, yq = pchip(x, yw[:, j], factor=8)
+            dashed = h > z_top + 1e-9        # above-waterline layers
+            ax_plan.plot(xq, yq, color="black",
+                         linewidth=0.9 if not dashed else 0.6,
+                         linestyle="-" if not dashed else (0, (3, 2)))
+            y_lab = float(np.nanmax(yq))
+            frac = round(h / z_top, 3)
+            label = _WL_LABELS.get(frac, f"{frac:.2f}T")
+            ax_plan.annotate(label, (x_lab, y_lab), xytext=(0, 3),
+                             textcoords="offset points", fontsize=6.5,
+                             color="black", ha="center")
     ax_plan.axhline(half, color="black", linewidth=0.5)
     ax_plan.set_xlim(-lpp * 0.02, lpp * 1.08)
     ax_plan.set_ylim(-half * 0.14, half * 1.12)
