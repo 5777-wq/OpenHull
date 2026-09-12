@@ -8,6 +8,10 @@ published benchmark ships (see AGENTS.md for the binding conventions).
 
 from importlib.metadata import PackageNotFoundError, version
 
+from .drawing import (
+    draw_lines_plan,
+    save_offsets_csv,
+)
 from .geometry import (
     JBC_KM_TARGET_M,
     OffsetsTable,
@@ -125,10 +129,12 @@ __all__ = [
     "knots_to_ms",
     "lackenby_transform",
     "area_curve",
+    "draw_lines_plan",
     "load_offsets_csv",
     "minimum_freeboard",
     "ms_to_knots",
     "outfit_area_coefficient_from_parent",
+    "save_offsets_csv",
     "simpson",
     "solve_weight_balance",
     "steel_cubic_coefficient_from_parent",
