@@ -53,7 +53,12 @@ def test_cli_csv_flag_streams_parseable_table(capsys):
     header = lines[0].split(",")
     row = dict(zip(header, lines[-1].split(",")))
     assert float(row["draft_m"]) == pytest.approx(16.5)
-    assert float(row["km_m"]) == pytest.approx(18.59, abs=0.01)
+    # task 2.6 switched the CLI hull from the stage-1 fitted parent
+    # (KM pinned to the anchor) to the real mother-ship chain: the
+    # anchor band (±2 %, AGENTS.md section 4) still governs, and the
+    # new exact value is pinned so drift shows up as a number
+    assert abs(float(row["km_m"]) - 18.59) / 18.59 < 0.02
+    assert float(row["km_m"]) == pytest.approx(18.6978, abs=0.005)
 
 
 def test_cli_json_flag_roundtrips(capsys):

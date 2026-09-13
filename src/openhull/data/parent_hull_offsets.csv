@@ -1,0 +1,51 @@
+# Series 60 parent form - total prismatic coefficient 0.805 ("Series 60, Cb = 0.80")
+# Model 4214W-B4 | Forebody prismatic 0.861 | Afterbody prismatic 0.750
+#
+# Source: Todd, F.H., "Series 60 - Methodical Experiments with Models of
+#   Single-Screw Merchant Ships", DTMB Report 1712, July 1963, Table 7,
+#   page V-10 (PDF page 52 of the public-domain scan archived at
+#   archive.org/items/DTIC_AD0419990; DTIC accession AD0419990).
+# Local copy of the report (internal, never committed):
+#   知识库/DTMB_1712_Series60/DTMB_Report_1712_Todd_1963.pdf
+#
+# Values are half-breadths as FRACTIONS of each waterline's maximum half
+# breadth, exactly as tabulated in the report. Multiply each waterline
+# column by the max_half_beam row to obtain fractions of B/2; multiply
+# by B/2 for absolute metres. Waterline numbers are draft/T ratios of
+# the parent (1.00 = designed load waterline). area_fraction is the
+# sectional area as a fraction of the midship area to the 1.00 WL.
+# Stations run from FP (bow) to AP in twentieths of Lpp; "Tan." is the
+# tangent line at the baseline (0.075 is the first waterline above it).
+#
+# Digitized 2026-09-11 from the report's text layer, cross-checked
+# visually against the rendered page at 300 dpi (three low-resolution
+# misreads corrected: station 1 @ WL 1.25 = 0.554, station 18.5 tangent
+# = 0.092, station 19 @ WL 0.50 = 0.166).
+#
+station,tan_line,wl_0.075,wl_0.25,wl_0.50,wl_0.75,wl_1.00,wl_1.25,wl_1.50,area_fraction
+FP,0.000,0.000,0.000,0.000,0.000,0.000,0.044,0.098,0.000
+0.5,0.053,0.162,0.235,0.258,0.267,0.280,0.318,0.378,0.243
+1,0.160,0.324,0.435,0.486,0.505,0.522,0.554,0.613,0.458
+1.5,0.286,0.467,0.581,0.650,0.681,0.700,0.728,0.779,0.620
+2,0.423,0.591,0.702,0.774,0.808,0.830,0.852,0.890,0.746
+3,0.696,0.793,0.867,0.921,0.948,0.964,0.975,0.984,0.901
+4,0.903,0.929,0.962,0.983,0.994,0.999,1.000,1.000,0.975
+5,0.990,0.991,0.995,0.998,1.000,1.000,1.000,1.000,0.997
+6,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000
+7,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000
+8,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000
+9,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000
+10,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000
+11,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000,1.000
+12,0.996,0.997,1.000,1.000,1.000,1.000,1.000,1.000,0.999
+13,0.958,0.976,0.996,1.000,1.000,1.000,1.000,1.000,0.995
+14,0.858,0.906,0.958,0.991,1.000,1.000,1.000,1.000,0.974
+15,0.686,0.780,0.872,0.941,0.972,0.988,0.996,1.000,0.915
+16,0.486,0.625,0.726,0.831,0.900,0.941,0.969,0.991,0.806
+17,0.302,0.442,0.542,0.656,0.765,0.851,0.915,0.964,0.649
+18,0.146,0.266,0.337,0.427,0.560,0.712,0.832,0.896,0.449
+18.5,0.092,0.185,0.232,0.298,0.425,0.617,0.764,0.840,0.336
+19,0.045,0.105,0.130,0.166,0.263,0.503,0.670,0.760,0.212
+19.5,0.013,0.026,0.032,0.035,0.071,0.353,0.546,0.644,0.079
+AP,0.000,0.000,0.000,0.000,0.000,0.160,0.370,0.476,0.100
+max_half_beam,0.850,0.970,1.000,1.000,1.000,1.000,1.000,1.000,

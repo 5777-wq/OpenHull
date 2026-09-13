@@ -22,12 +22,15 @@ from .geometry import (
     OffsetsTable,
     jbc_parent_offsets,
     load_offsets_csv,
+    load_parent_offsets,
+    scale_offsets,
 )
 from .linesplan import (
     LackenbyReport,
     TRANSFORM_ALGORITHMS,
     area_curve,
     lackenby_transform,
+    parent_to_taskbook,
 )
 from .freeboard import (
     FreeboardResult,
@@ -136,6 +139,9 @@ __all__ = [
     "jbc_parent_offsets",
     "knots_to_ms",
     "lackenby_transform",
+    "load_parent_offsets",
+    "parent_to_taskbook",
+    "scale_offsets",
     "area_curve",
     "draw_lines_plan",
     "load_offsets_csv",

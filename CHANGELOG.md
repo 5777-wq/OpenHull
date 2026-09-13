@@ -8,6 +8,15 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- Mother-ship geometry chain (plan task 2.6): the CLI and library now
+  build the hull from REAL tabulated offsets — the packaged digitised
+  Series 60 parent (`openhull/data/`, byte-identical to the examples
+  CSV), affine-scaled onto the balanced task-book dimensions
+  (`scale_offsets`, coefficients invariant) and Lackenby-transformed
+  onto the task-book block coefficient (`parent_to_taskbook`).
+  Acceptance at the JBC anchors: displacement volume within ±1 %,
+  Cb ±0.005, KM ±2 %, LCB ±0.02 %Lpp — all met; Bonjean integration
+  stays consistent with the hydrostatics volume (rel 1e-4).
 - Lackenby hull-form transform (plan task 2.3): `lackenby_transform`
   with fore/aft prismatic-coefficient split, parallel-middle-body
   shift, table-level convergence iteration and guard rails; selectable

@@ -46,7 +46,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .geometry import OffsetsTable
+from .geometry import OffsetsTable, load_parent_offsets, scale_offsets
 from .hydrostatics import simpson
 from .spec import SpecValidationError
 
@@ -588,6 +588,51 @@ def _carry_table(table: OffsetsTable, fore, aft) -> OffsetsTable:
         waterlines=table.waterlines.copy(), half_breadths=new_breadths,
     )
     return new_table, dx
+
+
+def parent_to_taskbook(
+    *,
+    lpp: float,
+    beam: float,
+    draft: float,
+    target_cb: float,
+    target_lcb_pct: float | None = None,
+    max_passes: int = MAX_PASSES,
+) -> tuple:
+    """Mother-ship chain from the PACKAGED digitised parent (task 2.6).
+
+    The full geometry path of the stage-2 chain in one call:
+
+      1. load the packaged digitised Series 60 parent (DTMB 1712
+         Table 7, provenance in ``examples/data/DATA_SOURCES.md``);
+      2. affine-scale it onto the task-book dimensions ``(lpp, beam,
+         draft)`` — all form coefficients are invariant;
+      3. Lackenby-transform the scaled table onto ``target_cb`` (and
+         optionally ``target_lcb_pct``).
+
+    This replaces the stage-1 analytic fitted parent: the hull the
+    hydrostatics see is now built from REAL tabulated offsets.
+
+    Args:
+        lpp / beam / draft: task-book dimensions, m (all > 0).  draft
+            is the design draft and also the new grid top.
+        target_cb: desired block coefficient at the design draft.
+        target_lcb_pct: desired LCB, % Lpp (fwd+); None keeps the
+            parent's longitudinal distribution.
+        max_passes: ceiling for the Lackenby convergence loop.
+
+    Returns:
+        ``(table, report)`` — the transformed :class:`OffsetsTable`
+        and the :class:`LackenbyReport` audit trail.
+    """
+    parent = load_parent_offsets()
+    scaled = scale_offsets(parent, lpp=lpp, beam=beam, draft=draft)
+    return lackenby_transform(
+        scaled,
+        target_cb=target_cb,
+        target_lcb_pct=target_lcb_pct,
+        max_passes=max_passes,
+    )
 
 
 # ---------------------------------------------------------------------------

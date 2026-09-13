@@ -52,6 +52,10 @@ their prismatic coefficient; "Series 60, Cb = 0.80" refers to the
   against the rendered page at 300 dpi; the whole table re-verified
   row-by-row against the 300-dpi render during task 2.3 — one
   transposed-cell suspicion on the AP row investigated and cleared).
+  Since plan task 2.6 a byte-identical copy ships inside the package
+  as `openhull/data/parent_hull_offsets.csv` (loaded by
+  `openhull.geometry.load_parent_offsets`); a test pins the two files
+  to be equal, so the provenance on this page covers both.
 - Loading conventions (`openhull.geometry.load_offsets_csv`): each
   waterline column holds half-breadths as fractions of THAT waterline's
   maximum half-breadth; the `max_half_beam` row holds per-column maxima

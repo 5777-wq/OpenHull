@@ -28,8 +28,10 @@ from pathlib import Path
 
 import yaml
 
-from .geometry import jbc_parent_offsets
+from .geometry import jbc_parent_offsets  # noqa: F401  (1.x fitted parent,
+#   kept for the validation tests; the run chain uses real offsets - 2.6)
 from .hydrostatics import hydrostatics_table
+from .linesplan import parent_to_taskbook
 from .spec import knots_to_ms, ShipSpec, SpecValidationError
 from .weight_balance import solve_weight_balance
 
@@ -131,9 +133,15 @@ def run_taskbook(taskbook_path: str) -> dict:
 
     balance = solve_weight_balance(spec)
 
-    # hydrostatics on the stage-1 fitted parent hull at fractions of the
-    # balanced design draft (geometry task 1.4; real offsets arrive in 2.1)
-    hull = jbc_parent_offsets(draft=design_draft)
+    # stage-2 chain (task 2.6): REAL offsets — the packaged digitised
+    # Series 60 parent, affine-scaled onto the balanced dimensions and
+    # Lackenby-transformed onto the task-book block coefficient
+    hull, transform = parent_to_taskbook(
+        lpp=balance.lpp,
+        beam=balance.beam,
+        draft=balance.draft,
+        target_cb=spec.cb,
+    )
     drafts = [round(design_draft * f, 4) for f in (0.25, 0.5, 0.75, 1.0)]
     hydro_table = hydrostatics_table(hull, drafts)
     hydro_design = hydro_table.at(drafts[-1])
@@ -141,6 +149,13 @@ def run_taskbook(taskbook_path: str) -> dict:
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
         "ship_type": spec.ship_type,
+        "hull_source": (
+            "digitised Series 60 parent (DTMB 1712 Table 7) affine-scaled "
+            "+ Lackenby"
+        ),
+        "transform_passes": transform.iterations,
+        "cb_target": spec.cb,
+        "cb_achieved": round(transform.achieved.get("cb", float("nan")), 4),
         "deadweight_t": balance.deadweight_t,
         "algorithm_id": balance.algorithm_id,
         "displacement_t": round(balance.displacement_t, 3),
@@ -180,7 +195,10 @@ def _print_summary(summary: dict) -> None:
     )
     print(f"deadweight ratio    : {summary['deadweight_ratio_achieved']:>12.4f}")
     print("-" * 64)
-    print(f"hydrostatics at {design['draft_m']:.2f} m (stage-1 fitted parent):")
+    print(f"hydrostatics at {design['draft_m']:.2f} m "
+          f"({summary['hull_source']}, {summary['transform_passes']} passes):")
+    print(f"  cb achieved          {design['cb']:>10.4f} "
+          f"(target {summary['cb_target']:.4f})")
     print(f"  displacement volume {design['displacement_volume_m3']:>10.1f} m3")
     print(
         f"  KM = KB + BMT      {design['km_m']:>10.3f} m "

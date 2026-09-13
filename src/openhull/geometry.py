@@ -557,6 +557,90 @@ def load_raw_offsets(path: str, *, lpp: float, beam: float,
     }
 
 
+# ---------------------------------------------------------------------------
+# Mother-ship affine scaling and the packaged digitised parent (task 2.6)
+# ---------------------------------------------------------------------------
+
+
+def scale_offsets(
+    table: OffsetsTable,
+    *,
+    lpp: float,
+    beam: float,
+    draft: float,
+) -> OffsetsTable:
+    """Affine mother-ship scaling of an offsets table to new dimensions.
+
+    The classical mother-ship method: every abscissa is stretched by
+    ``lpp / table.lpp``, every half-breadth by ``beam / table.beam``
+    and every waterline height by ``draft / table.waterlines[-1]``.
+    All form coefficients (Cb, Cm, Cwp, Cp) and the LCB position in
+    percent of Lpp are INVARIANT under this mapping — only the size
+    changes — which is exactly why a digitised parent of one size can
+    serve task books of any size.
+
+    Args:
+        table: parent offsets grid.
+        lpp: target length between perpendiculars, m (> 0).
+        beam: target moulded beam, m (> 0).
+        draft: target waterline extent of the grid, m (> 0).  This is
+            the DEEPEST waterline of the new grid, normally the design
+            draft of the task book.
+
+    Returns:
+        The scaled :class:`OffsetsTable` (original untouched).
+    """
+    for name, value in (("lpp", lpp), ("beam", beam), ("draft", draft)):
+        if not math.isfinite(value) or value <= 0:
+            raise SpecValidationError(
+                name, value, "finite positive target dimension",
+                "affine scaling stretches the parent onto the task-book "
+                "dimensions; a zero or negative target describes no ship.",
+            )
+    sx = lpp / table.lpp
+    sb = beam / table.beam
+    sz = draft / float(table.waterlines[-1])
+    # the new beam is derived from the SAME factor sb that scales the
+    # half-breadths: deriving it independently (beam := lpp request)
+    # can leave y_max a float ulp above beam/2 and trip the table's
+    # own 0 <= y <= B/2 validation on the parent's full-beam stations
+    new_beam = float(table.beam * sb)
+    return OffsetsTable(
+        lpp=float(lpp),
+        beam=new_beam,
+        stations=table.stations * sx,
+        waterlines=table.waterlines * sz,
+        half_breadths=table.half_breadths * sb,
+    )
+
+
+def load_parent_offsets(
+    *,
+    n_stations: int = 21,
+    n_waterlines: int = 27,
+) -> OffsetsTable:
+    """The PACKAGED digitised Series 60 parent (plan task 2.6).
+
+    Loads ``openhull/data/parent_hull_offsets.csv`` — the same DTMB
+    1712 Table 7 digitisation as ``examples/data/`` (byte-identical,
+    pinned by a test) — so the mother-ship chain runs from any
+    working directory without repo-relative paths.  Provenance:
+    ``examples/data/DATA_SOURCES.md`` (Todd, DTMB Report 1712, 1963).
+
+    Returns:
+        The parent :class:`OffsetsTable` at the tabulated size
+        (Lpp 280 m, B 45 m, grid top = 16.5 m).
+    """
+    from importlib.resources import as_file, files
+
+    ref = files("openhull").joinpath("data", "parent_hull_offsets.csv")
+    with as_file(ref) as path:
+        return load_offsets_csv(
+            str(path), lpp=280.0, beam=45.0, draft=16.5,
+            n_stations=n_stations, n_waterlines=n_waterlines,
+        )
+
+
 def load_upper_offsets(
     path: str,
     *,
