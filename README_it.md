@@ -16,12 +16,18 @@ propulsione / stabilità e output di disegni (DXF).
 
 ## Stato
 
-**v0.1 pubblicato** — fase 1 completata: bilanciamento peso-spinta dal libretto di progetto, dimensioni principali, idrostatica, stabilità iniziale ed assetto, franco bordo — tutto validato sulla nave di riferimento JBC (vedi [VALIDATION.md](VALIDATION.md)). Esecuzione: `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.2 pubblicato** — fasi 1–2 completate: bilanciamento peso-spinta dal libretto di progetto, dimensioni principali, idrostatica, stabilità iniziale ed assetto, franco bordo, più la catena parametrica della carena — offset reali digitalizzati della nave madre, scalatura affine, trasformazione di Lackenby, piano delle forme e verifica numerica di regolarità — tutto validato sulla nave di riferimento JBC (vedi [VALIDATION.md](VALIDATION.md)). Esecuzione: `openhull run examples/taskbook_bulk_carrier.yaml`. — fase 1 completata: bilanciamento peso-spinta dal libretto di progetto, dimensioni principali, idrostatica, stabilità iniziale ed assetto, franco bordo — tutto validato sulla nave di riferimento JBC (vedi [VALIDATION.md](VALIDATION.md)). Esecuzione: `openhull run examples/taskbook_bulk_carrier.yaml`.
+
+## Piano delle forme (prodotto della fase 2)
+
+![Lines plan - Series 60 parent transformed onto the JBC targets](examples/lines_plan_series60_to_jbc.png)
+
+![Lines plan - 116.6 m coastal cargo ship rebuilt from the owner's offset table](examples/real_ship_116/lines_plan.png)
 
 ## Roadmap
 
 - [x] Fase 1 — Iterazione delle dimensioni principali e nucleo idrostatico (**v0.1**)
-- [ ] Fase 2 — Generazione parametrica della carena (trasformazione della nave madre)
+- [x] Fase 2 — Generazione parametrica della carena (trasformazione della nave madre) (**v0.2**)
 - [ ] Fase 3 — Ciclo delle prestazioni: resistenza / propulsione / stabilità
 - [ ] Fase 4 — Output di disegni (DXF) e relazioni di progetto
 - [ ] Fase 5 — Documentazione e rilascio di comunità (v1.0)

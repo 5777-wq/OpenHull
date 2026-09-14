@@ -14,12 +14,18 @@ resistance / propulsion / stability estimates, and drawing outputs (DXF).
 
 ## Status
 
-**v0.1 released** — stage 1 complete: task-book weight-buoyancy balance, principal dimensions, hydrostatics, initial stability & trim, and freeboard checks — all validated against the JBC benchmark ship (see [VALIDATION.md](VALIDATION.md)). One command: `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.2 released** — stages 1–2 complete: task-book weight-buoyancy balance, principal dimensions, hydrostatics, initial stability & trim, freeboard checks, and the parametric hull-form chain — real digitised parent offsets, affine scaling, Lackenby transform, lines-plan output and numerical fairness checks — all validated against the JBC benchmark ship (see [VALIDATION.md](VALIDATION.md)). One command: `openhull run examples/taskbook_bulk_carrier.yaml`. — stage 1 complete: task-book weight-buoyancy balance, principal dimensions, hydrostatics, initial stability & trim, and freeboard checks — all validated against the JBC benchmark ship (see [VALIDATION.md](VALIDATION.md)). One command: `openhull run examples/taskbook_bulk_carrier.yaml`.
+
+## Lines plan (stage-2 output)
+
+![Lines plan - Series 60 parent transformed onto the JBC targets](examples/lines_plan_series60_to_jbc.png)
+
+![Lines plan - 116.6 m coastal cargo ship rebuilt from the owner's offset table](examples/real_ship_116/lines_plan.png)
 
 ## Roadmap
 
 - [x] Stage 1 — Principal dimension iteration & hydrostatics core (**v0.1**)
-- [ ] Stage 2 — Parametric hull form generation (mother-ship transformation)
+- [x] Stage 2 — Parametric hull form generation (mother-ship transformation) (**v0.2**)
 - [ ] Stage 3 — Performance loop: resistance / propulsion / stability
 - [ ] Stage 4 — Drawing output (DXF) & design reports
 - [ ] Stage 5 — Documentation & community release (v1.0)

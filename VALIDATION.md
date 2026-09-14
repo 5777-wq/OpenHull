@@ -6,8 +6,9 @@
 > Benchmarks and data sources: [`examples/data/DATA_SOURCES.md`](examples/data/DATA_SOURCES.md).
 > Binding conventions: [`AGENTS.md`](AGENTS.md) (tolerances in section 4).
 
-Status: **stage 1 (dimensions + hydrostatics core) complete**, 113 tests
-green. `openhull run` reproduces the chain end to end.
+Status: **stages 1–2 complete** (dimensions + hydrostatics core +
+parametric hull generation on real offsets), 171 tests green.
+`openhull run` reproduces the chain end to end.
 
 ## Stage-1 acceptance summary (TB-001 / JBC-anchored)
 
@@ -97,6 +98,42 @@ method. The Series 60 → JBC run demonstrates the pipeline reaches an
 independent modern benchmark from a 1963 parent without refitting
 anything.
 
+### Numerical fairness checks (task 2.5)
+
+| Check | Result | Criterion |
+|---|---|---|
+| Digitised Series 60 parent (known fair, DTMB 1712 Table 7) | **zero issues** over 27 waterlines × 21 stations | plan acceptance: no false alarms |
+| Calibration basis | parent's max measured curvature contrast 12.2 (dimensionless, Lpp²/B scale); absolute alarm floor set to 25 (~2×) | margin test: max contrast < 0.7 × floor |
+| Planted single-point spike (+0.06 B at one bow station) | flagged as curvature jump at the right waterline and station | must catch the guilty |
+| Planted slope kink (+0.15 m per station ramp) | flagged as curvature jump | must catch the guilty |
+| Planted lobe break (plateau dent −0.05 B) | flagged as non-monotonic | must catch the guilty |
+| Planted parallel-body wobble (−0.06 m inside the run) | flagged as parallel wobble | must catch the guilty |
+| Smooth bulb bump on a low waterline (fair feature) | no alarm (contrast below floor; monotonicity scoped out below 0.5 draft) | no false alarms |
+| Real-ship demo (94 m coastal ship, owner's DXF rebuild) | three stern-bottom cells flagged (baseline width 25 mm → 6,195 mm between adjacent stations) | human-review worklist |
+
+### Mother-ship chain on real offsets (task 2.6)
+
+The `openhull run` hull is now built from REAL tabulated offsets: the
+packaged digitised Series 60 parent (byte-identical to the examples
+CSV, pinned by test; ships inside the built wheel), affine-scaled onto
+the balanced task-book dimensions, then Lackenby-transformed onto the
+task-book block coefficient.
+
+| Check | Result | Criterion |
+|---|---|---|
+| Chain at JBC dimensions/targets: displacement volume | within ±1 % of 178,369.9 m³ [NMRI] | ±1 % |
+| Chain Cb | 0.8578 vs 0.8580 [NMRI] | ±0.005 |
+| Chain KM (CLI end-to-end) | 18.698 m vs 18.59 m [NMRI] → **+0.58 %** | ±2 % |
+| Chain LCB | +2.5411 %L vs +2.5475 [NMRI] | ±0.02 %L |
+| Affine scaling invariants | coefficients unchanged; half-scale ship displaces exactly 1/8 | exact |
+| Bonjean ×-integration vs hydrostatics volume on the chain table | agrees | rel 1e-4 |
+| CLI determinism (same task book, two runs) | identical output | equality |
+| Packaged data file ships in the built wheel | verified by wheel inspection | — |
+
+TPC / Aw / KB / LCF still have **no published JBC values**; they are
+now computed on the real-offsets chain and carry definition-identity
+tests plus the cross-flux check.
+
 ## Declared circularities and approximations
 
 These are features of the current stage, not hidden weaknesses:
@@ -141,7 +178,7 @@ These are features of the current stage, not hidden weaknesses:
 ## Reproducing
 
 ```bash
-uv run pytest                        # 138 tests
+uv run pytest                        # 171 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

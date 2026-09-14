@@ -17,12 +17,18 @@ plans (DXF).
 
 ## État d'avancement
 
-**v0.1 publié** — étape 1 terminée : équilibre poids-poussée piloté par cahier des charges, dimensions principales, hydrostatique, stabilité initiale et assiette, franc-bord — le tout validé sur le navire de référence JBC (voir [VALIDATION.md](VALIDATION.md)). Exécution : `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.2 publié** — étapes 1–2 terminées : équilibre poids-poussée piloté par cahier des charges, dimensions principales, hydrostatique, stabilité initiale et assiette, franc-bord, ainsi que la chaîne paramétrique de carène — tableaux d'offsets réels numérisés, mise à l'échelle affine, transformation de Lackenby, plan des formes et contrôle numérique de régularité — le tout validé sur le navire de référence JBC (voir [VALIDATION.md](VALIDATION.md)). Exécution : `openhull run examples/taskbook_bulk_carrier.yaml`. — étape 1 terminée : équilibre poids-poussée piloté par cahier des charges, dimensions principales, hydrostatique, stabilité initiale et assiette, franc-bord — le tout validé sur le navire de référence JBC (voir [VALIDATION.md](VALIDATION.md)). Exécution : `openhull run examples/taskbook_bulk_carrier.yaml`.
+
+## Plan des formes (livrable de l'étape 2)
+
+![Lines plan - Series 60 parent transformed onto the JBC targets](examples/lines_plan_series60_to_jbc.png)
+
+![Lines plan - 116.6 m coastal cargo ship rebuilt from the owner's offset table](examples/real_ship_116/lines_plan.png)
 
 ## Feuille de route
 
 - [x] Étape 1 — Itération des dimensions principales & noyau hydrostatique (**v0.1**)
-- [ ] Étape 2 — Génération paramétrique de carène (transformation du navire mère)
+- [x] Étape 2 — Génération paramétrique de carène (transformation du navire mère) (**v0.2**)
 - [ ] Étape 3 — Boucle performance : résistance / propulsion / stabilité
 - [ ] Étape 4 — Sorties graphiques (DXF) & rapports de conception
 - [ ] Étape 5 — Documentation et publication communautaire (v1.0)

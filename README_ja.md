@@ -15,12 +15,18 @@ AIエージェントがオーケストレーションする、オープンソー
 
 ## 現在の状況
 
-**v0.1 リリース** —— ステージ 1 完了：タスクブック駆動の重量・浮力平衡、主要目、静水力、初期復元性・トリム、乾舷チェック、すべて JBC 基準船で検証済み（[VALIDATION.md](VALIDATION.md) 参照）。実行：`openhull run examples/taskbook_bulk_carrier.yaml`。
+**v0.2 リリース** —— ステージ 1・2 完了：タスクブック駆動の重量・浮力平衡、主要目、静水力、初期復元性・トリム、乾舷チェックに加え、パラメトリック船型チェーン——実母型のデジタル化データ、アフィン変換、Lackenby 変換、船体線図出力、数値平滑度チェック——すべて JBC 基準船で検証済み（[VALIDATION.md](VALIDATION.md) 参照）。実行：`openhull run examples/taskbook_bulk_carrier.yaml`。 —— ステージ 1 完了：タスクブック駆動の重量・浮力平衡、主要目、静水力、初期復元性・トリム、乾舷チェック、すべて JBC 基準船で検証済み（[VALIDATION.md](VALIDATION.md) 参照）。実行：`openhull run examples/taskbook_bulk_carrier.yaml`。
+
+## 船体線図（ステージ 2 の成果物）
+
+![Lines plan - Series 60 parent transformed onto the JBC targets](examples/lines_plan_series60_to_jbc.png)
+
+![Lines plan - 116.6 m coastal cargo ship rebuilt from the owner's offset table](examples/real_ship_116/lines_plan.png)
 
 ## ロードマップ
 
 - [x] ステージ 1 — 主寸法反復と静水性能計算コア (**v0.1**)
-- [ ] ステージ 2 — パラメトリック船型生成（母型船変換）
+- [x] ステージ 2 — パラメトリック船型生成（母型船変換）(**v0.2**)
 - [ ] ステージ 3 — 性能ループ：抵抗／推進／復原性
 - [ ] ステージ 4 — 図面出力（DXF）と設計報告書
 - [ ] ステージ 5 — ドキュメント整備とコミュニティリリース（v1.0）

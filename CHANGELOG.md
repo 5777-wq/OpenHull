@@ -4,7 +4,7 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
-## [Unreleased]
+## [0.2.0] - 2026-09-13
 
 ### Added
 
