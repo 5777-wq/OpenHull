@@ -10,6 +10,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .drawing import (
     draw_lines_plan,
+    save_lines_plan_dxf,
     save_offsets_csv,
 )
 from .fairness import (
@@ -148,6 +149,7 @@ __all__ = [
     "minimum_freeboard",
     "ms_to_knots",
     "outfit_area_coefficient_from_parent",
+    "save_lines_plan_dxf",
     "save_offsets_csv",
     "simpson",
     "solve_weight_balance",

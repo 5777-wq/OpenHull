@@ -4,6 +4,19 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [Unreleased]
+
+### Added
+
+- Layered DXF lines-plan export (plan task 2.7):
+  `save_lines_plan_dxf` writes the three views (body plan / sheer /
+  half-breadth plan) onto an A3 frame with one layer per content class
+  (sections, waterlines, buttocks, deck, heavy design waterline, grid,
+  labels), curves as PCHIP-faired polylines.  All TEXT entities are
+  pure ASCII so AutoCAD opens the file without mojibake in any locale;
+  a non-ASCII title is ASCII-folded.  Example:
+  `examples/lines_plan_series60_to_jbc.dxf`.
+
 ## [0.2.0] - 2026-09-14
 
 ### Added

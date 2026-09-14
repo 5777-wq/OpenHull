@@ -337,3 +337,188 @@ def draw_lines_plan(raw: dict, path: str, *,
     fig.savefig(path, dpi=dpi, facecolor="white")
     plt.close(fig)
     return path
+
+
+# ---------------------------------------------------------------------------
+# DXF lines-plan export (plan task 2.7)
+# ---------------------------------------------------------------------------
+
+#: DXF layer plan: name -> (aci colour, description)
+DXF_LAYERS = {
+    "FRAME": (7, "sheet frame and title block"),
+    "SECTIONS": (7, "body-plan station sections"),
+    "WATERLINES": (7, "half-breadth-plan waterlines"),
+    "BUTTOCKS": (7, "sheer-view buttock lines"),
+    "DECK": (7, "deck edge and centreline curves"),
+    "DWL": (5, "design waterline (heavy)"),
+    "GRID": (253, "reference grid lines (light)"),
+    "LABELS": (7, "view titles, notes, station labels"),
+}
+
+
+def save_lines_plan_dxf(
+    raw: dict,
+    path: str,
+    *,
+    title: str = "Lines plan",
+    dxf_version: str = "R2018",
+) -> str:
+    """Export the three-view lines plan as a layered DXF drawing.
+
+    Sheet layout: an A3 landscape frame (420 x 297 mm) with a title
+    strip; body plan left, sheer view top right, half-breadth plan
+    bottom right — the same views as :func:`draw_lines_plan`.  Each
+    view keeps its own equal aspect ratio (scales differ between
+    views, as in the PNG sheet and as noted on the drawing).
+
+    All TEXT entities are pure ASCII on purpose: AutoCAD opens the
+    file with no font-substitution surprises regardless of locale
+    (plan task 2.7 acceptance "no mojibake").
+
+    Args:
+        raw: the drawing-grade grid (see ``load_raw_offsets``).
+        path: output ``.dxf`` path.
+        title: drawing title (ASCII characters only).
+        dxf_version: ezdxf DXF version id (default R2018).
+
+    Returns:
+        The written path.
+    """
+    import ezdxf
+    from ezdxf.enums import TextEntityAlignment
+
+    doc = ezdxf.new(dxf_version, setup=True)
+    msp = doc.modelspace()
+    for name, (aci, _descr) in DXF_LAYERS.items():
+        doc.layers.add(name, color=aci)
+
+    x = np.asarray(raw["stations"], dtype=float)
+    heights = np.asarray(raw["heights"], dtype=float)
+    yw = np.asarray(raw["half_breadths"], dtype=float)
+    lpp = float(x[-1])
+    fr = raw.get("fractions")
+    if fr is not None:
+        i_dwl = int(np.argmin(np.abs(np.asarray(fr, dtype=float) - 1.0)))
+    else:
+        i_dwl = 5
+    z_top = float(heights[i_dwl])
+    z_max = float(heights[-1])
+    half = float(np.nanmax(yw[:, i_dwl]))
+
+    # ---- sheet frame and title strip ---------------------------------
+    W, H = 420.0, 297.0
+    msp.add_lwpolyline(
+        [(0, 0), (W, 0), (W, H), (0, H)], close=True, dxfattribs={"layer": "FRAME"}
+    )
+    msp.add_lwpolyline(
+        [(8, 8), (W - 8, 8), (W - 8, H - 8), (8, H - 8)],
+        close=True,
+        dxfattribs={"layer": "FRAME"},
+    )
+    msp.add_line((8, 26), (W - 8, 26), dxfattribs={"layer": "FRAME"})
+    ascii_title = title.encode("ascii", "replace").decode("ascii")
+    msp.add_text(
+        ascii_title,
+        dxfattribs={"layer": "LABELS", "height": 5.0},
+    ).set_placement((12, 29), align=TextEntityAlignment.BOTTOM_LEFT)
+    msp.add_text(
+        "OpenHull - all dimensions in metres, moulded surface; "
+        "station 0 = AP, station 20 = FP; scales differ between views",
+        dxfattribs={"layer": "LABELS", "height": 2.2},
+    ).set_placement((12, 12), align=TextEntityAlignment.BOTTOM_LEFT)
+
+    def _frame(x0, y0, x1, y1):
+        msp.add_lwpolyline(
+            [(x0, y0), (x1, y0), (x1, y1), (x0, y1)],
+            close=True,
+            dxfattribs={"layer": "FRAME"},
+        )
+
+    def _view_mapper(x0, y0, x1, y1, span_x, span_y, margin=6.0):
+        """Linear mapper from data space into a view box, equal aspect."""
+        w, h = x1 - x0 - 2 * margin, y1 - y0 - 2 * margin
+        s = min(w / span_x, h / span_y)
+        ox = x0 + margin + (w - span_x * s) / 2.0
+        oy = y0 + margin + (h - span_y * s) / 2.0
+        return lambda px, py: (ox + px * s, oy + py * s)
+
+    def _polyline(points, layer, linetype=None):
+        pts = [(float(px), float(py)) for px, py in points]
+        if len(pts) < 2:
+            return
+        attribs = {"layer": layer}
+        if linetype:
+            attribs["linetype"] = linetype
+        msp.add_lwpolyline(pts, dxfattribs=attribs)
+
+    def _label(text, px, py, height=2.6, align="BOTTOM_LEFT"):
+        ascii_text = text.encode("ascii", "replace").decode("ascii")
+        msp.add_text(
+            ascii_text, dxfattribs={"layer": "LABELS", "height": height}
+        ).set_placement((float(px), float(py)), align=getattr(
+            TextEntityAlignment, align
+        ))
+
+    # ---- body plan (left): fore right / aft left of the centreline ---
+    bx0, by0, bx1, by1 = 12.0, 32.0, 150.0, H - 12.0
+    _frame(bx0, by0, bx1, by1)
+    map_b = _view_mapper(bx0, by0, bx1, by1, 2.0 * half * 1.1, z_max * 1.08)
+    cx = (bx0 + bx1) / 2.0
+    for i in range(1, x.size - 1):
+        y_sec, z_sec = _dense_section(heights, yw[i])
+        side = 1.0 if x[i] >= lpp / 2.0 else -1.0
+        pts = [map_b(side * float(yv), float(zv)) for yv, zv in zip(y_sec, z_sec)]
+        _polyline(pts, "SECTIONS")
+    dwl_y = [(map_b(-half * 1.05, z_top)[0], map_b(-half * 1.05, z_top)[1]),
+             (map_b(half * 1.05, z_top)[0], map_b(half * 1.05, z_top)[1])]
+    msp.add_line(*dwl_y, dxfattribs={"layer": "DWL", "lineweight": 50})
+    for h in heights[1:-1]:
+        p0, p1 = map_b(-half, float(h)), map_b(half, float(h))
+        msp.add_line(p0, p1, dxfattribs={"layer": "GRID", "linetype": "DOTTED"})
+    p = map_b(-half * 1.02, z_top)
+    _label(f"DWL {z_top:.2f} m", p[0] + 1.0, p[1] + 1.0)
+    _label("BODY PLAN (fore right / aft left)", cx, by1 - 4.0, align="BOTTOM_CENTER")
+
+    # ---- sheer view (top right): buttocks ----------------------------
+    sx0, sy0, sx1, sy1 = 156.0, 170.0, W - 12.0, H - 12.0
+    _frame(sx0, sy0, sx1, sy1)
+    map_s = _view_mapper(sx0, sy0, sx1, sy1, lpp * 1.06, z_max * 1.12)
+    msp.add_line(map_s(0.0, z_top), map_s(lpp, z_top),
+                 dxfattribs={"layer": "DWL", "lineweight": 50})
+    for frac, lt in ((0.25, "DASHED"), (0.50, "DASHED"), (0.75, "DASHDOT")):
+        target = frac * half
+        z_at = np.array([_buttock_height(yw[i], heights, target)
+                         for i in range(x.size)])
+        xq, zq = _dense_buttock(x, z_at)
+        _polyline([map_s(float(a), float(b)) for a, b in zip(xq, zq)],
+                  "BUTTOCKS", linetype=lt)
+        if not np.isnan(z_at[-1]):
+            p = map_s(lpp, float(z_at[-1]))
+            _label(f"{int(frac * 100)}%", p[0] + 1.0, p[1] - 1.0, height=2.0)
+    p = map_s(0.35 * lpp, z_top)
+    _label("DWL", p[0], p[1] + 1.0, align="BOTTOM_CENTER")
+    _label("SHEER VIEW (buttocks 25/50/75 % B/2)",
+           (sx0 + sx1) / 2.0, sy1 - 4.0, align="BOTTOM_CENTER")
+
+    # ---- half-breadth plan (bottom right): waterlines -----------------
+    px0, py0, px1, py1 = 156.0, 32.0, W - 12.0, 164.0
+    _frame(px0, py0, px1, py1)
+    map_p = _view_mapper(px0, py0, px1, py1, lpp * 1.08, half * 1.24)
+    for j in range(1, heights.size):
+        h = float(heights[j])
+        xq, yq = pchip(x, yw[:, j], factor=8)
+        dashed = h > z_top + 1e-9
+        _polyline([map_p(float(a), float(b)) for a, b in zip(xq, yq)],
+                  "WATERLINES", linetype="DASHED" if dashed else None)
+    msp.add_line(map_p(0.0, half), map_p(lpp, half),
+                 dxfattribs={"layer": "DECK"})
+    p = map_p(0.9 * lpp, half)
+    _label("max half breadth", p[0] - 12.0, p[1] + 1.0, height=2.0)
+    _label("HALF-BREADTH PLAN (waterlines, station 0 = AP)",
+           (px0 + px1) / 2.0, py1 - 4.0, align="BOTTOM_CENTER")
+    for st, tag in ((0, "ST 0 = AP"), (x.size - 1, "ST 20 = FP")):
+        p = map_p(float(x[st]), -half * 0.06)
+        _label(tag, p[0], p[1], height=2.0, align="BOTTOM_CENTER")
+
+    doc.saveas(path)
+    return path
