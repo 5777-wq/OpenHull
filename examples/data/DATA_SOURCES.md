@@ -18,6 +18,12 @@ standard benchmark for the Tokyo 2015 CFD workshop.
 | Service speed | 14.5 kn (Fn = 0.142) |
 | Ballast condition | Cb 0.8216, Fn 0.152 |
 
+The LCB provenance and sign convention were re-verified against the
+official conditions table (2026-09-14): the printed row reads
+`LCB (%Lpp), fwd+` = **+2.5475** (design) / +1.5589 (ballast), i.e.
+forward of midship positive — the same convention as the OpenHull
+container fields.
+
 **Files & links**
 
 - Hull geometry (IGES): <https://t2015.nmri.go.jp/file/Geometry_IGES_files/jbc/JBC_IGES.zip>
