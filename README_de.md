@@ -16,13 +16,7 @@ bewertungen und Zeichnungsausgaben (DXF).
 
 ## Status
 
-**v0.2 veröffentlicht** — Stufe 1–2 abgeschlossen: aufgabenbuchgetriebene Gewicht-Auftrieb-Balance, Hauptabmessungen, Hydrostatik, Anfangsstabilität & Trimm, Freibordnachweis sowie die parametrische Rumpfformkette — digitalisierte Mutteroffsets, affine Skalierung, Lackenby-Transformation, Linienriss-Ausgabe und numerische Glättenprüfung — alles gegen das Referenzschiff JBC validiert (siehe [VALIDATION.md](VALIDATION.md)). Ausführen: `openhull run examples/taskbook_bulk_carrier.yaml`. — Stufe 1 abgeschlossen: aufgabenbuchgetriebene Gewicht-Auftrieb-Balance, Hauptabmessungen, Hydrostatik, Anfangsstabilität & Trimm sowie Freibordnachweis — alle gegen das Referenzschiff JBC validiert (siehe [VALIDATION.md](VALIDATION.md)). Ausführen: `openhull run examples/taskbook_bulk_carrier.yaml`.
-
-## Linienriss (Stufe-2-Ergebnis)
-
-![Lines plan - Series 60 parent transformed onto the JBC targets](examples/lines_plan_series60_to_jbc.png)
-
-![Lines plan - 116.6 m coastal cargo ship rebuilt from the owner's offset table](examples/real_ship_116/lines_plan.png)
+**v0.2 veröffentlicht** — Stufe 1–2 abgeschlossen: aufgabenbuchgetriebene Gewicht-Auftrieb-Balance, Hauptabmessungen, Hydrostatik, Anfangsstabilität & Trimm, Freibordnachweis sowie die parametrische Rumpfformkette — digitalisierte Mutteroffsets, affine Skalierung, Lackenby-Transformation, Linienriss-Ausgabe und numerische Glättenprüfung — alles gegen das Referenzschiff JBC validiert (siehe [VALIDATION.md](VALIDATION.md)). Ausführen: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Fahrplan
 

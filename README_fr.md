@@ -17,13 +17,7 @@ plans (DXF).
 
 ## État d'avancement
 
-**v0.2 publié** — étapes 1–2 terminées : équilibre poids-poussée piloté par cahier des charges, dimensions principales, hydrostatique, stabilité initiale et assiette, franc-bord, ainsi que la chaîne paramétrique de carène — tableaux d'offsets réels numérisés, mise à l'échelle affine, transformation de Lackenby, plan des formes et contrôle numérique de régularité — le tout validé sur le navire de référence JBC (voir [VALIDATION.md](VALIDATION.md)). Exécution : `openhull run examples/taskbook_bulk_carrier.yaml`. — étape 1 terminée : équilibre poids-poussée piloté par cahier des charges, dimensions principales, hydrostatique, stabilité initiale et assiette, franc-bord — le tout validé sur le navire de référence JBC (voir [VALIDATION.md](VALIDATION.md)). Exécution : `openhull run examples/taskbook_bulk_carrier.yaml`.
-
-## Plan des formes (livrable de l'étape 2)
-
-![Lines plan - Series 60 parent transformed onto the JBC targets](examples/lines_plan_series60_to_jbc.png)
-
-![Lines plan - 116.6 m coastal cargo ship rebuilt from the owner's offset table](examples/real_ship_116/lines_plan.png)
+**v0.2 publié** — étapes 1–2 terminées : équilibre poids-poussée piloté par cahier des charges, dimensions principales, hydrostatique, stabilité initiale et assiette, franc-bord, ainsi que la chaîne paramétrique de carène — tableaux d'offsets réels numérisés, mise à l'échelle affine, transformation de Lackenby, plan des formes et contrôle numérique de régularité — le tout validé sur le navire de référence JBC (voir [VALIDATION.md](VALIDATION.md)). Exécution : `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Feuille de route
 

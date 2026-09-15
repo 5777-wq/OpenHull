@@ -218,6 +218,11 @@ source must not be merged.
   plan approval workflow, no outfitting. Output is preliminary-design grade.
 - No estimated number may be presented as published data; provenance tags
   are mandatory in examples and reports.
+- **No drawing deliverables (decided 2026-09-15)**: geometry outputs are
+  delivered as the **offsets table + layered DXF vector data** (the CAD
+  side produces drawings from them). PNG/SVG renderings are development
+  aids only — they are not project deliverables and are not featured in
+  the README.
 
 ## 8. Code standards
 

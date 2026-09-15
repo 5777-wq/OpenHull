@@ -16,13 +16,7 @@ propulsión / estabilidad y planos de salida (DXF).
 
 ## Estado
 
-**v0.2 publicado** — etapas 1–2 completadas: balance peso-empuje guiado por libro de tareas, dimensiones principales, hidrostática, estabilidad inicial y asiento, francobordo, y la cadena paramétrica de formas — offset reales digitalizados del buque madre, escalado afín, transformación de Lackenby, plano de formas y comprobación numérica de regularidad — todo validado contra el buque de referencia JBC (véase [VALIDATION.md](VALIDATION.md)). Ejecutar: `openhull run examples/taskbook_bulk_carrier.yaml`. — etapa 1 completada: balance peso-empuje guiado por libro de tareas, dimensiones principales, hidrostática, estabilidad inicial y asiento, francobordo — todo validado contra el buque de referencia JBC (véase [VALIDATION.md](VALIDATION.md)). Ejecutar: `openhull run examples/taskbook_bulk_carrier.yaml`.
-
-## Plano de formas (resultado de la etapa 2)
-
-![Lines plan - Series 60 parent transformed onto the JBC targets](examples/lines_plan_series60_to_jbc.png)
-
-![Lines plan - 116.6 m coastal cargo ship rebuilt from the owner's offset table](examples/real_ship_116/lines_plan.png)
+**v0.2 publicado** — etapas 1–2 completadas: balance peso-empuje guiado por libro de tareas, dimensiones principales, hidrostática, estabilidad inicial y asiento, francobordo, y la cadena paramétrica de formas — offset reales digitalizados del buque madre, escalado afín, transformación de Lackenby, plano de formas y comprobación numérica de regularidad — todo validado contra el buque de referencia JBC (véase [VALIDATION.md](VALIDATION.md)). Ejecutar: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Hoja de ruta
 

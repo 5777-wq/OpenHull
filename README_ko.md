@@ -15,13 +15,7 @@ AI 에이전트가 오케스트레이션하는 오픈소스 파라메트릭 선�
 
 ## 현재 상태
 
-**v0.2 출시** — 1·2단계 완료: 태스크북 기반 중량·부력 평형, 주요치, 정수력, 초동복원성·트림, 건현 검사에 더해 파라메트릭 선형 체인—실모선 디지털 오프셋, 아핀 스케일링, Lackenby 변환, 선도 출력, 수치 평활도 검사—모두 JBC 기준선으로 검증 완료([VALIDATION.md](VALIDATION.md) 참조). 실행: `openhull run examples/taskbook_bulk_carrier.yaml`. — 1단계 완료: 태스크북 기반 중량·부력 평형, 주요치, 정수력, 초동복원성·트림, 건현 검사 — 모두 JBC 기준선으로 검증 완료([VALIDATION.md](VALIDATION.md) 참조). 실행: `openhull run examples/taskbook_bulk_carrier.yaml`.
-
-## 선도(2단계 산출물)
-
-![Lines plan - Series 60 parent transformed onto the JBC targets](examples/lines_plan_series60_to_jbc.png)
-
-![Lines plan - 116.6 m coastal cargo ship rebuilt from the owner's offset table](examples/real_ship_116/lines_plan.png)
+**v0.2 출시** — 1·2단계 완료: 태스크북 기반 중량·부력 평형, 주요치, 정수력, 초동복원성·트림, 건현 검사에 더해 파라메트릭 선형 체인—실모선 디지털 오프셋, 아핀 스케일링, Lackenby 변환, 선도 출력, 수치 평활도 검사—모두 JBC 기준선으로 검증 완료([VALIDATION.md](VALIDATION.md) 참조). 실행: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## 로드맵
 

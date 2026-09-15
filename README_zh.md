@@ -14,13 +14,7 @@ DXF 图纸等成果。
 
 ## 当前状态
 
-**v0.2 已发布** —— 阶段 1–2 完成：任务书驱动的重量浮力平衡、主尺度、静水力、初稳性与浮态、干舷校核，以及参数化船型链路——数字化实母型、仿射缩放、Lackenby 变换、型线图输出与数值光顺检查，全部通过 JBC 基准船验证（见 [VALIDATION.md](VALIDATION.md)）。一条命令运行：`openhull run examples/taskbook_bulk_carrier.yaml`。 —— 阶段 1 完成：任务书驱动的重量浮力平衡、主尺度、静水力、初稳性与浮态、干舷校核，全部通过 JBC 基准船验证（见 [VALIDATION.md](VALIDATION.md)）。一条命令运行：`openhull run examples/taskbook_bulk_carrier.yaml`。
-
-## 型线图（阶段 2 产出）
-
-![Lines plan - Series 60 parent transformed onto the JBC targets](examples/lines_plan_series60_to_jbc.png)
-
-![Lines plan - 116.6 m coastal cargo ship rebuilt from the owner's offset table](examples/real_ship_116/lines_plan.png)
+**v0.2 已发布** —— 阶段 1–2 完成：任务书驱动的重量浮力平衡、主尺度、静水力、初稳性与浮态、干舷校核，以及参数化船型链路——数字化实母型、仿射缩放、Lackenby 变换、型线图输出与数值光顺检查，全部通过 JBC 基准船验证（见 [VALIDATION.md](VALIDATION.md)）。一条命令运行：`openhull run examples/taskbook_bulk_carrier.yaml`。
 
 ## 路线图
 
