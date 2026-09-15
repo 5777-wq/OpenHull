@@ -49,9 +49,23 @@ is semantic (MAJOR.MINOR.PATCH).
 - Real-ship verification data path: the 116.6 m cargo ship and the
   94 m coastal open-top container ship were rebuilt from their DXF
   offset tables (text-layer extraction → offsets table → lines plan);
-  on the latter the 2.5 checker flags three stern-bottom cells
-  (baseline width jumping 25 mm → 6195 mm between adjacent stations)
-  for human review.
+  the 94 m rebuild was later verified cell-by-cell against the
+  authoritative printed offsets table supplied by the owner
+  (see Corrected).
+
+### Corrected
+
+- An earlier claim that the 2.5 checker "flags three stern-bottom
+  cells" of the 94 m ship was an artefact of the DEMO grid
+  construction (stations whose bottom sits above the baseline were
+  left-filled with their 1 m-waterline breadth at z = 0), not a
+  defect of the rebuilt table.  The owner then supplied the printed
+  offsets table: all 273 cells match, four cells differing between
+  the CAD text layer and the printed sheet (st1 4000WL, st5/st14
+  baseline width, st18 6000WL) were corrected to the printed values.
+  With the demo grid fixed the checker reports no mid-body defects;
+  the printed non-monotone bow waterlines at st20 are a feature of
+  the design and were carried as printed.
 
 ### Fixed
 

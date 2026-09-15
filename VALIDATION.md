@@ -109,7 +109,7 @@ anything.
 | Planted lobe break (plateau dent −0.05 B) | flagged as non-monotonic | must catch the guilty |
 | Planted parallel-body wobble (−0.06 m inside the run) | flagged as parallel wobble | must catch the guilty |
 | Smooth bulb bump on a low waterline (fair feature) | no alarm (contrast below floor; monotonicity scoped out below 0.5 draft) | no false alarms |
-| Real-ship demo (94 m coastal ship, owner's DXF rebuild) | three stern-bottom cells flagged (baseline width 25 mm → 6,195 mm between adjacent stations) | human-review worklist |
+| Real-ship demo (94 m coastal ship, owner's DXF rebuild) | rebuild verified cell-by-cell against the authoritative printed table (273/273 match after 4 printed-sheet corrections); checker reports no mid-body defects (an earlier "3 stern-bottom flags" report was an artefact of the demo grid's z=0 left-fill, retracted) | verification |
 
 ### Mother-ship chain on real offsets (task 2.6)
 
