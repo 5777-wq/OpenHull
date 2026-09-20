@@ -42,6 +42,10 @@ requirements:
                                # from typical Capesize lightweight was
                                # considered and not adopted).
   service_speed_kn: 14.5       # [NMRI] design full load condition
+  kg_m: 13.290                 # [NMRI] full-load centre of gravity above
+                               # keel; NMRI's GM 5.30 m reference is
+                               # KM 18.59 m - KG 13.29 m.  Consumed by
+                               # the large-angle stability run (task 3.4)
   trading_area: unrestricted   # [ASSUMED] ocean-going capesize service
 
   drafts:

@@ -126,6 +126,26 @@
   式(3-25)(3-26) 首尾吃水逐步近似，式(3-27) 双判据
   （|W−B|/W 与 |xg−xb|/L）。
 
+**大倾角稳性（静稳性曲线）**
+- 盛振邦、刘应中，《船舶原理》上册—— 第 5 章：式(5-1)
+  l = l_s − l_g = (y_Bφ·cosφ + z_Bφ·sinφ) − KG·sinφ（l_s 形状稳性臂、
+  l_g 重量稳性臂）；§5-2 等排水量法及其计算机流程——逐倾角迭代求
+  等体积倾斜水线与中线交点 z_i（初值=正浮吃水），修正式
+  z_i ← c·(z_i + dΔ/(w·A_Wφ))，c=1，收敛 |Δ−Δ_φ| ≤ ε（ε=0.1%Δ），
+  倾角序列 10°~80°（书页 88–91 已于 2026-09-20 对扫描原件视觉
+  核对）；§3-5 式(3-41) 符拉索夫各站积分 a=∫y dz、b=½∫y²dz、
+  c=∫zy dz——以型值剖面多边形直接裁剪实现（书 p46 明文准许数值
+  积分）；§5-5 式(5-15)(5-16) 静稳性曲线原点斜率=GM（用作测试
+  恒等式）；§5-6 动稳性 T_R=Δ·∫l dφ；§5-4 自由液面 δl=M_H/Δ 与
+  50% 舱容规则（留任务 3.5）。
+- Hussain, Md Daluar & Amin, Osman Md (2021), "A Comprehensive Analysis
+  of the Stability and Powering Performances of a Hard Sail-Assisted
+  Bulk Carrier", Journal of Marine Science and Application, vol. 20,
+  no. 3——JBC 满载工况公开发表的 GZ 分析（MAXSURF 模型，装帆前的
+  素船体；其表 7）：最大 GZ 对应角 40.9°（验收锚，按 §4 容差 ±5°），
+  最大 GZ 3.309 m（仅作宽松演示带——该文 KG 未公布，OpenHull 用
+  NMRI KG 13.29 m）。
+
 **型线**
 - 林焰 主编，《船舶设计原理》第 4 版（大连理工大学出版社），第 5 章
   型线设计，"②勒根贝尔(Lackenby)法"（第 211–212 页）——母型变换的

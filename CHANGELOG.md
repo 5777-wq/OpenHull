@@ -8,6 +8,22 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- Large-angle stability — the static stability curve (plan task 3.4):
+  `gz_curve(table, displacement, kg, depth)` computes l(φ) by the
+  equal-displacement method (Ship Theory vol. 1, sec. 5-2): per heel
+  angle the equal-volume heeled waterline is iterated on the tabulated
+  sections (exact polygon clipping; no draft-direction quadrature) and
+  the arm assembled from Eq. (5-1).  The result carries per-angle audit
+  points, the maximum arm and its angle (0.25 deg refinement), the
+  vanishing angle (bisected) and the dynamic stability arm of sec. 5-6.
+  The CLI `run` prints the curve when the task book carries
+  `requirements.kg_m` (TB-001: NMRI 13.29 m).  Zero-circularity
+  acceptance: a wall-sided box hull reproduces its closed-form GZ curve
+  to 1e-8; the curve's origin slope equals GM (sec. 5-5); every point
+  holds |Δ−Δ_φ|/Δ ≤ 0.1 %.  A published JBC full-load GZ analysis
+  (Hussain & Amin 2021, JMSA 20(3), Table 7: max 3.309 m at 40.9°) is
+  recorded as a wide demonstration band — see VALIDATION.md for the
+  attribution of the differences.
 - Layered DXF lines-plan export (plan task 2.7):
   `save_lines_plan_dxf` writes the three views (body plan / sheer /
   half-breadth plan) onto an A3 frame with one layer per content class

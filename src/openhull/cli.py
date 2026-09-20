@@ -1,14 +1,16 @@
-"""Command line interface: task book in, stage-1 design chain out.
+"""Command line interface: task book in, design chain out.
 
     openhull run examples/taskbook_bulk_carrier.yaml
     openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
     openhull --version
 
-The ``run`` command executes the stage-1 chain end to end (plan task
-1.8): weight-buoyancy balance from the task book (task 1.3), principal
-dimensions, and a hydrostatics table (task 1.4 machinery).  The human
-summary goes to stdout; ``--csv`` prints pure CSV instead, so the
-shell redirection stores the table (``--csv`` output is UTF-8 with
+The ``run`` command executes the design chain end to end: weight-buoyancy
+balance from the task book (task 1.3), principal dimensions, a
+hydrostatics table (task 1.4 machinery) on the real-offsets hull (task
+2.6), and — when the task book carries ``requirements.kg_m`` — the
+large-angle stability curve (task 3.4).  The human summary goes to
+stdout; ``--csv`` prints the hydrostatics table as pure CSV instead, so
+the shell redirection stores the table (``--csv`` output is UTF-8 with
 BOM, ready for Excel).  Results are deterministic: same task book,
 same numbers (AGENTS.md section 8).
 
@@ -33,6 +35,7 @@ from .geometry import jbc_parent_offsets  # noqa: F401  (1.x fitted parent,
 from .hydrostatics import hydrostatics_table
 from .linesplan import parent_to_taskbook
 from .spec import knots_to_ms, ShipSpec, SpecValidationError
+from .stability import gz_curve
 from .weight_balance import solve_weight_balance
 
 __all__ = ["main", "run_taskbook"]
@@ -123,7 +126,7 @@ def _hydrostatics_rows(hydro_table) -> list[dict]:
 
 
 def run_taskbook(taskbook_path: str) -> dict:
-    """Run the stage-1 chain for one task book; returns the summary dict.
+    """Run the design chain for one task book; returns the summary dict.
 
     Pure computation and stdout formatting live apart: this function
     only computes and returns; the caller decides how to render.
@@ -145,6 +148,20 @@ def run_taskbook(taskbook_path: str) -> dict:
     drafts = [round(design_draft * f, 4) for f in (0.25, 0.5, 0.75, 1.0)]
     hydro_table = hydrostatics_table(hull, drafts)
     hydro_design = hydro_table.at(drafts[-1])
+
+    # large-angle stability (plan task 3.4): runs when the task book
+    # carries the loading KG; the deck closes the sections at the
+    # moulded depth (wall-sided above the top tabulated waterline)
+    gz_summary = None
+    kg_value = (data.get("requirements") or {}).get("kg_m")
+    if kg_value is not None:
+        gz = gz_curve(
+            hull,
+            balance.displacement_t,
+            float(kg_value),
+            depth_m=balance.depth,
+        )
+        gz_summary = gz.to_dict()
 
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
@@ -171,6 +188,7 @@ def run_taskbook(taskbook_path: str) -> dict:
         ),
         "citation": balance.citation,
         "hydrostatics": _hydrostatics_rows(hydro_table),
+        "gz_curve": gz_summary,
     }
     return summary
 
@@ -179,7 +197,7 @@ def _print_summary(summary: dict) -> None:
     hydro = summary["hydrostatics"]
     design = hydro[-1]
     print("=" * 64)
-    print(f"OpenHull stage-1 run - {summary['taskbook_id'] or '(task book)'}")
+    print(f"OpenHull run - {summary['taskbook_id'] or '(task book)'}")
     print("=" * 64)
     print(f"algorithm           : {summary['algorithm_id']}")
     print(f"deadweight          : {summary['deadweight_t']:>12.1f} t")
@@ -206,6 +224,30 @@ def _print_summary(summary: dict) -> None:
     )
     print(f"  TPC                {design['tpc_t_per_cm']:>10.2f} t/cm")
     print(f"  LCB                {design['lcb_pct_lpp']:>+10.4f} %Lpp")
+    gz = summary.get("gz_curve")
+    if gz is not None:
+        print("-" * 64)
+        print(
+            f"large-angle stability at KG {gz['kg_m']:.2f} m "
+            f"(displacement {gz['displacement_t']:.1f} t, "
+            f"equal-volume waterlines <= {gz['volume_tolerance']:.1%}):"
+        )
+        print("   phi    GZ(m)  shape l_s  dynamic arm")
+        for point in gz["points"]:
+            print(
+                f"  {point['angle_deg']:4.0f}deg {point['gz_m']:>7.3f} "
+                f"{point['shape_arm_m']:>10.3f} "
+                f"{point['dynamic_arm_mrad']:>11.4f} m*rad"
+            )
+        vanishing = gz["angle_vanishing_deg"]
+        vanishing_text = (
+            f"{vanishing:.1f}deg" if vanishing is not None else "> 80deg"
+        )
+        print(
+            f"  max GZ {gz['gz_max_m']:.3f} m at "
+            f"{gz['angle_max_deg']:.1f}deg; vanishing angle "
+            f"{vanishing_text}"
+        )
     print("-" * 64)
     print("JSON summary and CSV available via --json / --csv redirection.")
 
@@ -237,7 +279,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     sub = parser.add_subparsers(dest="command", required=True)
     run = sub.add_parser(
-        "run", help="run the stage-1 chain for one task book (YAML)"
+        "run", help="run the design chain for one task book (YAML)"
     )
     run.add_argument("taskbook", help="path to the task book YAML")
     fmt = run.add_mutually_exclusive_group()

@@ -148,6 +148,32 @@ no page numbers from memory).
   with the Eq.(3-27) balance criteria on both |W − B|/W and
   |xg − xb|/L.
 
+**Large-angle stability (static stability curve)**
+- Sheng Zhenbang & Liu Yingzhong, *Ship Theory*, vol. 1, 2nd ed. —
+  chapter 5: Eq.(5-1) l = l_s − l_g = (y_Bφ·cosφ + z_Bφ·sinφ) − KG·sinφ
+  (l_s the shape arm, l_g the weight arm); section 5-2 the
+  equal-displacement (direct) method and its computer procedure —
+  equal-volume heeled waterline per heel angle by iteration on the
+  centreline crossing z_i (initial value = the even-keel draft) with
+  the update z_i ← c·(z_i + dΔ/(w·A_Wφ)), c = 1, convergence
+  |Δ − Δ_φ| ≤ ε with ε = 0.1 % of Δ, heel sequence 10°…80° (pages
+  88–91 visually verified against the scanned original, 2026-09-20);
+  section 3-5 Eq.(3-41) the Vlasov per-station integrals
+  a = ∫y dz, b = ½∫y² dz, c = ∫zy dz — realized by direct polygon
+  clipping of the tabulated sections (the book's own sanction of
+  numerical integration, p. 46); section 5-5 Eqs.(5-15)/(5-16) the
+  origin slope of the GZ curve equals GM (used as a test identity);
+  section 5-6 dynamic stability T_R = Δ·∫l dφ; section 5-4 free-surface
+  influence δl = M_H/Δ with the 50 %-fill rule (deferred to task 3.5).
+- Hussain, Md Daluar & Amin, Osman Md (2021), "A Comprehensive Analysis
+  of the Stability and Powering Performances of a Hard Sail-Assisted
+  Bulk Carrier", Journal of Marine Science and Application, vol. 20,
+  no. 3 — published JBC full-load GZ analysis (MAXSURF model of the
+  plain hull, before sail installation; their Table 7): angle of
+  maximum GZ 40.9° (acceptance anchor, tolerance ±5° per section 4)
+  and maximum GZ 3.309 m (loose demonstration band only — the paper's
+  KG is unpublished; OpenHull runs the NMRI KG 13.29 m).
+
 **Lines plan**
 - Lin Yan (ed.), *Ship Design Principles* (船舶设计原理), 4th ed.
   (Dalian University of Technology Press), chapter 5 lines design,

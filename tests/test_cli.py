@@ -36,7 +36,7 @@ def test_cli_summary_text(capsys):
     rc = main(["run", TASKBOOK])
     out = capsys.readouterr().out
     assert rc == 0
-    assert "OpenHull stage-1 run" in out
+    assert "OpenHull run" in out
     assert "TB-001" in out
     assert "KM = KB + BMT" in out
 

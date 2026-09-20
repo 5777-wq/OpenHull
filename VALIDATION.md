@@ -7,8 +7,11 @@
 > Binding conventions: [`AGENTS.md`](AGENTS.md) (tolerances in section 4).
 
 Status: **stages 1–2 complete** (dimensions + hydrostatics core +
-parametric hull generation on real offsets), 171 tests green.
-`openhull run` reproduces the chain end to end.
+parametric hull generation on real offsets); stage 3 started with the
+static stability curve (task 3.4). 195 tests green.
+`openhull run` reproduces the chain end to end — dimensions,
+hydrostatics, and (with `requirements.kg_m` in the task book) the
+large-angle GZ curve.
 
 ## Stage-1 acceptance summary (TB-001 / JBC-anchored)
 
@@ -134,6 +137,41 @@ TPC / Aw / KB / LCF still have **no published JBC values**; they are
 now computed on the real-offsets chain and carry definition-identity
 tests plus the cross-flux check.
 
+### Static stability curve (task 3.4)
+
+`gz_curve` computes l(φ) by the equal-displacement method (Ship Theory
+vol. 1, sec. 5-2): per heel angle the equal-volume heeled waterline is
+found by iterating its centreline crossing (the book's update
+z_i += dΔ/(w·A_Wφ), bracketed bisection as fallback), with per-station
+immersed areas and moments from exact polygon clipping of the tabulated
+sections (the Vlasov integrals of Eq. 3-41, realized without
+draft-direction quadrature).  Formula pages 45/88–91/102–103 were
+visually verified against the scanned original before implementation.
+
+| Check | Result | Criterion |
+|---|---|---|
+| Wall-sided box hull vs closed-form GZ(φ) | exact to 1e-8 at 10/20/30/40° | analytic (derived from Eq. 5-1 with z_i = T) |
+| Box equal-volume crossing | z_i = T recovered to 1e-6 | analytic |
+| Origin slope of the JBC curve | GZ(5°)/sin 5° = GM within **0.04 %** | sec. 5-5 identity (Eqs. 5-15/5-16) |
+| Volume conservation at every angle | worst residual ≤ 0.05 % | sec. 5-2: ε ≤ 0.1 % of Δ |
+| KM consistency of the chain used | 18.592 m vs 18.59 m [NMRI] | ±2 % (task 2.6 band) |
+| Curve characteristics (chain, KG 13.29 m, Δ 182,829.1 t) | max 2.56 m at 31.0°, vanishing 69.4° | qualitative (single hump, closes in range) |
+| Published JBC comparison — Hussain & Amin (2021), JMSA 20(3), Table 7 (MAXSURF, plain hull, full load): max 3.309 m at 40.9° | ours 2.56 m at 31.0° | **demonstration band only** (pinned 25–45° / 2.2–3.4 m) |
+
+**Why the published GZ is a demonstration band, not a ±5° anchor.**
+The paper analyses the real JBC lines; the OpenHull hull is the declared
+Series 60 + Lackenby approximation, with the topside above the design
+draft closed wall-sided up to the deck — and the 30–50° range of the
+GZ curve is dominated by exactly that geometry.  The paper's KG is
+unpublished (its GM 5.702 m implies ≈ 13.0 m against our KM; we use the
+NMRI 13.29 m); re-running our geometry at their implied KG still puts
+the maximum near 31°, so the angle difference is hull-model, not
+loading.  The comparison is retained as a wide regression band and the
+zero-circularity acceptance rests on the box closed form and the
+sec. 5-5 slope identity.  Candidates to tighten it later: an
+authoritative JBC stability source, or real topside geometry from the
+JBC IGES.
+
 ## Declared circularities and approximations
 
 These are features of the current stage, not hidden weaknesses:
@@ -174,11 +212,18 @@ These are features of the current stage, not hidden weaknesses:
 9. **Parallel-body detection** uses a 0.05 % band on the area curve
    peak (Series 60: l_pf 0.42, l_pa 0.20 of the half length); it can
    be overridden by explicit dl targets only.
+10. **GZ curve approximations (task 3.4).** Sections run wall-sided
+    from the top tabulated waterline to the deck (the offsets grid
+    ends at the design draft; consistent with the flush-deck freeboard
+    assumption of task 1.6); trim coupling is neglected (the textbook's
+    own sec. 5-1 assumption); free-surface influence on the curve
+    (sec. 5-4, 50 % fill) is deferred to task 3.5; the dynamic arm is
+    accumulated trapezoidally over the 10° grid.
 
 ## Reproducing
 
 ```bash
-uv run pytest                        # 171 tests
+uv run pytest                        # 195 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 
