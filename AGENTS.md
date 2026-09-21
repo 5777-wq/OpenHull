@@ -227,11 +227,31 @@ no page numbers from memory).
   angle of at least 25°; 2.2.4 initial GM0 at least 0.15 m.
   Cross-checked against Xie Yunping *Ship Design Principles* (domestic
   rule: cargo ships GM >= 0.15 m) and the Ship Theory vol. 1 worked
-  example table 4-5 (requirements column).  The severe wind and
-  rolling criterion (section 2.3: 504 Pa, levers l_w1/l_w2, roll-angle
-  formula with the X1/X2/S coefficient tables) is NOT yet implemented
-  — plan task 3.5b must transcribe and visually verify those tables
-  first.
+  example table 4-5 (requirements column).
+- IMO Resolution MSC.267(85), 2008 IS Code, Part A section 2.3
+  (severe wind and rolling criterion) — implemented in task 3.5b.
+  Text and coefficient tables verified verbatim against a public
+  reproduction of the code (imorules.com, formula images read
+  individually, 2026-09-21) and cross-checked table-by-table against
+  IMO Resolution A.562(14) (official IMO CDN copy): l_w1 =
+  P·A·Z/(1000·g·Δ) with P = 504 Pa (A.562: 0.0514 t/m², same value),
+  l_w2 = 1.5·l_w1; roll angle phi_1 = 109·k·X1·X2·sqrt(r·s) degrees
+  with r = 0.73 + 0.6·OG/d, OG = KG − d, k = 1.0 round bilge without
+  keels / 0.7 sharp bilges / table of A_k·100/(Lwl·B), and the X1
+  (B/d), X2 (Cb), s (rolling period) tables with linear interpolation;
+  rolling period T = 2·C·B/sqrt(GM) with C = 0.373 + 0.023·(B/d) −
+  0.043·(Lwl/100), GM free-surface corrected.  Areas per the
+  normative figure (both reproductions agree): a = ∫(l_w1 − GZ)dθ
+  from the roll-back angle θ1 = φ0 − phi_1 to the steady-wind
+  equilibrium φ0 (GZ extended to negative heel by odd symmetry);
+  b = ∫(GZ − l_w2)dθ from the rising intercept of l_w2 with the GZ
+  curve to θ2 = min(down-flooding angle, 50°, falling intercept);
+  criterion b ≥ a, plus φ0 ≤ 16° or 80 % of the deck-edge immersion
+  angle.  Applicability (2.3.5): B/d < 3.5, (KG/d − 1) in −0.3…0.5,
+  T < 20 s — outside it the module refuses (MSC.1/Circ.1200 model
+  tests are the alternative).  Note: the imorules X1 table omits the
+  B/d = 3.3 row; the A.562 original carries 3.3 → 0.84 and the
+  implementation follows A.562.
 
 **Propeller (preliminary)**
 - AU-series chart data; the specific regression to be pinned here at

@@ -76,6 +76,20 @@ constraints:
                                      # areas therefore run to 30/40 deg.
                                      # Set to a number once an opening
                                      # angle is fixed in general layout.
+    weather_criterion:               # IS Code 2.3 severe wind and rolling
+                                     # (plan task 3.5b)
+      windage_area_m2: 2380          # [ASSUMED] hull lateral area above the
+                                     # waterline = Lpp x freeboard
+                                     # (280 x 8.5); the aft deckhouse is
+                                     # neglected - unconservative
+                                     # direction, refine with the general
+                                     # layout
+      windage_lever_z_m: 12.5        # [DERIV] centre of A (T + freeboard/2
+                                     # = 20.75 m above keel) minus the
+                                     # half-draught point (8.25 m)
+      bilge_keel_area_m2: 0          # [ASSUMED] round bilge, no bar keel
+                                     # -> factor k = 1.0
+      length_waterline_m: 285        # [NMRI] L_WL of the JBC
 
 validation_anchors:              # hard numbers the OpenHull test suite
                                  # asserts against (tolerances as noted,

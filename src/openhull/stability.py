@@ -1378,3 +1378,495 @@ def intact_stability_criteria(
         all_passed=all(c.passed for c in criteria),
         notes=tuple(notes),
     )
+
+
+# ---------------------------------------------------------------------------
+# Severe wind and rolling criterion: IS Code part A 2.3 (plan task 3.5b)
+# ---------------------------------------------------------------------------
+
+#: wind pressure of the criterion, Pa (2.3.2; A.562(14): 0.0514 t/m2).
+#: Restricted-service reductions are an Administration matter - pass a
+#: reduced value explicitly if the task book calls for one.
+WEATHER_WIND_PRESSURE_PA = 504.0
+
+#: gust factor of 2.3.1.3: l_w2 = 1.5 * l_w1 (formula image, verbatim)
+WEATHER_GUST_FACTOR = 1.5
+
+# factor tables of 2.3.4 with linear interpolation between rows (the
+# <=/>= end rows clamp).  X1 values from A.562(14) table 1, which
+# carries the B/d = 3.3 -> 0.84 row the imorules reproduction omits.
+_X1_TABLE = (
+    (2.4, 1.0), (2.5, 0.98), (2.6, 0.96), (2.7, 0.95), (2.8, 0.93),
+    (2.9, 0.91), (3.0, 0.90), (3.1, 0.88), (3.2, 0.86), (3.3, 0.84),
+    (3.4, 0.82), (3.5, 0.80),
+)
+_X2_TABLE = (
+    (0.45, 0.75), (0.50, 0.82), (0.55, 0.89), (0.60, 0.95),
+    (0.65, 0.97), (0.70, 1.00),
+)
+_K_TABLE = (
+    (0.0, 1.0), (1.0, 0.98), (1.5, 0.95), (2.0, 0.88),
+    (2.5, 0.79), (3.0, 0.74), (3.5, 0.72), (4.0, 0.70),
+)
+_S_TABLE = (
+    (6.0, 0.100), (7.0, 0.098), (8.0, 0.093), (12.0, 0.065),
+    (14.0, 0.053), (16.0, 0.044), (18.0, 0.038), (20.0, 0.035),
+)
+
+#: hard cap of the theta_2 definition: min(down-flooding, 50 deg, theta_c)
+_THETA2_CAP_DEG = 50.0
+
+
+def _interp_table(table: tuple[tuple[float, float], ...], x: float) -> float:
+    """Linear interpolation into a criterion factor table; the <=/>=
+    end rows clamp (2.3.4: intermediate values interpolate linearly)."""
+    if x <= table[0][0]:
+        return table[0][1]
+    for (x0, v0), (x1, v1) in zip(table, table[1:]):
+        if x <= x1:
+            return v0 + (v1 - v0) * (x - x0) / (x1 - x0)
+    return table[-1][1]
+
+
+@dataclass(frozen=True)
+class WeatherCriterionResult:
+    """Severe wind and rolling criterion verdict (JSON-ready).
+
+    Every intermediate of the 2.3 chain is reported so the verdict can
+    be audited: the wind levers, the roll data (T, C, X1, X2, k, r, s,
+    phi_1), the steady-wind heel and its limits, the roll-back angle,
+    the areas and the three criterion verdicts.
+    """
+
+    rule: str
+    displacement_t: float
+    kg_m: float
+    density: float
+    windage_area_m2: float
+    windage_lever_z_m: float
+    wind_pressure_pa: float
+    length_waterline_m: float
+    beam_m: float
+    draft_m: float
+    cb: float
+    gm0_m: float
+    b_over_d: float
+    lw1_m: float
+    lw2_m: float
+    roll_period_s: float
+    c_coefficient: float
+    x1: float
+    x2: float
+    k_factor: float
+    r_factor: float
+    s_factor: float
+    phi1_deg: float
+    phi0_deg: float
+    deck_edge_angle_deg: float
+    roll_back_deg: float
+    theta2_deg: float
+    area_a_mrad: float
+    area_b_mrad: float
+    criteria: tuple[GZCriterion, ...]
+    all_passed: bool
+    notes: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "rule": self.rule,
+            "displacement_t": self.displacement_t,
+            "kg_m": self.kg_m,
+            "density": self.density,
+            "windage_area_m2": self.windage_area_m2,
+            "windage_lever_z_m": self.windage_lever_z_m,
+            "wind_pressure_pa": self.wind_pressure_pa,
+            "length_waterline_m": self.length_waterline_m,
+            "beam_m": self.beam_m,
+            "draft_m": self.draft_m,
+            "cb": self.cb,
+            "gm0_m": self.gm0_m,
+            "b_over_d": self.b_over_d,
+            "lw1_m": self.lw1_m,
+            "lw2_m": self.lw2_m,
+            "roll_period_s": self.roll_period_s,
+            "c_coefficient": self.c_coefficient,
+            "x1": self.x1,
+            "x2": self.x2,
+            "k_factor": self.k_factor,
+            "r_factor": self.r_factor,
+            "s_factor": self.s_factor,
+            "phi1_deg": self.phi1_deg,
+            "phi0_deg": self.phi0_deg,
+            "deck_edge_angle_deg": self.deck_edge_angle_deg,
+            "roll_back_deg": self.roll_back_deg,
+            "theta2_deg": self.theta2_deg,
+            "area_a_mrad": self.area_a_mrad,
+            "area_b_mrad": self.area_b_mrad,
+            "criteria": [asdict(c) for c in self.criteria],
+            "all_passed": self.all_passed,
+            "notes": list(self.notes),
+        }
+
+
+def weather_criterion(
+    table: OffsetsTable,
+    displacement_t: float,
+    kg_m: float,
+    depth_m: float,
+    density: float = 1.025,
+    *,
+    windage_area_m2: float,
+    windage_lever_z_m: float,
+    wind_pressure_pa: float = WEATHER_WIND_PRESSURE_PA,
+    bilge_keel_area_m2: float = 0.0,
+    length_waterline_m: float | None = None,
+    flooding_angle_deg: float | None = None,
+    tanks: tuple[Tank, ...] = (),
+    angle_step_deg: float = 1.25,
+) -> WeatherCriterionResult:
+    """Severe wind and rolling criterion, IMO 2008 IS Code part A 2.3.
+
+    Sequence of 2.3.1: steady wind lever l_w1 heels the ship to phi_0
+    (limited to 16 deg or 80 % of the deck-edge immersion angle); the
+    ship rolls to windward by the wave angle phi_1 of 2.3.4; the gust
+    lever l_w2 = 1.5 l_w1 then acts.  The areas follow the normative
+    figure: a = integral of (l_w1 - GZ) from the roll-back angle
+    theta_1 = phi_0 - phi_1 to phi_0 (GZ continued to negative heel by
+    odd symmetry - Ship Theory vol. 1, sec. 5-5(6)), b = integral of
+    (GZ - l_w2) from the rising intercept of l_w2 with the GZ curve to
+    theta_2 = min(down-flooding, 50 deg, falling intercept).  The ship
+    survives when b >= a.
+
+    Args:
+        table: offsets grid of the hull.
+        displacement_t: ship displacement Delta, t.
+        kg_m: centre of gravity above keel, m.
+        depth_m: deck-at-side height for the section closure, m.
+        density: water density, t/m^3.
+        windage_area_m2: A, projected lateral area of the ship and
+            deck cargo above the waterline, m^2 (task-book input).
+        windage_lever_z_m: Z, vertical distance from the centre of A
+            to a point at one half the mean draught, m (task-book
+            input).
+        wind_pressure_pa: P, Pa (504 worldwide; reduced values for
+            restricted service are an Administration decision).
+        bilge_keel_area_m2: A_k total area of bilge keels (or bar-keel
+            lateral projection), m^2; 0 gives the round-bilge k = 1.0.
+        length_waterline_m: Lwl for the C coefficient; defaults to the
+            table Lpp (declared in the notes when used).
+        flooding_angle_deg: down-flooding angle, degrees; None when
+            none is declared (the 50 deg cap then usually governs).
+        tanks: free-surface tanks (the GM of the rolling period is the
+            free-surface-corrected GM, and the arm curve is corrected).
+        angle_step_deg: heel grid of the arm curve, degrees.
+
+    Returns:
+        WeatherCriterionResult with every intermediate and the three
+        verdicts (b >= a, phi_0 <= 16 deg, phi_0 <= 80 % deck edge).
+
+    Raises:
+        SpecValidationError: inputs out of range, the 2.3.5
+            applicability bounds (B/d < 3.5, KG/d - 1 in -0.3..0.5,
+            T < 20 s) are violated, or GM0 is not positive.
+        RuntimeError: the steady-wind lever exceeds the maximum
+            restoring lever (no equilibrium heel exists).
+    """
+    if not math.isfinite(windage_area_m2) or windage_area_m2 <= 0:
+        raise SpecValidationError(
+            "windage_area_m2", windage_area_m2, "finite A > 0",
+            "the wind heeling lever l_w1 = P*A*Z/(1000*g*Delta) acts on "
+            "the projected lateral area; without it no wind moment "
+            "exists.",
+        )
+    if not math.isfinite(windage_lever_z_m) or windage_lever_z_m <= 0:
+        raise SpecValidationError(
+            "windage_lever_z_m", windage_lever_z_m, "finite Z > 0",
+            "Z distances the centre of the windage area from the "
+            "underwater lateral centre (about half the draught).",
+        )
+    if not math.isfinite(wind_pressure_pa) or not 0 < wind_pressure_pa <= 504:
+        raise SpecValidationError(
+            "wind_pressure_pa", wind_pressure_pa, "0 < P <= 504 Pa",
+            "the criterion's full-sea pressure is 504 Pa (2.3.2); "
+            "reduced restricted-service values need the task book to "
+            "say so explicitly.",
+        )
+    if bilge_keel_area_m2 < 0:
+        raise SpecValidationError(
+            "bilge_keel_area_m2", bilge_keel_area_m2, ">= 0",
+            "a negative bilge-keel area has no physical meaning.",
+        )
+    if flooding_angle_deg is not None and (
+        not math.isfinite(flooding_angle_deg)
+        or not 0.0 < flooding_angle_deg <= GZ_MAX_ANGLE_DEG
+    ):
+        raise SpecValidationError(
+            "flooding_angle_deg", flooding_angle_deg,
+            f"0 < phi_f <= {GZ_MAX_ANGLE_DEG} deg",
+            "the down-flooding angle bounds theta_2 of the criterion.",
+        )
+
+    top_waterline = float(table.waterlines[-1])
+    if depth_m < top_waterline:
+        raise SpecValidationError(
+            "depth", depth_m, f">= top tabulated waterline "
+            f"({top_waterline} m)",
+            "the deck closes every section from above (see gz_curve).",
+        )
+
+    # the condition's even-keel draft and form data
+    lo_z, hi_z = 0.0, top_waterline
+    for _ in range(60):
+        mid = 0.5 * (lo_z + hi_z)
+        if hydrostatics_at(table, mid, density).displacement < displacement_t:
+            lo_z = mid
+        else:
+            hi_z = mid
+    draft = 0.5 * (lo_z + hi_z)
+    hydro = hydrostatics_at(table, draft, density)
+    fsc = free_surface_correction(tanks, displacement_t)
+    gm0 = hydro.km - kg_m - fsc
+    beam = float(table.beam)
+    b_over_d = beam / draft
+
+    notes: list[str] = []
+    if length_waterline_m is None:
+        length_waterline_m = float(table.lpp)
+        notes.append(
+            "no Lwl in the task book: the rolling-period coefficient "
+            "uses Lpp as Lwl (declared approximation)"
+        )
+    lwl = float(length_waterline_m)
+
+    # 2.3.5 applicability: B/d < 3.5, (KG/d - 1) in -0.3..0.5
+    kg_over_d_minus_1 = kg_m / draft - 1.0
+    if not b_over_d < 3.5:
+        raise SpecValidationError(
+            "B/d", b_over_d, "< 3.5 (IS Code 2.3.5)",
+            "the roll-angle formulae are based on ships with B/d below "
+            "3.5; outside the band MSC.1/Circ.1200 model experiments "
+            "are the alternative.",
+        )
+    if not -0.3 <= kg_over_d_minus_1 <= 0.5:
+        raise SpecValidationError(
+            "KG/d - 1", kg_over_d_minus_1, "-0.3 .. 0.5 (IS Code 2.3.5)",
+            "the roll-angle formulae are based on ships inside this "
+            "gravity-height band; outside it MSC.1/Circ.1200 model "
+            "experiments are the alternative.",
+        )
+    if not math.isfinite(gm0) or gm0 <= 0:
+        raise SpecValidationError(
+            "GM0", gm0, "> 0",
+            "the rolling period T = 2*C*B/sqrt(GM) needs a positive "
+            "free-surface-corrected initial stability.",
+        )
+
+    # 2.3.4: rolling period, factors and the roll angle phi_1
+    c_coeff = 0.373 + 0.023 * b_over_d - 0.043 * (lwl / 100.0)
+    roll_period = 2.0 * c_coeff * beam / math.sqrt(gm0)
+    if not roll_period < 20.0:
+        raise SpecValidationError(
+            "T", roll_period, "< 20 s (IS Code 2.3.5)",
+            "the roll-angle formulae are based on ships with rolling "
+            "periods below 20 s; MSC.1/Circ.1200 model experiments are "
+            "the alternative.",
+        )
+    x1 = _interp_table(_X1_TABLE, b_over_d)
+    x2 = _interp_table(_X2_TABLE, hydro.cb)
+    if bilge_keel_area_m2 > 0:
+        k_factor = _interp_table(
+            _K_TABLE, 100.0 * bilge_keel_area_m2 / (lwl * beam)
+        )
+    else:
+        k_factor = 1.0  # round-bilged ship having no bilge or bar keels
+    r_factor = 0.73 + 0.6 * (kg_m / draft - 1.0)  # OG = KG - d
+    s_factor = _interp_table(_S_TABLE, roll_period)
+    phi1 = 109.0 * k_factor * x1 * x2 * math.sqrt(r_factor * s_factor)
+
+    # 2.3.2: wind heeling levers (g = 9.81 m/s^2, AGENTS.md section 1)
+    lw1 = (
+        wind_pressure_pa * windage_area_m2 * windage_lever_z_m
+        / (1000.0 * 9.81 * displacement_t)
+    )
+    lw2 = WEATHER_GUST_FACTOR * lw1
+
+    # arm curve on a fine uniform grid; GZ(-theta) = -GZ(theta) by the
+    # odd symmetry of the static stability curve (sec. 5-5(6))
+    step = float(angle_step_deg)
+    n_steps = int(round(GZ_MAX_ANGLE_DEG / step))
+    fine_angles = [step * i for i in range(1, n_steps + 1)]
+    fine = gz_curve(
+        table, displacement_t, kg_m, depth_m, density,
+        angles_deg=tuple(fine_angles),
+    )
+    grid_angles = [0.0] + list(fine_angles)
+    grid_arms = [0.0] + [
+        p.gz_m - free_surface_arm(tanks, displacement_t, p.angle_deg)
+        for p in fine.points
+    ]
+    full_angles = [-a for a in reversed(grid_angles)] + grid_angles[1:]
+    full_arms = [-v for v in reversed(grid_arms)] + grid_arms[1:]
+
+    def first_crossing(level: float) -> float:
+        """Rising intercept of the arm curve with a constant lever."""
+        for a0, v0, a1, v1 in zip(
+            grid_angles, grid_arms, grid_angles[1:], grid_arms[1:]
+        ):
+            if v0 < level <= v1:
+                return a0 + (a1 - a0) * (level - v0) / (v1 - v0)
+        raise RuntimeError(
+            f"the arm curve never reaches the lever {level:.4f} m "
+            f"within {GZ_MAX_ANGLE_DEG:.0f} deg: the ship has no "
+            "equilibrium heel under this wind - the weather criterion "
+            "cannot be evaluated (the vessel capsizes statically)."
+        )
+
+    def last_crossing(level: float) -> float | None:
+        """Falling intercept after the peak, None if the curve stays
+        above the level to the end of the grid."""
+        result: float | None = None
+        for a0, v0, a1, v1 in zip(
+            grid_angles, grid_arms, grid_angles[1:], grid_arms[1:]
+        ):
+            if v0 >= level > v1:
+                result = a0 + (a1 - a0) * (level - v0) / (v1 - v0)
+        return result
+
+    phi0 = first_crossing(lw1)
+
+    rings = [
+        _section_polygon(row, table.waterlines, depth_m)
+        for row in table.half_breadths
+    ]
+    stations_array = np.asarray(table.stations, dtype=float)
+
+    def deck_immersed(phi_deg: float) -> bool:
+        """True when the equal-volume waterline at this heel touches
+        the deck at side at any station (wall-sided topside)."""
+        tan_phi = math.tan(math.radians(phi_deg))
+        z_i, _, _, _, _, _ = _equal_volume_crossing(
+            rings, stations_array,
+            displacement_t, density, tan_phi, depth_m,
+            GZ_VOLUME_TOLERANCE, 30, draft,
+        )
+        return any(
+            depth_m <= z_i + float(row[-1]) * tan_phi
+            for row in table.half_breadths
+        )
+
+    lo_phi, hi_phi = 0.0, float(fine_angles[-1])
+    if deck_immersed(hi_phi):
+        for _ in range(12):  # 80 deg / 2^12 < 0.02 deg
+            mid = 0.5 * (lo_phi + hi_phi)
+            if deck_immersed(mid):
+                hi_phi = mid
+            else:
+                lo_phi = mid
+        deck_edge_angle = hi_phi
+    else:
+        deck_edge_angle = float("inf")
+        notes.append(
+            "the deck edge never immerses within the computed heel "
+            "range: the 80 % deck-edge limit is not active"
+        )
+
+    # area a: roll-up energy against l_w1, from theta_1 to phi_0
+    roll_back = phi0 - phi1
+    if roll_back < -GZ_MAX_ANGLE_DEG:
+        raise SpecValidationError(
+            "theta_1", roll_back,
+            f">= -{GZ_MAX_ANGLE_DEG:.0f} deg",
+            "the roll-back angle leaves the computed arm curve; the "
+            "roll angle phi_1 of 2.3.4 is implausibly large for this "
+            "hull - check the inputs.",
+        )
+    selected_a = [
+        (a, v) for a, v in zip(full_angles, full_arms)
+        if roll_back <= a <= phi0
+    ]
+    points_a = (
+        [(roll_back, float(np.interp(roll_back, full_angles, full_arms)))]
+        + selected_a
+        + [(phi0, float(np.interp(phi0, full_angles, full_arms)))]
+    )
+    area_a = 0.0
+    for (a0, v0), (a1, v1) in zip(points_a, points_a[1:]):
+        area_a += 0.5 * ((lw1 - v0) + (lw1 - v1)) * math.radians(a1 - a0)
+
+    # area b: between GZ and l_w2 from the rising intercept to theta_2
+    rising = first_crossing(lw2)
+    falling = last_crossing(lw2)
+    ceiling = _THETA2_CAP_DEG
+    if flooding_angle_deg is not None:
+        ceiling = min(ceiling, flooding_angle_deg)
+    if falling is not None:
+        ceiling = min(ceiling, falling)
+    selected_b = [
+        (a, v) for a, v in zip(grid_angles, grid_arms)
+        if rising <= a <= ceiling
+    ]
+    points_b = (
+        [(rising, lw2)]
+        + selected_b
+        + [(ceiling, float(np.interp(ceiling, grid_angles, grid_arms)))]
+    )
+    area_b = 0.0
+    for (a0, v0), (a1, v1) in zip(points_b, points_b[1:]):
+        area_b += 0.5 * ((v0 - lw2) + (v1 - lw2)) * math.radians(a1 - a0)
+
+    criteria = [
+        GZCriterion(
+            criterion_id="IS Code 2.3.1 area b >= a",
+            description="severe wind and rolling: area between GZ and "
+            "the gust lever vs roll-up area against the steady lever",
+            required=area_a, unit="m*rad", actual=area_b,
+            passed=area_b >= area_a,
+        ),
+        GZCriterion(
+            criterion_id="IS Code 2.3.1 steady heel",
+            description="steady-wind heel angle phi_0",
+            required=16.0, unit="deg", actual=phi0, passed=phi0 <= 16.0,
+        ),
+        GZCriterion(
+            criterion_id="IS Code 2.3.1 deck edge",
+            description="steady-wind heel vs 80 % of the deck-edge "
+            "immersion angle",
+            required=0.8 * deck_edge_angle, unit="deg", actual=phi0,
+            passed=phi0 <= 0.8 * deck_edge_angle,
+        ),
+    ]
+
+    return WeatherCriterionResult(
+        rule="IMO 2008 IS Code, Part A, 2.3 (resolution MSC.267(85))",
+        displacement_t=displacement_t,
+        kg_m=kg_m,
+        density=density,
+        windage_area_m2=windage_area_m2,
+        windage_lever_z_m=windage_lever_z_m,
+        wind_pressure_pa=wind_pressure_pa,
+        length_waterline_m=lwl,
+        beam_m=beam,
+        draft_m=draft,
+        cb=hydro.cb,
+        gm0_m=gm0,
+        b_over_d=b_over_d,
+        lw1_m=lw1,
+        lw2_m=lw2,
+        roll_period_s=roll_period,
+        c_coefficient=c_coeff,
+        x1=x1,
+        x2=x2,
+        k_factor=k_factor,
+        r_factor=r_factor,
+        s_factor=s_factor,
+        phi1_deg=phi1,
+        phi0_deg=phi0,
+        deck_edge_angle_deg=deck_edge_angle,
+        roll_back_deg=roll_back,
+        theta2_deg=ceiling,
+        area_a_mrad=area_a,
+        area_b_mrad=area_b,
+        criteria=tuple(criteria),
+        all_passed=all(c.passed for c in criteria),
+        notes=tuple(notes),
+    )

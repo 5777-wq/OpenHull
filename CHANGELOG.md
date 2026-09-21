@@ -8,6 +8,22 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- Severe wind and rolling criterion (plan task 3.5b):
+  `weather_criterion` evaluates IMO 2008 IS Code part A 2.3 end to
+  end — the wind levers (lw1 = P·A·Z/(1000·g·Δ) at 504 Pa, gust
+  lw2 = 1.5·lw1), the 2.3.4 roll chain (X1/X2/k/s factor tables with
+  linear interpolation, r = 0.73 + 0.6·OG/d, rolling period
+  T = 2·C·B/√GM on the free-surface-corrected GM, φ₁ = 109·k·X1·X2·
+  √(r·s)), the steady-wind heel against the 16° / 80 %-deck-edge
+  limits, and the normative areas a and b with the b ≥ a verdict.
+  Applicability guards refuse ships outside B/d < 3.5,
+  KG/d − 1 = −0.3…0.5, T < 20 s (2.3.5; MSC.1/Circ.1200 model tests
+  are the alternative).  Sources: criterion text and tables verified
+  verbatim against a public reproduction of the code and
+  cross-checked against IMO resolution A.562(14) — which restores the
+  B/d = 3.3 X1 row the reproduction omits.  TB-001 passes with wide
+  margins (a 0.345 vs b 1.527 m·rad); the task book now carries the
+  windage block ([ASSUMED] hull-side area, deckhouse neglected).
 - Intact stability criteria (plan task 3.5): `intact_stability_criteria`
   evaluates IMO 2008 IS Code Part A 2.2 — the three GZ-curve area
   requirements (0.055/0.09/0.03 m·rad with down-flooding angle

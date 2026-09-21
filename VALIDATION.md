@@ -8,11 +8,14 @@
 
 Status: **stages 1–2 complete** (dimensions + hydrostatics core +
 parametric hull generation on real offsets); stage 3 started with the
-static stability curve (task 3.4) and the IS Code general criteria
-(task 3.5). 208 tests green.
+static stability curve (task 3.4), the IS Code general criteria
+(task 3.5) and the severe wind and rolling criterion (task 3.5b).
+222 tests green.
 `openhull run` reproduces the chain end to end — dimensions,
-hydrostatics, the large-angle GZ curve, and the stability criteria
-verdict (with `requirements.kg_m` in the task book).
+hydrostatics, the large-angle GZ curve, the general criteria verdict
+and the weather criterion (with `requirements.kg_m` and the
+`constraints.stability.weather_criterion` windage block in the task
+book).
 
 ## Stage-1 acceptance summary (TB-001 / JBC-anchored)
 
@@ -201,11 +204,38 @@ rule.
 | Down-flooding at φf < 30° drops criterion (c) and re-targets (b) and 2.2.2 | verified | 2.2.1 literal text |
 | CLI end-to-end (balanced hull) | all six PASS; areas 0.718/1.074/0.356 m·rad; GM0 5.400 m | determinism |
 
-The severe wind and rolling criterion (IS Code 2.3: 504 Pa wind
-pressure, levers l_w1/l_w2, the roll-angle formula and its X1/X2/S
-coefficient tables) is **not yet implemented** — plan task 3.5b must
-transcribe and visually verify those tables first, and the TB-001
-windage area is undefined until then.
+The severe wind and rolling criterion (IS Code 2.3) is implemented in
+task 3.5b — see its section below.
+
+### Severe wind and rolling criterion (task 3.5b)
+
+`weather_criterion` evaluates IS Code part A 2.3. Sources: the
+criterion text, formula images and the X1/X2/k/s tables were verified
+verbatim against a public reproduction of the code (imorules.com,
+2026-09-21) and cross-checked table-by-table against IMO Resolution
+A.562(14) (official IMO CDN copy) — which also restores the B/d = 3.3
+→ 0.84 X1 row the reproduction omits and pins the normative area
+definitions of figure 2.3.1. TB-001 windage inputs are task-book
+declared ([ASSUMED] hull-side area 2,380 m², deckhouse neglected —
+unconservative direction; [DERIV] Z = 12.5 m; [NMRI] Lwl = 285 m).
+
+| Check | Result | Criterion |
+|---|---|---|
+| 2.3.4 chain vs independent hand evaluation (X1, X2, k, r, s, C, T, φ₁) | X1 0.9445, X2 1.000, k 1.0, r 0.6133, s 0.0636, C 0.3132, T 12.24 s, **φ₁ 20.33°** — all match the hand calculation | analytic |
+| 2.3.2 wind levers | lw1 = 8.36 mm (hand value exact), lw2 = 1.5·lw1 | 2.3.2 formula |
+| TB-001 chain (Δ 182,829.1 t, KG 13.29 m) | φ₀ 0.090°, deck edge 20.8°, roll-back −20.2°, θ₂ 50°, **area a 0.345 vs b 1.527 m·rad** | all three verdicts PASS |
+| Area integrals under grid refinement (2.5° → 1.25°) | change < 2 % (a) / < 1 % (b) | convergence |
+| Bilge keels (Ak 200 m² → k < 1) reduce φ₁ | verified | table behaviour |
+| 2.3.5 guards (B/d ≥ 3.5, KG/d−1 ∉ −0.3…0.5, T ≥ 20 s, P > 504 Pa) | refuse with citation | constitution §6 |
+
+**Anchor honesty**: no published JBC weather-criterion evaluation
+exists to our knowledge, so — like TPC/KB/LCF in task 1.4 — the
+binding acceptance is the independent hand evaluation of the whole
+2.3.4/2.3.2 chain plus the exact identities (lw2 = 1.5·lw1, the φ₀
+intercept, the θ₂ 50° cap), not an external number. The windage area
+is the dominant declared assumption; the verdict margins are wide
+(b ≈ 4.4 × a), but a deckhouse estimate would scale lw1 and must be
+re-run when the general layout defines it.
 
 ## Declared circularities and approximations
 
@@ -259,11 +289,18 @@ These are features of the current stage, not hidden weaknesses:
     exact only for prismatic rectangular tanks (the sec. 5-4 50 %-fill
     rule); criterion areas integrate the 2.5° corrected-arm grid
     (trapezoid on any terminal partial panel).
+12. **Weather criterion approximations (task 3.5b).** The TB-001
+    windage area is the hull side only (Lpp × freeboard; the aft
+    deckhouse is neglected — unconservative direction, task-book
+    declared); the negative-heel branch of the arm curve uses the odd
+    symmetry of the static stability curve; the area integrals run on
+    a 1.25° trapezoidal grid (convergence-tested); Lwl falls back to
+    Lpp when the task book omits it (TB-001 carries the NMRI 285 m).
 
 ## Reproducing
 
 ```bash
-uv run pytest                        # 208 tests
+uv run pytest                        # 222 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

@@ -35,7 +35,7 @@ from .geometry import jbc_parent_offsets  # noqa: F401  (1.x fitted parent,
 from .hydrostatics import hydrostatics_table
 from .linesplan import parent_to_taskbook
 from .spec import knots_to_ms, ShipSpec, SpecValidationError
-from .stability import gz_curve, intact_stability_criteria
+from .stability import gz_curve, intact_stability_criteria, weather_criterion
 from .weight_balance import solve_weight_balance
 
 __all__ = ["main", "run_taskbook"]
@@ -176,6 +176,33 @@ def run_taskbook(taskbook_path: str) -> dict:
             flooding_angle_deg=None if flooding is None else float(flooding),
         )
         criteria_summary = criteria.to_dict()
+        weather_block = (
+            ((data.get("constraints") or {}).get("stability") or {})
+            .get("weather_criterion")
+        )
+        weather_summary = None
+        if isinstance(weather_block, dict) and weather_block.get(
+            "windage_area_m2"
+        ) is not None:
+            weather = weather_criterion(
+                hull,
+                balance.displacement_t,
+                float(kg_value),
+                depth_m=balance.depth,
+                windage_area_m2=float(weather_block["windage_area_m2"]),
+                windage_lever_z_m=float(weather_block["windage_lever_z_m"]),
+                bilge_keel_area_m2=float(
+                    weather_block.get("bilge_keel_area_m2") or 0.0
+                ),
+                length_waterline_m=(
+                    None if weather_block.get("length_waterline_m") is None
+                    else float(weather_block["length_waterline_m"])
+                ),
+                flooding_angle_deg=(
+                    None if flooding is None else float(flooding)
+                ),
+            )
+            weather_summary = weather.to_dict()
 
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
@@ -204,6 +231,7 @@ def run_taskbook(taskbook_path: str) -> dict:
         "hydrostatics": _hydrostatics_rows(hydro_table),
         "gz_curve": gz_summary,
         "stability_criteria": criteria_summary,
+        "weather_criterion": weather_summary,
     }
     return summary
 
@@ -278,6 +306,28 @@ def _print_summary(summary: dict) -> None:
             f"  GM0 {criteria['gm0_m']:.3f} m (KG "
             f"{criteria['kg_m']:.2f} m); overall: "
             f"{'ALL PASS' if criteria['all_passed'] else 'FAILURES PRESENT'}"
+        )
+    weather = summary.get("weather_criterion")
+    if weather is not None:
+        print("-" * 64)
+        print(f"severe wind and rolling - {weather['rule']}:")
+        print(
+            f"  A {weather['windage_area_m2']:.0f} m2 at Z "
+            f"{weather['windage_lever_z_m']:.2f} m, P "
+            f"{weather['wind_pressure_pa']:.0f} Pa -> "
+            f"lw1 {weather['lw1_m'] * 1000:.1f} mm, "
+            f"lw2 {weather['lw2_m'] * 1000:.1f} mm"
+        )
+        print(
+            f"  roll: T {weather['roll_period_s']:.2f} s, phi_1 "
+            f"{weather['phi1_deg']:.2f} deg; steady heel phi_0 "
+            f"{weather['phi0_deg']:.3f} deg (deck edge at "
+            f"{weather['deck_edge_angle_deg']:.2f} deg)"
+        )
+        print(
+            f"  area a {weather['area_a_mrad']:.4f} vs b "
+            f"{weather['area_b_mrad']:.4f} m*rad; overall: "
+            f"{'ALL PASS' if weather['all_passed'] else 'FAILURES PRESENT'}"
         )
     print("-" * 64)
     print("JSON summary and CSV available via --json / --csv redirection.")
