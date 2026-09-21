@@ -70,6 +70,12 @@ constraints:
     rule: "IMO 2008 IS Code (complete stability)"  # checked in plan task 3.5
     gm_reference_m: 5.30             # [NMRI] full load (KG 13.29 m); values
                                      # added by NMRI in 2017 for reference
+    flooding_angle_deg: null         # [ASSUMED] no earlier non-weathertight
+                                     # opening is declared for the
+                                     # preliminary design; the criterion
+                                     # areas therefore run to 30/40 deg.
+                                     # Set to a number once an opening
+                                     # angle is fixed in general layout.
 
 validation_anchors:              # hard numbers the OpenHull test suite
                                  # asserts against (tolerances as noted,

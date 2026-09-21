@@ -8,10 +8,11 @@
 
 Status: **stages 1–2 complete** (dimensions + hydrostatics core +
 parametric hull generation on real offsets); stage 3 started with the
-static stability curve (task 3.4). 195 tests green.
+static stability curve (task 3.4) and the IS Code general criteria
+(task 3.5). 208 tests green.
 `openhull run` reproduces the chain end to end — dimensions,
-hydrostatics, and (with `requirements.kg_m` in the task book) the
-large-angle GZ curve.
+hydrostatics, the large-angle GZ curve, and the stability criteria
+verdict (with `requirements.kg_m` in the task book).
 
 ## Stage-1 acceptance summary (TB-001 / JBC-anchored)
 
@@ -172,6 +173,40 @@ sec. 5-5 slope identity.  Candidates to tighten it later: an
 authoritative JBC stability source, or real topside geometry from the
 JBC IGES.
 
+### Intact stability criteria (task 3.5)
+
+`intact_stability_criteria` evaluates IMO 2008 IS Code Part A 2.2
+(general criteria; text verified verbatim against a public reproduction
+of the code, imorules.com, 2026-09-21 — cross-checked with Xie
+Yunping's domestic GM ≥ 0.15 m and the Ship Theory vol. 1 table 4-5
+requirements column).  Areas integrate the free-surface-corrected arm
+curve on a 2.5° grid (Simpson; trapezoid on a terminal partial panel);
+free-surface arms follow Ship Theory vol. 1 sec. 5-4 with the 50 %-fill
+rule.
+
+| Criterion | Required | TB-001 chain (Δ 182,829.1 t, KG 13.29 m) | Verdict |
+|---|---|---|---|
+| 2.2.1(a) area 0–30° | ≥ 0.055 m·rad | **0.748 m·rad** | PASS |
+| 2.2.1(b) area 0–40° | ≥ 0.09 m·rad | **1.181 m·rad** | PASS |
+| 2.2.1(c) area 30–40° | ≥ 0.03 m·rad | **0.433 m·rad** | PASS |
+| 2.2.2 static lever at ≥ 30° | ≥ 0.2 m | **2.554 m** | PASS |
+| 2.2.3 angle of maximum lever | ≥ 25° | **31.0°** | PASS |
+| 2.2.4 initial GM0 | ≥ 0.15 m | **5.306 m** | PASS |
+
+| Check | Result | Criterion |
+|---|---|---|
+| Verdict agreement with the published JBC analysis (Hussain & Amin 2021, Table 7) | identical: all PASS there and here; their areas 0.781/1.319/0.555 m·rad vs ours 0.748/1.181/0.433 (ratios 0.96/0.90/0.78 — the task 3.4 geometry-model attribution applies) | demonstration |
+| Rectangular-tank free-surface arm vs closed form δl = w1·V·tanφ·b²/(12·h)/Δ | exact to 1e-12 at 5/10/20/30° | analytic (sec. 5-4, wall-sided prism at 50 % fill) |
+| Flooded tank reduces GM0 by Eq. (4-38) and every area | verified | consistency |
+| Down-flooding at φf < 30° drops criterion (c) and re-targets (b) and 2.2.2 | verified | 2.2.1 literal text |
+| CLI end-to-end (balanced hull) | all six PASS; areas 0.718/1.074/0.356 m·rad; GM0 5.400 m | determinism |
+
+The severe wind and rolling criterion (IS Code 2.3: 504 Pa wind
+pressure, levers l_w1/l_w2, the roll-angle formula and its X1/X2/S
+coefficient tables) is **not yet implemented** — plan task 3.5b must
+transcribe and visually verify those tables first, and the TB-001
+windage area is undefined until then.
+
 ## Declared circularities and approximations
 
 These are features of the current stage, not hidden weaknesses:
@@ -216,14 +251,19 @@ These are features of the current stage, not hidden weaknesses:
     from the top tabulated waterline to the deck (the offsets grid
     ends at the design draft; consistent with the flush-deck freeboard
     assumption of task 1.6); trim coupling is neglected (the textbook's
-    own sec. 5-1 assumption); free-surface influence on the curve
-    (sec. 5-4, 50 % fill) is deferred to task 3.5; the dynamic arm is
-    accumulated trapezoidally over the 10° grid.
+    own sec. 5-1 assumption); the dynamic arm is accumulated
+    trapezoidally over the 10° grid.
+11. **Criteria approximations (task 3.5).** TB-001 declares no earlier
+    non-weathertight opening, so the 2.2.1 areas run to 30°/40°
+    (flooding_angle_deg is a task-book input); free-surface arms are
+    exact only for prismatic rectangular tanks (the sec. 5-4 50 %-fill
+    rule); criterion areas integrate the 2.5° corrected-arm grid
+    (trapezoid on any terminal partial panel).
 
 ## Reproducing
 
 ```bash
-uv run pytest                        # 195 tests
+uv run pytest                        # 208 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

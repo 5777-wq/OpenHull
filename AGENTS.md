@@ -164,7 +164,8 @@ no page numbers from memory).
   numerical integration, p. 46); section 5-5 Eqs.(5-15)/(5-16) the
   origin slope of the GZ curve equals GM (used as a test identity);
   section 5-6 dynamic stability T_R = Δ·∫l dφ; section 5-4 free-surface
-  influence δl = M_H/Δ with the 50 %-fill rule (deferred to task 3.5).
+  influence δl = M_H/Δ with the 50 %-fill rule (implemented in task 3.5
+  for prismatic rectangular tanks).
 - Hussain, Md Daluar & Amin, Osman Md (2021), "A Comprehensive Analysis
   of the Stability and Powering Performances of a Hard Sail-Assisted
   Bulk Carrier", Journal of Marine Science and Application, vol. 20,
@@ -216,7 +217,21 @@ no page numbers from memory).
 
 **Intact stability criteria**
 - IMO Resolution MSC.267(85), International Code on Intact Stability,
-  2008 (IS Code) — general stability criteria.
+  2008 (IS Code) — general stability criteria, Part A section 2.2
+  (text verified verbatim against a public reproduction of the code,
+  imorules.com, fetched 2026-09-21): 2.2.1 area under the GZ curve
+  not less than 0.055 m·rad up to 30°, not less than 0.09 m·rad up to
+  40° or the down-flooding angle if less, not less than 0.03 m·rad
+  between 30° and 40° (or the down-flooding angle); 2.2.2 static lever
+  at least 0.2 m at an heel of 30° or greater; 2.2.3 maximum GZ at an
+  angle of at least 25°; 2.2.4 initial GM0 at least 0.15 m.
+  Cross-checked against Xie Yunping *Ship Design Principles* (domestic
+  rule: cargo ships GM >= 0.15 m) and the Ship Theory vol. 1 worked
+  example table 4-5 (requirements column).  The severe wind and
+  rolling criterion (section 2.3: 504 Pa, levers l_w1/l_w2, roll-angle
+  formula with the X1/X2/S coefficient tables) is NOT yet implemented
+  — plan task 3.5b must transcribe and visually verify those tables
+  first.
 
 **Propeller (preliminary)**
 - AU-series chart data; the specific regression to be pinned here at

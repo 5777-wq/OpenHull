@@ -35,7 +35,7 @@ from .geometry import jbc_parent_offsets  # noqa: F401  (1.x fitted parent,
 from .hydrostatics import hydrostatics_table
 from .linesplan import parent_to_taskbook
 from .spec import knots_to_ms, ShipSpec, SpecValidationError
-from .stability import gz_curve
+from .stability import gz_curve, intact_stability_criteria
 from .weight_balance import solve_weight_balance
 
 __all__ = ["main", "run_taskbook"]
@@ -149,10 +149,12 @@ def run_taskbook(taskbook_path: str) -> dict:
     hydro_table = hydrostatics_table(hull, drafts)
     hydro_design = hydro_table.at(drafts[-1])
 
-    # large-angle stability (plan task 3.4): runs when the task book
-    # carries the loading KG; the deck closes the sections at the
-    # moulded depth (wall-sided above the top tabulated waterline)
+    # large-angle stability (plan tasks 3.4/3.5): runs when the task
+    # book carries the loading KG; the deck closes the sections at the
+    # moulded depth (wall-sided above the top tabulated waterline) and
+    # the IS Code 2.2 criteria are evaluated on the curve
     gz_summary = None
+    criteria_summary = None
     kg_value = (data.get("requirements") or {}).get("kg_m")
     if kg_value is not None:
         gz = gz_curve(
@@ -162,6 +164,18 @@ def run_taskbook(taskbook_path: str) -> dict:
             depth_m=balance.depth,
         )
         gz_summary = gz.to_dict()
+        flooding = (
+            ((data.get("constraints") or {}).get("stability") or {})
+            .get("flooding_angle_deg")
+        )
+        criteria = intact_stability_criteria(
+            hull,
+            balance.displacement_t,
+            float(kg_value),
+            depth_m=balance.depth,
+            flooding_angle_deg=None if flooding is None else float(flooding),
+        )
+        criteria_summary = criteria.to_dict()
 
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
@@ -189,6 +203,7 @@ def run_taskbook(taskbook_path: str) -> dict:
         "citation": balance.citation,
         "hydrostatics": _hydrostatics_rows(hydro_table),
         "gz_curve": gz_summary,
+        "stability_criteria": criteria_summary,
     }
     return summary
 
@@ -247,6 +262,22 @@ def _print_summary(summary: dict) -> None:
             f"  max GZ {gz['gz_max_m']:.3f} m at "
             f"{gz['angle_max_deg']:.1f}deg; vanishing angle "
             f"{vanishing_text}"
+        )
+    criteria = summary.get("stability_criteria")
+    if criteria is not None:
+        print("-" * 64)
+        print(f"intact stability criteria - {criteria['rule']}:")
+        for entry in criteria["criteria"]:
+            verdict = "PASS" if entry["passed"] else "FAIL"
+            print(
+                f"  {entry['criterion_id']:18s} "
+                f"required {entry['required']:>8.3f} {entry['unit']:6s} "
+                f"actual {entry['actual']:>9.4f}  {verdict}"
+            )
+        print(
+            f"  GM0 {criteria['gm0_m']:.3f} m (KG "
+            f"{criteria['kg_m']:.2f} m); overall: "
+            f"{'ALL PASS' if criteria['all_passed'] else 'FAILURES PRESENT'}"
         )
     print("-" * 64)
     print("JSON summary and CSV available via --json / --csv redirection.")

@@ -8,6 +8,18 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- Intact stability criteria (plan task 3.5): `intact_stability_criteria`
+  evaluates IMO 2008 IS Code Part A 2.2 — the three GZ-curve area
+  requirements (0.055/0.09/0.03 m·rad with down-flooding angle
+  handling), the 0.2 m lever at 30° or greater, the 25° maximum-angle
+  requirement and GM0 ≥ 0.15 m — one JSON-serializable verdict per
+  criterion.  `free_surface_arm` applies the Ship Theory vol. 1
+  sec. 5-4 free-surface correction (50 %-fill rule, prismatic
+  rectangular tanks) to the arm curve; `Tank` now carries optional
+  moulded prism dimensions.  The CLI `run` prints the criteria table
+  after the GZ curve; the task book takes an optional
+  `constraints.stability.flooding_angle_deg`.  TB-001 full load: all
+  six criteria PASS (areas 0.748/1.181/0.433 m·rad, GM0 5.306 m).
 - Large-angle stability — the static stability curve (plan task 3.4):
   `gz_curve(table, displacement, kg, depth)` computes l(φ) by the
   equal-displacement method (Ship Theory vol. 1, sec. 5-2): per heel

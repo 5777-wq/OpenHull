@@ -59,6 +59,7 @@ from .spec import SpecValidationError
 __all__ = [
     "Tank",
     "free_surface_correction",
+    "free_surface_arm",
     "initial_stability",
     "InitialStability",
     "floating_position",
@@ -67,6 +68,9 @@ __all__ = [
     "gz_curve",
     "GZCurveResult",
     "GZPoint",
+    "intact_stability_criteria",
+    "StabilityCriteriaResult",
+    "GZCriterion",
     "BUOYANCY_TOLERANCE",
     "LCG_TOLERANCE",
     "GZ_VOLUME_TOLERANCE",
@@ -104,12 +108,19 @@ class Tank:
             1.000, seawater 1.025 — AGENTS.md section 1).
         i_y: optional longitudinal inertia of the free surface, m^4
             (for the GML correction, Eq. 4-37).
+        length / breadth / height: optional moulded tank dimensions, m.
+            The large-angle free-surface arm of sec. 5-4 shifts the
+            actual liquid volume, so it needs the physical prism; the
+            initial-GM correction of Eq. (4-38) runs on i_x alone.
     """
 
     name: str
     i_x: float
     liquid_density: float
     i_y: float | None = None
+    length: float | None = None
+    breadth: float | None = None
+    height: float | None = None
 
     def __post_init__(self) -> None:
         if not self.name:
@@ -135,13 +146,27 @@ class Tank:
                 "the longitudinal free-surface inertia must be a "
                 "positive area inertia when provided.",
             )
+        for attr in ("length", "breadth", "height"):
+            value = getattr(self, attr)
+            if value is not None and (
+                not math.isfinite(value) or value <= 0
+            ):
+                raise SpecValidationError(
+                    attr, value, f"finite {attr} > 0",
+                    "a tank prism dimension must be positive; the "
+                    "sec. 5-4 liquid shift moves the physical volume.",
+                )
 
     @classmethod
     def rectangular(
         cls, name: str, length: float, breadth: float,
-        liquid_density: float = 1.0,
+        liquid_density: float = 1.0, height: float | None = None,
     ) -> "Tank":
-        """Rectangular tank: i_x = l*b^3/12, i_y = b*l^3/12 (ch. 2)."""
+        """Rectangular tank: i_x = l*b^3/12, i_y = b*l^3/12 (ch. 2).
+
+        ``height`` is optional for the initial-GM correction but
+        required by the large-angle free-surface arm (sec. 5-4).
+        """
         for attr, value in (("length", length), ("breadth", breadth)):
             if not math.isfinite(value) or value <= 0:
                 raise SpecValidationError(
@@ -149,11 +174,20 @@ class Tank:
                     "a tank dimension must be positive; the free-surface "
                     "inertias scale with l*b^3 and b*l^3.",
                 )
+        if height is not None and (not math.isfinite(height) or height <= 0):
+            raise SpecValidationError(
+                "height", height, "finite height > 0",
+                "the tank depth bounds the liquid prism; the sec. 5-4 "
+                "shift needs a positive moulded height.",
+            )
         return cls(
             name=name,
             i_x=length * breadth**3 / 12.0,
             liquid_density=liquid_density,
             i_y=breadth * length**3 / 12.0,
+            length=length,
+            breadth=breadth,
+            height=height,
         )
 
 
@@ -975,4 +1009,372 @@ def gz_curve(
         gz_max_m=best_arm,
         angle_max_deg=best_angle,
         angle_vanishing_deg=vanishing,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Intact stability criteria: IMO 2008 IS Code Part A 2.2 (plan task 3.5)
+# ---------------------------------------------------------------------------
+
+
+def free_surface_arm(
+    tanks: tuple[Tank, ...], displacement: float, angle_deg: float,
+) -> float:
+    """Free-surface influence on the stability arm at one heel.
+
+    Ship Theory vol. 1, sec. 5-4: delta_l = M_H/Delta with the liquid
+    shifting moment M_H = sum(w1 * V * y_shift).  Tanks are treated as
+    prismatic rectangular prisms (length/breadth/height define the
+    liquid volume exactly); the liquid sits at 50 % of the tank volume
+    per the sec. 5-4 worst-case rule, so its surface passes through the
+    tank centre — any line through the centre of a centrally symmetric
+    section bisects the area, which pins the surface without
+    iteration.  The shifted liquid centroid comes from the same exact
+    polygon machinery as the GZ curve.
+
+    Args:
+        tanks: tanks with free surfaces; each needs length, breadth
+            and height (construct via ``Tank.rectangular(..., height=)``).
+        displacement: ship displacement Delta, t.
+        angle_deg: heel angle phi, degrees (0 allowed; the arm is 0).
+
+    Returns:
+        delta_l, metres to subtract from every GZ of the curve.
+
+    Raises:
+        SpecValidationError: displacement non-positive, angle out of
+            range, or a tank without its physical prism dimensions.
+    """
+    if not math.isfinite(displacement) or displacement <= 0:
+        raise SpecValidationError(
+            "displacement", displacement, "finite Delta > 0",
+            "the liquid moment divides by the ship displacement "
+            "(delta_l = M_H/Delta).",
+        )
+    if (
+        not math.isfinite(angle_deg) or angle_deg < 0.0
+        or angle_deg > GZ_MAX_ANGLE_DEG
+    ):
+        raise SpecValidationError(
+            "angle_deg", angle_deg,
+            f"0 <= phi <= {GZ_MAX_ANGLE_DEG} deg",
+            "the free-surface arm follows the same heel range as the "
+            "stability curve itself.",
+        )
+    moment = 0.0
+    for tank in tanks:
+        dims = (tank.length, tank.breadth, tank.height)
+        if any(dim is None for dim in dims):
+            raise SpecValidationError(
+                "tanks", tank.name,
+                "length, breadth and height set",
+                "the sec. 5-4 arm shifts the actual liquid volume, so "
+                f"tank '{tank.name}' needs its physical prism; "
+                "construct it via Tank.rectangular(..., height=...).",
+            )
+        length, breadth, height = (float(d) for d in dims)
+        ring = [
+            (-breadth / 2.0, 0.0), (breadth / 2.0, 0.0),
+            (breadth / 2.0, height), (-breadth / 2.0, height),
+        ]
+        tan_phi = math.tan(math.radians(angle_deg))
+        area, cy, _cz = _area_centroid(
+            _clip_below_line(ring, height / 2.0, tan_phi)
+        )
+        moment += tank.liquid_density * area * length * cy
+    return moment / displacement
+
+
+@dataclass(frozen=True)
+class GZCriterion:
+    """One evaluated stability criterion (JSON-serializable).
+
+    Attributes:
+        criterion_id: the rule section, e.g. "IS Code 2.2.1(a)".
+        description: plain-ASCII statement of the requirement.
+        required: the required value.
+        unit: the unit of both required and actual.
+        actual: the value computed for this loading condition.
+        passed: actual satisfies required.
+    """
+
+    criterion_id: str
+    description: str
+    required: float
+    unit: str
+    actual: float
+    passed: bool
+
+
+@dataclass(frozen=True)
+class StabilityCriteriaResult:
+    """Verdict of the general intact stability criteria (JSON-ready).
+
+    Attributes:
+        rule: the rule identification string.
+        displacement_t / kg_m / density: the loading condition, t / m /
+            t/m^3.
+        gm0_m: free-surface-corrected initial metacentric height, m.
+        free_surface_correction_m: sum(w1*i_x)/Delta applied, m.
+        flooding_angle_deg: down-flooding angle used, degrees (None =
+            none declared; areas run to 30/40 deg).
+        criteria: one :class:`GZCriterion` per checked requirement.
+        area_angles_deg / area_arms_m: the corrected-arm curve the
+            areas were integrated on (0..40 deg, fine step).
+        all_passed: True when every criterion passed.
+        notes: declared assumptions and integration details.
+    """
+
+    rule: str
+    displacement_t: float
+    kg_m: float
+    density: float
+    gm0_m: float
+    free_surface_correction_m: float
+    flooding_angle_deg: float | None
+    criteria: tuple[GZCriterion, ...]
+    area_angles_deg: tuple[float, ...]
+    area_arms_m: tuple[float, ...]
+    all_passed: bool
+    notes: tuple[str, ...]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "rule": self.rule,
+            "displacement_t": self.displacement_t,
+            "kg_m": self.kg_m,
+            "density": self.density,
+            "gm0_m": self.gm0_m,
+            "free_surface_correction_m": self.free_surface_correction_m,
+            "flooding_angle_deg": self.flooding_angle_deg,
+            "criteria": [asdict(c) for c in self.criteria],
+            "area_angles_deg": list(self.area_angles_deg),
+            "area_arms_m": list(self.area_arms_m),
+            "all_passed": self.all_passed,
+            "notes": list(self.notes),
+        }
+
+
+#: fine angle grid (degrees) the criterion areas integrate on: 0..40 in
+#: 2.5 deg steps (16 intervals, Simpson-ready; a flooding angle inside a
+#: step closes the last panel trapezoidally)
+_CRITERIA_STEP_DEG = 2.5
+
+
+def intact_stability_criteria(
+    table: OffsetsTable,
+    displacement_t: float,
+    kg_m: float,
+    depth_m: float,
+    density: float = 1.025,
+    *,
+    flooding_angle_deg: float | None = None,
+    tanks: tuple[Tank, ...] = (),
+) -> StabilityCriteriaResult:
+    """General intact stability criteria, IMO 2008 IS Code Part A 2.2.
+
+    Text verified verbatim (AGENTS.md section 5 whitelist): 2.2.1 area
+    under the GZ curve >= 0.055 m*rad up to 30 deg, >= 0.09 m*rad up
+    to 40 deg or the down-flooding angle if less, >= 0.03 m*rad
+    between 30 and 40 deg (or to the flooding angle); 2.2.2 a static
+    lever of at least 0.2 m at 30 deg or greater; 2.2.3 the maximum
+    lever at 25 deg or greater; 2.2.4 GM0 >= 0.15 m.
+
+    Args:
+        table: offsets grid of the hull.
+        displacement_t: ship displacement Delta, t.
+        kg_m: centre of gravity above keel, m.
+        depth_m: deck-at-side height for the section closure, m (see
+            :func:`gz_curve`).
+        density: water density, t/m^3.
+        flooding_angle_deg: down-flooding angle of the first
+            non-weathertight opening, degrees; None when none is
+            declared (the areas then run to 30/40 deg).
+        tanks: free-surface tanks; the arm curve is corrected by the
+            sec. 5-4 delta_l and GM0 by Eq. (4-38).
+
+    Returns:
+        StabilityCriteriaResult with one verdict per criterion.
+
+    Raises:
+        SpecValidationError: inputs out of range (see :func:`gz_curve`
+            and :func:`free_surface_arm`).
+    """
+    if flooding_angle_deg is not None and (
+        not math.isfinite(flooding_angle_deg)
+        or not 0.0 < flooding_angle_deg <= GZ_MAX_ANGLE_DEG
+    ):
+        raise SpecValidationError(
+            "flooding_angle_deg", flooding_angle_deg,
+            f"0 < phi_f <= {GZ_MAX_ANGLE_DEG} deg",
+            "the down-flooding angle bounds the effective part of the "
+            "stability curve; a value outside the computed heel range "
+            "cannot be honoured.",
+        )
+
+    # GM0 at the even-keel draft of the condition (KM from the
+    # stage-1.4 hydrostatics; free-surface correction Eq. 4-38)
+    top_waterline = float(table.waterlines[-1])
+    lo_z, hi_z = 0.0, top_waterline
+    for _ in range(60):
+        mid = 0.5 * (lo_z + hi_z)
+        if hydrostatics_at(table, mid, density).displacement < displacement_t:
+            lo_z = mid
+        else:
+            hi_z = mid
+    draft = 0.5 * (lo_z + hi_z)
+    km = hydrostatics_at(table, draft, density).km
+    fsc = free_surface_correction(tanks, displacement_t)
+    gm0 = km - kg_m - fsc
+
+    # corrected arm curve: full range for the 2.2.3 characteristic, a
+    # fine grid for the 2.2.1 areas (delta_l per sec. 5-4 when tanks
+    # are given)
+    def corrected_arm(arm: float, angle_deg: float) -> float:
+        return arm - free_surface_arm(tanks, displacement_t, angle_deg)
+
+    full = gz_curve(table, displacement_t, kg_m, depth_m, density)
+    full_corrected = [
+        corrected_arm(p.gz_m, p.angle_deg) for p in full.points
+    ]
+    fine_angles = [
+        _CRITERIA_STEP_DEG * i for i in range(1, 17)
+    ]  # 2.5 .. 40 deg
+    fine = gz_curve(
+        table, displacement_t, kg_m, depth_m, density,
+        angles_deg=tuple(fine_angles),
+    )
+    grid_angles = [0.0] + list(fine_angles)
+    grid_arms = [0.0] + [
+        corrected_arm(p.gz_m, p.angle_deg) for p in fine.points
+    ]
+    grid_rad = [math.radians(a) for a in grid_angles]
+
+    def area_to(ceiling_deg: float) -> float:
+        """Area under the corrected arm curve up to a ceiling, m*rad:
+        Simpson over the even count of full 2.5 deg panels, trapezoid
+        on the terminal partial panel when the ceiling falls inside (or
+        leaves an odd) panel."""
+        ceiling = math.radians(ceiling_deg)
+        step = grid_rad[1] - grid_rad[0]
+        n_full = int(math.floor(round(ceiling / step, 9)))
+        n_simpson = n_full if n_full % 2 == 0 else n_full - 1
+        area = 0.0
+        if n_simpson >= 2:
+            area += simpson(np.asarray(grid_arms[:n_simpson + 1]), step)
+        last = (
+            n_simpson if n_simpson < len(grid_rad) - 1
+            else len(grid_rad) - 1
+        )
+        if ceiling > grid_rad[last] + 1e-12:
+            arm_ceiling = float(np.interp(ceiling, grid_rad, grid_arms))
+            area += 0.5 * (grid_arms[last] + arm_ceiling) * (
+                ceiling - grid_rad[last]
+            )
+        return area
+
+    phi_f = flooding_angle_deg
+    ceiling_b = min(40.0, phi_f) if phi_f is not None else 40.0
+    criteria: list[GZCriterion] = []
+    notes = [
+        "areas integrated by Simpson on a 2.5 deg grid of the "
+        "free-surface-corrected curve (trapezoid on any terminal "
+        "partial panel)",
+    ]
+
+    area_a = area_to(min(30.0, ceiling_b))
+    criteria.append(GZCriterion(
+        criterion_id="IS Code 2.2.1(a)",
+        description="GZ curve area from 0 to "
+        f"{min(30.0, ceiling_b):.1f} deg",
+        required=0.055, unit="m*rad", actual=area_a,
+        passed=area_a >= 0.055,
+    ))
+    area_b = area_to(ceiling_b)
+    criteria.append(GZCriterion(
+        criterion_id="IS Code 2.2.1(b)",
+        description="GZ curve area from 0 to "
+        f"{ceiling_b:.1f} deg (40 deg or down-flooding angle)",
+        required=0.09, unit="m*rad", actual=area_b,
+        passed=area_b >= 0.09,
+    ))
+    if phi_f is None or phi_f > 30.0:
+        ceiling_c = min(40.0, phi_f) if phi_f is not None else 40.0
+        area_c = area_to(ceiling_c) - area_to(30.0)
+        criteria.append(GZCriterion(
+            criterion_id="IS Code 2.2.1(c)",
+            description=f"GZ curve area from 30 to {ceiling_c:.1f} deg",
+            required=0.03, unit="m*rad", actual=area_c,
+            passed=area_c >= 0.03,
+        ))
+    else:
+        notes.append(
+            f"down-flooding at {phi_f:.1f} deg precedes 30 deg: "
+            "criterion 2.2.1(c) has no interval and is not evaluated"
+        )
+
+    # 2.2.2: a static lever of at least 0.2 m at 30 deg or greater
+    # (when the ship floods before 30 deg, judged up to that angle)
+    if phi_f is not None and phi_f < 30.0:
+        arms_window = [
+            arm for a, arm in zip(grid_angles, grid_arms)
+            if a <= phi_f + 1e-9
+        ]
+        window_text = f"up to {phi_f:.1f} deg (down-flooding)"
+    else:
+        arms_window = [
+            arm for a, arm in zip(grid_angles, grid_arms)
+            if a >= 30.0 - 1e-9
+        ]
+        window_text = "at 30 deg or greater"
+    lever = max(arms_window)
+    criteria.append(GZCriterion(
+        criterion_id="IS Code 2.2.2",
+        description=f"static lever {window_text}",
+        required=0.2, unit="m", actual=lever, passed=lever >= 0.2,
+    ))
+
+    # 2.2.3: the maximum lever at 25 deg or greater (full curve).  With
+    # no tanks the curve's own 0.25 deg-refined angle is used directly;
+    # a free-surface correction moves the maximum, so it is then
+    # re-located on the corrected grid arms.
+    if tanks:
+        angle_max = full.points[
+            full_corrected.index(max(full_corrected))
+        ].angle_deg
+    else:
+        angle_max = full.angle_max_deg
+    criteria.append(GZCriterion(
+        criterion_id="IS Code 2.2.3",
+        description="heel angle of the maximum lever (full curve)",
+        required=25.0, unit="deg", actual=angle_max,
+        passed=angle_max >= 25.0,
+    ))
+    if angle_max == full.points[-1].angle_deg:
+        notes.append(
+            "the corrected arm still rises at the last computed angle: "
+            "the reported maximum angle is a lower bound"
+        )
+
+    # 2.2.4: initial metacentric height
+    criteria.append(GZCriterion(
+        criterion_id="IS Code 2.2.4",
+        description="initial metacentric height GM0 (free-surface "
+        "corrected, Eq. 4-38)",
+        required=0.15, unit="m", actual=gm0, passed=gm0 >= 0.15,
+    ))
+
+    return StabilityCriteriaResult(
+        rule="IMO 2008 IS Code, Part A, 2.2 (resolution MSC.267(85))",
+        displacement_t=displacement_t,
+        kg_m=kg_m,
+        density=density,
+        gm0_m=gm0,
+        free_surface_correction_m=fsc,
+        flooding_angle_deg=phi_f,
+        criteria=tuple(criteria),
+        area_angles_deg=tuple(grid_angles),
+        area_arms_m=tuple(grid_arms),
+        all_passed=all(c.passed for c in criteria),
+        notes=tuple(notes),
     )
