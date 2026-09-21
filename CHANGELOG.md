@@ -8,6 +8,20 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- Ayre resistance estimation (plan task 3.1 v1):
+  `ayre_effective_power` implements the Ayre method as transcribed in
+  Ship Theory vol. 1 section 7-1 — the standard-form effective power
+  (Eq. 7-21) with the figure 7-3 C₀ coefficient digitised from the
+  scanned chart, the four corrections (block coefficient via Eq. 7-22
+  / table 7-6, B/T via Eq. 7-23, LCB via Eq. 7-24 / tables 7-7a,b
+  with the three-part suppression rule, waterline length via
+  Eq. 7-25) reported as an audit chain, and the bare-hull power of
+  Eq. 7-27.  Guards: V/√L 0.50–1.20 (knots/√ft — the worked example
+  pins the units) and the digitised C₀ band L/Δ^(1/3) 4.88–6.41.
+  Acceptance: the published table 7-8 example reproduces to
+  +0.1 % / +0.0 % on effective power (C₄ 441.3/400.7 vs 441/401).
+  Holtrop & Mennen remains a registered placeholder pending its
+  source paper; a selectable-algorithm registry is in place.
 - Severe wind and rolling criterion (plan task 3.5b):
   `weather_criterion` evaluates IMO 2008 IS Code part A 2.3 end to
   end — the wind levers (lw1 = P·A·Z/(1000·g·Δ) at 504 Pa, gust

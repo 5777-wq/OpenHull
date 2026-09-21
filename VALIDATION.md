@@ -7,10 +7,9 @@
 > Binding conventions: [`AGENTS.md`](AGENTS.md) (tolerances in section 4).
 
 Status: **stages 1–2 complete** (dimensions + hydrostatics core +
-parametric hull generation on real offsets); stage 3 started with the
-static stability curve (task 3.4), the IS Code general criteria
-(task 3.5) and the severe wind and rolling criterion (task 3.5b).
-222 tests green.
+parametric hull generation on real offsets); stage 3 in progress —
+stability pillar complete (tasks 3.4/3.5/3.5b) and resistance
+estimation started (task 3.1, Ayre method). 236 tests green.
 `openhull run` reproduces the chain end to end — dimensions,
 hydrostatics, the large-angle GZ curve, the general criteria verdict
 and the weather criterion (with `requirements.kg_m` and the
@@ -237,6 +236,30 @@ is the dominant declared assumption; the verdict margins are wide
 (b ≈ 4.4 × a), but a deckhouse estimate would scale lw1 and must be
 re-run when the general layout defines it.
 
+### Resistance estimation — Ayre method (task 3.1 v1)
+
+`ayre_effective_power` implements the Ayre method as transcribed in
+Ship Theory vol. 1 section 7-1 (Eqs. 7-21..7-27, tables 7-5/7-6/7-7a/b,
+figure 7-3).  The C₀ chart is digitised (mid-family curves
+L/Δ^(1/3) = 4.88..6.41, V/√L stations 0.50..1.30, reading tolerance
+±4 units) and the speed-length ratio uses knots/√ft — the worked
+example pins both (14 kn on 122 m → 0.70, not 1.27).
+
+| Check | Result | Criterion |
+|---|---|---|
+| Table 7-8 worked example (Lbp 122 m, Δ 11,970 t, Cb 0.721): C₄ | **441.3 / 400.7** vs published 441 / 401 | reproduction |
+| Table 7-8 effective power | **1862 / 2522 kW** vs published 1860 / 2521 (errors +0.1 % / +0.0 %) | §4 allows +10…15 % |
+| Fuller-ship sign flip at 15 kn (Cb 0.721 > Cbc 0.705 → Eq. 7-22 negative, LCB penalty suppressed) | verified | correction rules |
+| Guard: JBC service speed 14.5 kn → V/√L = 0.478 < 0.50 | refused with the value | §4 band + §6 |
+| Guard: L/Δ^(1/3) outside 4.88..6.41, LCB offset > 2 %L | refused | §6 |
+
+Holtrop & Mennen (the whitelisted method for the JBC band) stays a
+registered placeholder until its source paper arrives; JBC-band
+resistance validation is therefore scheduled with it.  The digitised
+C₀ band (L/Δ^(1/3) 4.88..6.41) covers the table 7-8 example and
+typical merchant ships; the remaining chart curves are declared
+future data-entry work, and the module refuses outside the band.
+
 ## Declared circularities and approximations
 
 These are features of the current stage, not hidden weaknesses:
@@ -296,11 +319,19 @@ These are features of the current stage, not hidden weaknesses:
     symmetry of the static stability curve; the area integrals run on
     a 1.25° trapezoidal grid (convergence-tested); Lwl falls back to
     Lpp when the task book omits it (TB-001 carries the NMRI 285 m).
+13. **Ayre method approximations (task 3.1 v1).** The C₀ chart is
+    hand-digitised (±4 units, anchor-checked against the table 7-8
+    example) for the L/Δ^(1/3) = 4.88..6.41 curves only, and the
+    V/√L band is 0.50..1.20; the standard-LCB table turns aft above
+    V/√L ≈ 0.82 (stored signed); the result includes the method's
+    inherent ~8 % appendage/air allowance (Eq. 7-27 divides it out
+    for the bare hull); twin-screw LCB sign handling beyond the
+    table-7-5 single-screw column is unvalidated (tests use single).
 
 ## Reproducing
 
 ```bash
-uv run pytest                        # 222 tests
+uv run pytest                        # 236 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 
