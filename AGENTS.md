@@ -196,6 +196,17 @@ no page numbers from memory).
   form coefficients of the mother hull.
 
 **Resistance**
+- Ayre method as transcribed in Ship Theory vol. 1 (Sheng Zhenbang &
+  Liu Yingzhong, 2nd ed.), section 7-1, pp. 291–296 — Eqs.(7-21)–(7-27)
+  effective power of the standard form and its corrections; tables
+  7-5 (standard Cbc and LCB), 7-6 (Kbc), 7-7(a)/(b) (Kxc), figure 7-3
+  (C₀ chart, digitised for L/Δ^(1/3) = 4.88–6.41) and the worked
+  example of table 7-8 (acceptance anchor).  Units trap pinned by the
+  example: V/√L is knots over √feet, L/Δ^(1/3) and Fr are SI.
+  Owner approval: task 3.1 implementation plan (2026-09-21).
+  Amendment-order note: implemented and whitelisted in the same
+  session, whitelist commit immediately following — recorded here
+  for transparency.
 - ITTC 1957 model–ship correlation line — frictional resistance.
 - Holtrop, J. & Mennen, G.G.J. (1982), "An Approximate Power Prediction
   Method", International Shipbuilding Progress, vol. 29 — residual
