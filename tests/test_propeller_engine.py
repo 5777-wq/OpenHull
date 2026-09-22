@@ -14,6 +14,7 @@ import pytest
 from openhull.propeller import (
     OpenWaterSeries,
     solve_optimal_propeller,
+    solve_speed_thrust_balance,
     terminal_design,
 )
 from openhull.spec import SpecValidationError
@@ -115,3 +116,36 @@ def test_terminal_design_refuses_unbracketed_demand():
     with pytest.raises(SpecValidationError):
         terminal_design(8500.0, 1.975, 0.34, 0.26, pe, MOCK,
                         speed_bounds_ms=(4.0, 10.0))
+
+
+def test_thrust_balance_recovers_a_planted_speed():
+    # plant a propeller/condition, derive the hull curve that balances
+    # it exactly at v0 = 7 m/s, and check the solver walks back to it:
+    # P_E(v) = P_E(v0) * (v/v0)^2 in kW with P_E(v0) chosen so that
+    # T_req(v0) = P_E(v0)*1e3/(v0*(1-t)) equals the available thrust
+    v0 = 7.0
+    pitch, n_rps, d = 0.95, 1.975, 5.5
+    t_ded = 0.26
+    j0 = v0 * (1.0 - 0.34) / (n_rps * d)
+    kt0 = MOCK.kt(j0, pitch)
+    t_avail0 = 1025.9 * n_rps ** 2 * d ** 4 * kt0
+    pe_v0_kw = t_avail0 * v0 * (1.0 - t_ded) / 1e3
+
+    def pe(v: float) -> float:
+        return pe_v0_kw * (v / v0) ** 2
+
+    sol = solve_speed_thrust_balance(
+        MOCK, pitch, n_rps, d, pe, wake=0.34, thrust_deduction=t_ded,
+        v_bounds_ms=(4.0, 10.0))
+    assert sol.v_ms == pytest.approx(v0, abs=5e-3)
+    assert sol.thrust_available_n == pytest.approx(
+        sol.thrust_required_n, rel=1e-3)
+    assert sol.eta_o == pytest.approx(
+        sol.j * sol.kt / (2 * math.pi * MOCK.kq(sol.j, pitch)), rel=1e-9)
+
+
+def test_thrust_balance_refuses_unbracketed_band():
+    pe = lambda v: 1e12  # noqa: E731  (hull demand no propeller can meet)
+    with pytest.raises(SpecValidationError):
+        solve_speed_thrust_balance(
+            MOCK, 0.95, 1.975, 5.5, pe, wake=0.34, thrust_deduction=0.26)

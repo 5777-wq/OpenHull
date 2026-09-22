@@ -533,3 +533,100 @@ def terminal_design(
         hull_efficiency=eta_h,
         provenance=series.provenance,
     )
+
+
+@dataclass(frozen=True)
+class ThrustBalanceSolution:
+    """Attainable speed for a FIXED propeller (pitch, diameter,
+    revolutions): the speed where the propeller's available thrust
+    equals the hull demand derived from the effective-power curve."""
+
+    v_ms: float
+    j: float
+    kt: float
+    thrust_available_n: float
+    thrust_required_n: float
+    eta_o: float
+    series_name: str
+
+
+def solve_speed_thrust_balance(
+    series: OpenWaterSeries,
+    pitch_ratio: float,
+    n_rps: float,
+    diameter_m: float,
+    effective_power_kw,
+    wake: float,
+    thrust_deduction: float,
+    *,
+    v_bounds_ms: Tuple[float, float] = (1.5, 18.0),
+    rho: float = SEAWATER_DENSITY,
+) -> ThrustBalanceSolution:
+    """Attainable speed of a ship driven by a FIXED propeller.
+
+    Solves V such that the propeller thrust rho*n^2*D^4*K_T(J(V)),
+    J = V*(1-w)/(n*D), equals the hull demand
+    P_E(V)*1e3 / (V * (1-t)): available thrust falls with speed
+    (K_T decreases with J) while the demand rises, so the balance is
+    unique and bracketed by bisection.  Speeds whose J leaves the
+    series domain count as unavailable thrust, which the bracketing
+    handles.  effective_power_kw is a callable V_ms -> kW (the task
+    3.1 Ayre curve at the call site, or a measured curve).
+    """
+    if not 0.0 < wake < 1.0:
+        raise SpecValidationError(
+            "wake", wake, "0 < w < 1",
+            "the wake fraction is the speed fraction carried by the "
+            "boundary layer; it cannot leave the unit interval.")
+    if not 0.0 <= thrust_deduction < 1.0:
+        raise SpecValidationError(
+            "thrust_deduction", thrust_deduction, "0 <= t < 1",
+            "the thrust deduction is the thrust fraction spent on the "
+            "hull drag; it cannot be negative or reach unity.")
+
+    def thrust_available(v_ms: float) -> float | None:
+        j = v_ms * (1.0 - wake) / (n_rps * diameter_m)
+        if not (series.j_domain[0] <= j <= series.j_domain[1]):
+            return None
+        kt = series.kt(j, pitch_ratio)
+        if kt <= 0:
+            return None
+        return rho * n_rps ** 2 * diameter_m ** 4 * kt
+
+    def balance(v_ms: float) -> float:
+        ta = thrust_available(v_ms)
+        if ta is None:
+            return -1.0
+        tr = effective_power_kw(v_ms) * 1e3 / (v_ms * (1.0 - thrust_deduction))
+        return ta - tr
+
+    lo, hi = v_bounds_ms
+    flo, fhi = balance(lo), balance(hi)
+    if flo < 0.0 or fhi > 0.0:
+        raise SpecValidationError(
+            "v_bounds_ms", v_bounds_ms,
+            "bracketing the thrust balance",
+            "the fixed propeller either cannot develop thrust inside "
+            "the series domain at the lower bound or still out-pushes "
+            "the hull at the upper bound - the operating point lies "
+            "outside the searched band.")
+    for _ in range(80):
+        mid = 0.5 * (lo + hi)
+        if balance(mid) > 0.0:
+            lo = mid
+        else:
+            hi = mid
+    v = 0.5 * (lo + hi)
+    j = v * (1.0 - wake) / (n_rps * diameter_m)
+    kt = series.kt(j, pitch_ratio)
+    ta = rho * n_rps ** 2 * diameter_m ** 4 * kt
+    tr = effective_power_kw(v) * 1e3 / (v * (1.0 - thrust_deduction))
+    return ThrustBalanceSolution(
+        v_ms=v,
+        j=j,
+        kt=kt,
+        thrust_available_n=ta,
+        thrust_required_n=tr,
+        eta_o=series.eta_o(j, pitch_ratio),
+        series_name=series.name,
+    )
