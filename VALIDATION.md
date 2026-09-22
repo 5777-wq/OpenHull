@@ -9,8 +9,9 @@
 Status: **stages 1–2 complete** (dimensions + hydrostatics core +
 parametric hull generation on real offsets); stage 3 in progress —
 stability pillar complete (3.4/3.5/3.5b), resistance estimation
-(3.1, Ayre) and propulsion factors with the service-speed solver
-(3.2) delivered. 248 tests green.
+(3.1, Ayre), propulsion factors with the service-speed solver (3.2),
+and the Burrill cavitation check (3.3 stage 1) delivered.
+261 tests green.
 `openhull run` reproduces the chain end to end — dimensions,
 hydrostatics, the large-angle GZ curve, the general criteria verdict
 and the weather criterion (with `requirements.kg_m` and the
@@ -359,11 +360,24 @@ These are features of the current stage, not hidden weaknesses:
     correlation do not depend on speed, so ηD is constant along the
     speed solution; the seawater kinematic viscosity is fixed at
     1.18831e-6 m²/s (15 °C).
+15. **Burrill cavitation check (task 3.3, stage 1).** The limit
+    line τc(σ) is carried at the book's own four chart-read anchor
+    points (tables 6-2 and 8-29; the module refuses σ outside
+    0.387..0.483, i.e. the anchors ± 0.002 print precision, with
+    linear extension across that band only).  The two book figures
+    (6-20 / 6-22) are re-printings of the same commercial line and
+    the four points blend them; the printed Eq. 6-16 relation is
+    A_P = A_E*(1.067 − 0.229 P/D) — the division rendering seen in
+    some transcriptions contradicts the table 6-2 arithmetic and is
+    not used.  Sigma may follow either book convention (with or
+    without the vapour pressure subtracted); both book examples are
+    reproducible.  Extending the line to the full σ range needs a
+    verified full-curve source (data-acquisition backlog).
 
 ## Reproducing
 
 ```bash
-uv run pytest                        # 248 tests
+uv run pytest                        # 261 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

@@ -8,6 +8,19 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- Burrill cavitation check (plan task 3.3, stage 1): `check_cavitation`
+  and helpers in `propeller.py` implement the Ship Theory vol. 2
+  section 6-5 chain — cavitation number at 0.7R (Eq. 6-14 with the
+  printed relative-velocity square), thrust loading (Eq. 6-15), the
+  projected/expanded area relation (Eq. 6-16, verified against the
+  table 6-2 arithmetic), and the required expanded area ratio.  The
+  commercial-ship limit line is carried at the book's own four
+  chart-read anchors (tables 6-2/8-29) and refuses sigma outside that
+  verified band (0.387..0.483).  Acceptance: the table 6-2 chain of
+  the 25,000 t bulk-carrier example reproduces end to end (sigma
+  0.481, tau_c 0.175, required AE/A0 0.642 vs the designed 0.65), and
+  the table 8-29 sigma values of the MAU4 example reproduce to
+  ±0.0015.
 - Propulsion factors and service-speed solver (plan task 3.2):
   `propulsion_factors` evaluates the Holtrop wake fraction, thrust
   deduction and hull efficiency as transcribed in Ship Theory vol. 2
