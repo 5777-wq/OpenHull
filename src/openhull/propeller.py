@@ -44,7 +44,7 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Callable, Sequence, Tuple
 
 from .spec import SpecValidationError
 
@@ -57,6 +57,12 @@ __all__ = [
     "CavitationCheck",
     "VAPOUR_PRESSURE_15C_PA",
     "STANDARD_ATMOSPHERE_PA",
+    "SEAWATER_DENSITY",
+    "OpenWaterSeries",
+    "OptimumPropeller",
+    "solve_optimal_propeller",
+    "terminal_design",
+    "TerminalDesign",
 ]
 
 #: standard atmosphere, Pa (book: pa = 10330 kgf/m^2 = 101326 Pa)
@@ -252,4 +258,278 @@ def check_cavitation(
         ok=margin >= 0.0,
         margin=margin,
         verdict=verdict,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Open-water series interface and the optimum-propeller engine
+# (Ship Theory vol. 2 section 8-2: the Bp-delta optimum-line design
+# procedure, realised numerically - the engine sweeps diameter at fixed
+# power/advance/revolutions and maximises eta_o, which is exactly the
+# chart's optimum-line reading done without a chart)
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class OpenWaterSeries:
+    """Open-water characteristic model K_T(J, P/D), K_Q(J, P/D).
+
+    A tiny plug-in interface so different verified data sources (a
+    digitised chart table, a published regression) feed the same
+    design engine.  Each instance carries its own domain guards and
+    its provenance line; K_Q must be increasing in P/D at fixed J so
+    the torque demand can be solved for pitch.
+    """
+
+    name: str
+    kt: Callable[[float, float], float]      # (j, pd) -> K_T
+    kq: Callable[[float, float], float]      # (j, pd) -> K_Q
+    j_domain: Tuple[float, float]
+    pd_domain: Tuple[float, float]
+    aeao_available: float | None
+    """Expanded-area ratio of the series, when it fixes one."""
+    provenance: str
+    """Whitelist citation / data source line (AGENTS.md section 5)."""
+
+    def eta_o(self, j: float, pd: float) -> float:
+        kq = self.kq(j, pd)
+        if kq <= 0.0:
+            raise SpecValidationError(
+                "kq", kq, "> 0",
+                "open-water torque coefficient must stay positive "
+                "inside the series domain.")
+        return j * self.kt(j, pd) / (2.0 * math.pi * kq)
+
+
+@dataclass(frozen=True)
+class OptimumPropeller:
+    """The best propeller for one operating condition (power, advance
+    speed, revolutions) - the numeric optimum-line reading."""
+
+    series_name: str
+    delivered_power_kw: float
+    va_ms: float
+    n_rps: float
+    diameter_m: float
+    pitch_ratio: float
+    j: float
+    kt: float
+    kq: float
+    thrust_n: float
+    eta_o: float
+    provenance: str
+
+
+def _kq_demand(series: OpenWaterSeries, j: float, kq_required: float) -> float:
+    """Solve K_Q(J, P/D) = kq_required for P/D (K_Q rises with P/D)."""
+    lo, hi = series.pd_domain
+    if series.kq(j, hi) < kq_required or series.kq(j, lo) > kq_required:
+        raise SpecValidationError(
+            "kq_required", kq_required,
+            f"reachable by the series at J = {j:.4f}",
+            "at this advance coefficient the series cannot absorb the "
+            "torque demand with any pitch inside "
+            f"{series.pd_domain}: the diameter/revolutions/advance "
+            "combination falls outside the series envelope.")
+    for _ in range(80):
+        mid = 0.5 * (lo + hi)
+        if series.kq(j, mid) < kq_required:
+            lo = mid
+        else:
+            hi = mid
+    return 0.5 * (lo + hi)
+
+
+def solve_optimal_propeller(
+    delivered_power_kw: float,
+    va_ms: float,
+    n_rps: float,
+    series: OpenWaterSeries,
+    *,
+    d_bounds_m: Tuple[float, float] | None = None,
+    rho: float = SEAWATER_DENSITY,
+    n_scan: int = 240,
+) -> OptimumPropeller:
+    """Optimum open-water propeller for (P_D, V_A, n) - plan task 3.3.
+
+    Sweeps the advance coefficient uniformly (diameter D = V_A/(n J)
+    follows); for each J the open-water torque coefficient demanded by
+    the delivered power, K_Q = P_D / (2 pi rho n^3 D^5), is solved for
+    the pitch ratio, the thrust coefficient follows, and the J with
+    the maximum open-water efficiency is refined by golden-section
+    search.  This is the section 8-2 optimum-line construction carried
+    out numerically on the series model instead of by chart reading.
+    Operating points with no admissible J are refused.
+    """
+    if delivered_power_kw <= 0:
+        raise SpecValidationError(
+            "delivered_power_kw", delivered_power_kw, "> 0",
+            "delivered power must be positive.")
+    if va_ms <= 0 or n_rps <= 0:
+        raise SpecValidationError(
+            "va_ms/n_rps", (va_ms, n_rps), "> 0",
+            "advance speed and revolutions must be positive.")
+    j_lo, j_hi = series.j_domain
+    if d_bounds_m is not None:
+        d_lo, d_hi = sorted(d_bounds_m)
+        j_lo = max(j_lo, va_ms / (n_rps * d_hi))
+        j_hi = min(j_hi, va_ms / (n_rps * max(d_lo, 1e-9)))
+    if j_lo > j_hi:
+        raise SpecValidationError(
+            "d_bounds_m", d_bounds_m,
+            "a diameter band intersecting the series J domain",
+            "the requested diameter band maps to advance coefficients "
+            f"{va_ms / (n_rps * d_hi):.3f}..{va_ms / (n_rps * d_lo):.3f} "
+            f"which leave the series domain {series.j_domain}.")
+
+    def evaluate(j: float) -> tuple | None:
+        d = va_ms / (n_rps * j)
+        kq_required = delivered_power_kw * 1e3 / (
+            2.0 * math.pi * rho * n_rps ** 3 * d ** 5)
+        try:
+            pd = _kq_demand(series, j, kq_required)
+        except SpecValidationError:
+            return None
+        kt = series.kt(j, pd)
+        if kt < 0:
+            return None
+        return (series.eta_o(j, pd), d, pd, kt, kq_required)
+
+    # coarse uniform scan over J, then golden-section refinement
+    scan = [evaluate(j_lo + (j_hi - j_lo) * i / n_scan)
+            for i in range(n_scan + 1)]
+    best_i, best = None, -math.inf
+    for i, cand in enumerate(scan):
+        if cand and cand[0] > best:
+            best_i, best = i, cand[0]
+    if best_i is None:
+        raise SpecValidationError(
+            "diameter", d_bounds_m,
+            "an admissible advance coefficient inside the series domain",
+            "no diameter in the scanned band yields an advance "
+            "coefficient inside the series domain while absorbing the "
+            "demanded torque - the operating point is outside the "
+            "series envelope.")
+    golden = (math.sqrt(5.0) - 1.0) / 2.0
+    a = j_lo + (j_hi - j_lo) * max(best_i - 1, 0) / n_scan
+    b = j_lo + (j_hi - j_lo) * min(best_i + 1, n_scan) / n_scan
+    c = b - golden * (b - a)
+    dd = a + golden * (b - a)
+    fc, fd = evaluate(c), evaluate(dd)
+    for _ in range(60):
+        if fc is None:
+            a = c
+        elif fd is None:
+            b = dd
+        elif fc[0] >= fd[0]:
+            b, dd, fd = dd, c, fc
+            c = b - golden * (b - a)
+            fc = evaluate(c)
+        else:
+            a, c, fc = c, dd, fd
+            dd = a + golden * (b - a)
+            fd = evaluate(dd)
+        if b - a < 1e-7:
+            break
+    j_best = 0.5 * (a + b)
+    result = evaluate(j_best) or (best if best else None)
+    if result is None:
+        result = best
+    eta, d, pd, kt, kq = result
+    thrust = rho * n_rps ** 2 * d ** 4 * kt
+    return OptimumPropeller(
+        series_name=series.name,
+        delivered_power_kw=delivered_power_kw,
+        va_ms=va_ms,
+        n_rps=n_rps,
+        diameter_m=d,
+        pitch_ratio=pd,
+        j=j_best,
+        kt=kt,
+        kq=kq,
+        thrust_n=thrust,
+        eta_o=eta,
+        provenance=series.provenance,
+    )
+
+
+@dataclass(frozen=True)
+class TerminalDesign:
+    """Section 8-2/8-3 terminal design: engine power and revolutions
+    fixed, the attainable speed found where the propeller's thrust
+    power crosses the hull effective-power curve (figure 8-9)."""
+
+    v_max_ms: float
+    propeller: OptimumPropeller
+    pte_kw: float
+    pe_kw: float
+    hull_efficiency: float
+    provenance: str
+
+
+def terminal_design(
+    delivered_power_kw: float,
+    n_rps: float,
+    wake: float,
+    thrust_deduction: float,
+    pe_curve,
+    series: OpenWaterSeries,
+    *,
+    speed_bounds_ms: Tuple[float, float] = (3.0, 15.0),
+    rho: float = SEAWATER_DENSITY,
+    n_scan: int = 120,
+) -> TerminalDesign:
+    """Attainable speed and best propeller for a fixed engine
+    (table 8-12 / figure 8-9 procedure).
+
+    pe_curve is a callable V_ms -> effective power in kW (e.g. an
+    interpolation of the table 8-11 style curve).  For each speed the
+    optimum propeller for (P_D, V_A = V(1-w), n) is solved; its thrust
+    power P_TE = P_D * eta_o * eta_H with eta_H = (1-t)/(1-w) is
+    compared with the hull demand, and the crossing speed is located
+    by bisection on P_TE - P_E (P_TE falls with speed along the
+    optimum line, P_E rises).
+    """
+    eta_h = (1.0 - thrust_deduction) / (1.0 - wake)
+
+    def balance(v_ms: float) -> float:
+        va = v_ms * (1.0 - wake)
+        prop = solve_optimal_propeller(
+            delivered_power_kw, va, n_rps, series, rho=rho, n_scan=n_scan)
+        pte = delivered_power_kw * prop.eta_o * eta_h
+        return pte - pe_curve(v_ms)
+
+    lo, hi = speed_bounds_ms
+    flo, fhi = balance(lo), balance(hi)
+    if flo < 0.0:
+        raise SpecValidationError(
+            "speed_bounds_ms", speed_bounds_ms,
+            "bracketing the attainable speed",
+            "even at the lower speed bound the propeller cannot "
+            "out-push the hull demand - the engine is too weak for "
+            "this band.")
+    if fhi > 0.0:
+        raise SpecValidationError(
+            "speed_bounds_ms", speed_bounds_ms,
+            "bracketing the attainable speed",
+            "even at the upper speed bound the propeller still "
+            "out-pushes the hull demand - widen the search band.")
+    for _ in range(80):
+        mid = 0.5 * (lo + hi)
+        if balance(mid) > 0.0:
+            lo = mid
+        else:
+            hi = mid
+    v_max = 0.5 * (lo + hi)
+    prop = solve_optimal_propeller(
+        delivered_power_kw, v_max * (1.0 - wake), n_rps, series,
+        rho=rho, n_scan=n_scan)
+    pte = delivered_power_kw * prop.eta_o * eta_h
+    return TerminalDesign(
+        v_max_ms=v_max,
+        propeller=prop,
+        pte_kw=pte,
+        pe_kw=pe_curve(v_max),
+        hull_efficiency=eta_h,
+        provenance=series.provenance,
     )
