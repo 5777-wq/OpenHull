@@ -58,6 +58,9 @@ Module and variable names follow design-stage vocabulary (`main_dimensions`,
 - First design task book: `examples/taskbook_bulk_carrier.yaml`.
   Every quantity there carries a provenance tag — `[NMRI]` (official),
   `[DERIV]` (formula stated inline), or `[ASSUMED]` (owner-approved).
+  `[DIGITIZED]` (added at task 3.3) marks a quantity read off a printed
+  chart by programmatic digitisation with a declared tolerance; the
+  source book's own worked-example readings bound the reading error.
 - **No test asserts a number without a published source or an owner-approved
   anchor.** Estimated values are never used as validation targets.
 
@@ -280,9 +283,47 @@ no page numbers from memory).
   divergences declared.  Owner approval: task 3.2 implementation
   plan (2026-09-21).
 
-**Propeller (preliminary)**
-- AU-series chart data; the specific regression to be pinned here at
-  task 3.3 before any implementation.
+**Propeller (preliminary design: open-water series, chart design, cavitation check)**
+- Ship Theory vol. 2 (Sheng Zhenbang & Liu Yingzhong), section 8-2
+  (B-δ chart design method and its application) and section 6-5
+  (cavitation check):
+  - section 8-2, figure 8-1 "AU5-50 open-water characteristic curves"
+    (KT and 10·KQ vs J on the left axis, ηo vs J on the right axis,
+    P/D = 0.4/0.6/0.8/1.0/1.2) — the only open-water chart printed in
+    the book — digitised into `openhull/data/au5_50_openwater.csv`
+    ([DIGITIZED], axis-calibrated; cross-checked against the duplicate
+    print of the same curves as figure 4-4).
+  - the Bp–δ optimum-line construction, steps (1)–(5) of section 8-2,
+    with the metric chart definitions BP = N·PD^0.5/VA^2.5 and
+    δ = ND/VA (AU charts: metric units, seawater-converted; the chart
+    optimum diameter is the behind-hull optimum diameter).  The
+    implementation constructs this optimum line numerically from the
+    digitised curves — no chart reading at run time; the construction
+    doubles as the digitisation self-check against table 8-12.
+  - worked example, 25,000 t bulk carrier (Lpp 172 m, B 27.2 m, draft
+    9.8 m; w 0.34, t 0.26, ηR 0.982, ηS 0.98; PS 12,000 hp,
+    N 118.5 rpm; table 8-11 effective-power curve): AU5-50 terminal
+    design Vmax 16.11 kn, D 5.897 m, P/D 0.731, ηo 0.569 (table 8-12,
+    figure 8-9) — end-to-end acceptance anchor.  The AU5-65 variant of
+    the same ship (Vmax 16.05 kn, D 5.747 m, P/D 0.782, ηo 0.559,
+    section 6-5) serves as the cavitation-chain anchor.
+  - section 6-5: Eqs.(6-14)/(6-15)/(6-16) — Burrill limit-line check,
+    σ0.7R = (p0 − pv)/(½ρV²0.7R), τc = T/(AP·½ρV²0.7R),
+    AP ≈ AE/(1.067 − 0.229·P/D); the commercial-ship limit line of
+    figure 6-20 (Burrill original) and its figure 6-22 re-plotting
+    (Yokoo & Yazaki) both digitised ([DIGITIZED], mutually
+    cross-checked): anchors from table 6-2 (σ 0.481 → τc 0.175,
+    required AE/A0 0.642) and table 8-29 (σ 0.389/0.407/0.416 →
+    τc 0.162/0.164/0.169, section 8-5 MAU4 example).
+  - Library-scope declaration: the implemented open-water library is
+    AU5-50 only (the book prints no Bp–δ charts for the other AU/MAU
+    variants; their worked-example readings anchor the cavitation
+    chain and the method, not the series).  A design whose required
+    AE/A0 exceeds 0.50 is reported as a shortfall, never silently
+    accepted.
+- Owner approval: task 3.3 implementation plan (2026-09-22, AU5-50
+  route; B-series regression deferred as a possible library-extension
+  task).
 
 **Adding a formula:** propose the source, owner approves, this section is
 amended first, implementation second. A formula without a whitelisted
