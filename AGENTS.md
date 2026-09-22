@@ -284,46 +284,70 @@ no page numbers from memory).
   plan (2026-09-21).
 
 **Propeller (preliminary design: open-water series, chart design, cavitation check)**
-- Ship Theory vol. 2 (Sheng Zhenbang & Liu Yingzhong), section 8-2
-  (B-δ chart design method and its application) and section 6-5
-  (cavitation check):
-  - section 8-2, figure 8-1 "AU5-50 open-water characteristic curves"
-    (KT and 10·KQ vs J on the left axis, ηo vs J on the right axis,
-    P/D = 0.4/0.6/0.8/1.0/1.2) — the only open-water chart printed in
-    the book — digitised into `openhull/data/au5_50_openwater.csv`
-    ([DIGITIZED], axis-calibrated; cross-checked against the duplicate
-    print of the same curves as figure 4-4).
-  - the Bp–δ optimum-line construction, steps (1)–(5) of section 8-2,
-    with the metric chart definitions BP = N·PD^0.5/VA^2.5 and
-    δ = ND/VA (AU charts: metric units, seawater-converted; the chart
-    optimum diameter is the behind-hull optimum diameter).  The
-    implementation constructs this optimum line numerically from the
-    digitised curves — no chart reading at run time; the construction
-    doubles as the digitisation self-check against table 8-12.
-  - worked example, 25,000 t bulk carrier (Lpp 172 m, B 27.2 m, draft
-    9.8 m; w 0.34, t 0.26, ηR 0.982, ηS 0.98; PS 12,000 hp,
-    N 118.5 rpm; table 8-11 effective-power curve): AU5-50 terminal
-    design Vmax 16.11 kn, D 5.897 m, P/D 0.731, ηo 0.569 (table 8-12,
-    figure 8-9) — end-to-end acceptance anchor.  The AU5-65 variant of
-    the same ship (Vmax 16.05 kn, D 5.747 m, P/D 0.782, ηo 0.559,
-    section 6-5) serves as the cavitation-chain anchor.
-  - section 6-5: Eqs.(6-14)/(6-15)/(6-16) — Burrill limit-line check,
-    σ0.7R = (p0 − pv)/(½ρV²0.7R), τc = T/(AP·½ρV²0.7R),
-    AP ≈ AE/(1.067 − 0.229·P/D); the commercial-ship limit line of
-    figure 6-20 (Burrill original) and its figure 6-22 re-plotting
-    (Yokoo & Yazaki) both digitised ([DIGITIZED], mutually
-    cross-checked): anchors from table 6-2 (σ 0.481 → τc 0.175,
-    required AE/A0 0.642) and table 8-29 (σ 0.389/0.407/0.416 →
-    τc 0.162/0.164/0.169, section 8-5 MAU4 example).
-  - Library-scope declaration: the implemented open-water library is
-    AU5-50 only (the book prints no Bp–δ charts for the other AU/MAU
-    variants; their worked-example readings anchor the cavitation
-    chain and the method, not the series).  A design whose required
-    AE/A0 exceeds 0.50 is reported as a shortfall, never silently
-    accepted.
-- Owner approval: task 3.3 implementation plan (2026-09-22, AU5-50
-  route; B-series regression deferred as a possible library-extension
-  task).
+- Wageningen B-series open-water regression — the implemented
+  open-water model (owner delegated the route choice to a documented
+  experiment between this regression and a digitisation of the
+  textbook's AU5-50 chart, 2026-09-22; the regression won on
+  verification, coverage and reproducibility):
+  Bernitsas, M.M., Ray, D., Kinley, P. (1981), "K_T, K_Q and
+  Efficiency Curves for the Wageningen B-Series Propellers",
+  Dept. of Naval Architecture and Marine Engineering, University of
+  Michigan, **Report No. 237, May 1981** (the report number is read
+  from the title page; 282/283 are the related 1975/76 B'-screw
+  reports and are miscitations).  TABLE 1 (report p.4): the general
+  polynomial K_T, K_Q = sum C*(J^s)(P/D)^t((A_E/A_O)^u)(Z^v),
+  39 K_T + 47 K_Q terms, valid as printed at Rn = 2e6, reproduced
+  therein from Oosterveld & van Oossanen (1974); TABLE 2 (report
+  p.5): Rn corrections, 9 dK_T + 13 dK_Q terms with
+  L = log10(Rn) - 0.301 (base stated in our transcription as an
+  assumption); validity (report p.6): 2 <= Z <= 7,
+  0.30 <= A_E/A_O <= 1.05, 0.5 <= P/D <= 1.40, "not fully reliable"
+  at the extremes.  Transcription: every coefficient read twice from
+  rendered pages of the report scan (page references carried in the
+  data module); acceptance = pixel-calibrated overlay of the
+  transcription onto the report's own Figure 41 (B4-70), plus two
+  independent referees: the textbook's table 8-12 optimum-line
+  readings (B5-50 vs the AU5-50 chart, eta_o within 1 %) and the
+  NMRI MP687 measured open-water table (eta_o mean |delta| 2.8 %,
+  declared cross-family check).
+- Ship Theory vol. 2, section 8-2 (B-δ chart design method and its
+  application) — the design PROCEDURE: the optimum-line construction
+  (steps 1-5, metric chart definitions BP = N·PD^0.5/VA^2.5,
+  δ = ND/VA; AU charts seawater-converted, chart optimum diameter =
+  behind-hull optimum diameter) is realised numerically in
+  `solve_optimal_propeller` (diameter sweep + torque-demand
+  inversion + eta_o maximisation), and the terminal design of
+  tables 8-11/8-12 and figure 8-9 (attainable speed where thrust
+  power P_TE = P_D·eta_o·eta_H crosses the effective-power curve) is
+  realised in `terminal_design`.
+- Ship Theory vol. 2, section 8-2, table 8-12 and figure 8-9 —
+  worked example, 25,000 t bulk carrier (Lpp 172 m, B 27.2 m,
+  draft 9.8 m; w 0.34, t 0.26, ηR 0.982, ηS 0.98; PS 12,000 hp,
+  N 118.5 rpm; table 8-11 effective-power curve): AU5-50 terminal
+  design Vmax 16.11 kn, D 5.897 m, P/D 0.731, ηo 0.569 — end-to-end
+  acceptance anchor for the design procedure; series-family
+  tolerance declared when run with the B-series (see VALIDATION).
+- Ship Theory vol. 2, section 6-5: Eqs.(6-14)/(6-15)/(6-16) —
+  Burrill limit-line check, σ0.7R = (p0 − pv)/(½ρV²0.7R),
+  τc = T/(AP·½ρV²0.7R), AP ≈ AE*(1.067 − 0.229·P/D) (multiplication
+  verified against the table 6-2 arithmetic); the commercial-ship
+  limit line is carried at the book's own four chart-read anchors
+  (table 6-2: σ 0.481 → τc 0.175; table 8-29: σ 0.389/0.407/0.416 →
+  τc 0.162/0.164/0.169) and the module refuses σ outside that
+  verified band; extending the line awaits a verified full-curve
+  source (data backlog).
+- AU-series chart route (figure 8-1, AU5-50 open-water
+  characteristic curves, P/D 0.4-1.2): the only open-water chart
+  printed in the book; its digitisation was attempted and is parked
+  as a backlog item (curve-identity ambiguities in the print, see
+  internal notes) — NOT implemented.  The section 8-2 figure 8-1
+  reading anchors and the section 6-5/8-5 worked examples remain the
+  book-side anchors above.
+- Owner approval: task 3.3 implementation plan (2026-09-22) approved
+  the AU5-50 route; the owner then delegated the final source choice
+  to a documented experiment of both routes (same date), which
+  selected the B-series regression.  This entry records that
+  decision; the AU route may be revisited as a library extension.
 
 **Adding a formula:** propose the source, owner approves, this section is
 amended first, implementation second. A formula without a whitelisted
