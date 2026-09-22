@@ -47,6 +47,12 @@ from .hydrostatics import (
     trapezoid,
     waterplane,
 )
+from .propulsion import (
+    PropulsionFactors,
+    SpeedSolution,
+    propulsion_factors,
+    solve_service_speed,
+)
 from .resistance import (
     AYRE_V_SQRT_L_MAX,
     AYRE_V_SQRT_L_MIN,
@@ -130,6 +136,8 @@ __all__ = [
     "AyreResult",
     "RESISTANCE_ALGORITHMS",
     "ResistanceAlgorithmInfo",
+    "PropulsionFactors",
+    "SpeedSolution",
     "DEFAULT_WEIGHT_ALGORITHM",
     "WEIGHT_ALGORITHMS",
     "BalanceStep",
@@ -171,6 +179,8 @@ __all__ = [
     "estimate_main_dimensions",
     "ayre_effective_power",
     "check_fairness",
+    "propulsion_factors",
+    "solve_service_speed",
     "floating_position",
     "free_surface_correction",
     "free_surface_arm",

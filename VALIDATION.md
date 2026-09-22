@@ -8,8 +8,9 @@
 
 Status: **stages 1–2 complete** (dimensions + hydrostatics core +
 parametric hull generation on real offsets); stage 3 in progress —
-stability pillar complete (tasks 3.4/3.5/3.5b) and resistance
-estimation started (task 3.1, Ayre method). 236 tests green.
+stability pillar complete (3.4/3.5/3.5b), resistance estimation
+(3.1, Ayre) and propulsion factors with the service-speed solver
+(3.2) delivered. 248 tests green.
 `openhull run` reproduces the chain end to end — dimensions,
 hydrostatics, the large-angle GZ curve, the general criteria verdict
 and the weather criterion (with `requirements.kg_m` and the
@@ -260,6 +261,27 @@ C₀ band (L/Δ^(1/3) 4.88..6.41) covers the table 7-8 example and
 typical merchant ships; the remaining chart curves are declared
 future data-entry work, and the module refuses outside the band.
 
+### Propulsion factors and service speed (task 3.2)
+
+`propulsion_factors` implements the Holtrop wake/thrust-deduction
+correlation as transcribed in Ship Theory vol. 2 sections 5-2/5-3
+(Eqs. 5-38..5-52, visually verified against the scanned original
+pages, 2026-09-21); `solve_service_speed` inverts it against the
+task 3.1 effective-power curve.  Published anchor: DTMB Report 1712
+(public domain) — Table 39 supplies the 600-ft-LBP ship of the
+Series 60 Cb 0.80 parent (B 92.31 ft, T 36.93 ft, Δ 46,717 long tons,
+propeller D 26.03 ft, LCB 2.5 %L forward) and Table 31 its measured
+self-propulsion results (model 4214W, the hull OpenHull digitised in
+task 2.1).
+
+| Check | Result | Criterion |
+|---|---|---|
+| Factors (600-ft ship) | w 0.315, t 0.196, ηh 1.175 | physical bands |
+| Implied open-water efficiency ηD_pub/(ηR·ηh), 14→17 kn | 0.666 / 0.661 / 0.650 / 0.632 — inside the open-water band, drift < 6 % | consistency vs measured propulsion |
+| Speed reproduction from published SHP (ηo calibrated once at 14 kn) | 15 kn −0.03, 16 kn +0.08, 17 kn +0.32 | ±0.5 kn (§4) ✓ |
+| Speed reproduction at 14 kn | −0.71 kn | asserted ≤0.75 with declaration: the digitised figure 7-3 knee region (V/√L 0.55-0.60) is the chart-reading tolerance peak |
+| Power unreachable inside the Ayre band / bad ηo / bad screw | refused | §6 |
+
 ## Declared circularities and approximations
 
 These are features of the current stage, not hidden weaknesses:
@@ -327,11 +349,21 @@ These are features of the current stage, not hidden weaknesses:
     inherent ~8 % appendage/air allowance (Eq. 7-27 divides it out
     for the bare hull); twin-screw LCB sign handling beyond the
     table-7-5 single-screw column is unvalidated (tests use single).
+14. **Propulsion approximations (task 3.2).** The textbook
+    transcription of the Holtrop correlation is implemented as
+    printed (three declared divergences from other published
+    renderings — see AGENTS.md section 5); the form factor (1+k),
+    Cstern and the open-water efficiency ηo are declared inputs
+    (ηo passes to task 3.3); ηR defaults to the book's no-data
+    value 1.0 (Eq. 5-50); the wake/thrust factors of this
+    correlation do not depend on speed, so ηD is constant along the
+    speed solution; the seawater kinematic viscosity is fixed at
+    1.18831e-6 m²/s (15 °C).
 
 ## Reproducing
 
 ```bash
-uv run pytest                        # 236 tests
+uv run pytest                        # 248 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

@@ -264,6 +264,22 @@ no page numbers from memory).
   B/d = 3.3 row; the A.562 original carries 3.3 → 0.84 and the
   implementation follows A.562.
 
+**Propulsion factors (wake, thrust deduction, rotative efficiency)**
+- Ship Theory vol. 2 (Sheng Zhenbang & Liu Yingzhong), section 5-2/5-3
+  (book pages 58-61) — the Holtrop correlation as transcribed:
+  Eqs.(5-38)/(5-39) wake fraction with the auxiliary chain CV=(1+k)Cf+CA,
+  CA, C2..C4, C8/C9, C11, Cp1 and the wetted-surface S formula;
+  Eqs.(5-48)/(5-49) thrust deduction; Eqs.(5-50)/(5-51)/(5-52)
+  relative rotative efficiency (5-50, eta_R = 1.0, the sanctioned
+  no-data fallback, is the v1 default).  Every formula visually
+  verified against the scanned original pages (2026-09-21).  The
+  textbook transcription diverges from other published renderings of
+  the Holtrop correlation (reciprocal instead of ratio form of two
+  wake terms; twin-screw Cb unsquared; Cb exponent printed as 4 in
+  CA) — the whitelisted textbook form is implemented and the
+  divergences declared.  Owner approval: task 3.2 implementation
+  plan (2026-09-21).
+
 **Propeller (preliminary)**
 - AU-series chart data; the specific regression to be pinned here at
   task 3.3 before any implementation.

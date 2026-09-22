@@ -8,6 +8,21 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- Propulsion factors and service-speed solver (plan task 3.2):
+  `propulsion_factors` evaluates the Holtrop wake fraction, thrust
+  deduction and hull efficiency as transcribed in Ship Theory vol. 2
+  sections 5-2/5-3 (Eqs. 5-38..5-52, with the full auxiliary chain —
+  ITTC 1957 friction, correlation allowance, bulb and stern
+  coefficients, wetted surface); `solve_service_speed` iterates the
+  speed whose bare-hull effective power (task 3.1) balances the
+  delivered power times eta_D = eta_o*eta_R*eta_h.  Validated against
+  the published self-propulsion results of DTMB Report 1712 for the
+  digitised Series 60 parent (Table 31/39): the implied open-water
+  efficiency stays at 0.63-0.67 across the published 14-17 kn range,
+  and service speeds reproduce within ±0.5 kn (14 kn within 0.75, the
+  declared chart-knee tolerance).  Applicability guards refuse
+  nonphysical wake/thrust values and out-of-band open-water
+  efficiencies.
 - Ayre resistance estimation (plan task 3.1 v1):
   `ayre_effective_power` implements the Ayre method as transcribed in
   Ship Theory vol. 1 section 7-1 — the standard-form effective power
