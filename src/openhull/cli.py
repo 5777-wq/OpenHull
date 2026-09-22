@@ -34,9 +34,104 @@ from .geometry import jbc_parent_offsets  # noqa: F401  (1.x fitted parent,
 #   kept for the validation tests; the run chain uses real offsets - 2.6)
 from .hydrostatics import hydrostatics_table
 from .linesplan import parent_to_taskbook
+from .propeller import b_series_open_water, check_cavitation, solve_optimal_propeller
+from .propulsion import propulsion_factors
+from .resistance import ayre_effective_power
 from .spec import knots_to_ms, ShipSpec, SpecValidationError
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
 from .weight_balance import solve_weight_balance
+
+
+def _design_propeller_at_service(data, balance, hydro_design):
+    """Preliminary propeller design at the task book's service speed.
+
+    Returns a summary dict, or a dict with skipped=True and the reason
+    when a whitelisted method refuses the operating point (e.g. the
+    Ayre speed-length band does not reach this ship's service speed).
+    """
+    propeller_block = data.get("propeller") or {}
+    if propeller_block.get("rpm") is None:
+        return None
+    try:
+        rpm = float(propeller_block["rpm"])
+        n_rps = rpm / 60.0
+        z = int(propeller_block.get("blades_z", 5))
+        aear = float(propeller_block.get("expanded_area_ratio", 0.50))
+        eta_r = float(propeller_block.get("relative_rotative_eff") or 1.0)
+        service_kn = float(
+            (data.get("requirements") or {}).get("service_speed_kn"))
+        v_ms = knots_to_ms(service_kn)
+        series = b_series_open_water(z, aear)
+        d_guess = 0.7 * balance.draft
+        prop = None
+        factors = None
+        for _ in range(3):
+            factors = propulsion_factors(
+                lpp_m=balance.lpp,
+                lwl_m=balance.lwl_m if hasattr(balance, "lwl_m")
+                else balance.lpp,
+                beam_m=balance.beam,
+                draft_m=balance.draft,
+                cb=hydro_design.cb, cp=hydro_design.cp,
+                cm=hydro_design.cm, cwp=hydro_design.cw,
+                lcb_pct_fwd=hydro_design.lcb,
+                propeller_diameter_m=d_guess, speed_ms=v_ms,
+                screw="single", eta_r=eta_r,
+            )
+            pe_kw = ayre_effective_power(
+                displacement_t=balance.displacement_t, speed_kn=service_kn,
+                lpp_m=balance.lpp, beam_m=balance.beam,
+                draft_m=balance.draft, cb=hydro_design.cb,
+                xc_pct_fwd=hydro_design.lcb, screw="single",
+            ).pe_bare_kw
+            va_ms = v_ms * (1.0 - factors.wake_fraction)
+            pd_ow = pe_kw / (factors.eta_h * 0.55)   # eta_o first guess
+            prop = solve_optimal_propeller(
+                pd_ow, va_ms, n_rps, series, n_scan=300)
+            d_guess = prop.diameter_m
+            for _ in range(3):
+                pd_ow = pe_kw / (prop.eta_o * factors.eta_h)
+                prop = solve_optimal_propeller(
+                    pd_ow, va_ms, n_rps, series, n_scan=300)
+        shaft_power_kw = prop.delivered_power_kw / (
+            float(propeller_block.get("shaft_efficiency") or 1.0) * eta_r)
+        cav = None
+        hs_m = propeller_block.get("shaft_immersion_m")
+        if hs_m is not None:
+            cav = check_cavitation(
+                thrust_n=prop.thrust_n, va_ms=prop.va_ms, n_rps=n_rps,
+                diameter_m=prop.diameter_m,
+                pitch_ratio=prop.pitch_ratio, aeao_available=aear,
+                hs_m=float(hs_m))
+        result = {
+            "series": prop.series_name,
+            "provenance": prop.provenance,
+            "service_speed_kn": service_kn,
+            "rpm": rpm,
+            "diameter_m": round(prop.diameter_m, 3),
+            "pitch_ratio": round(prop.pitch_ratio, 4),
+            "advance_coefficient": round(prop.j, 4),
+            "eta_open_water": round(prop.eta_o, 4),
+            "eta_hull": round(factors.eta_h, 4),
+            "wake_fraction": round(factors.wake_fraction, 4),
+            "thrust_deduction": round(factors.thrust_deduction, 4),
+            "thrust_n": round(prop.thrust_n, 1),
+            "delivered_power_kw": round(prop.delivered_power_kw, 1),
+            "shaft_power_kw": round(shaft_power_kw, 1),
+            "cavitation": None,
+        }
+        if cav is not None:
+            result["cavitation"] = {
+                "sigma_0_7r": round(cav.sigma_0_7r, 4),
+                "tau_c_limit": round(cav.tau_c_limit, 4),
+                "aeao_required": round(cav.aeao_required, 3),
+                "aeao_available": cav.aeao_available,
+                "ok": cav.ok,
+                "verdict": cav.verdict,
+            }
+        return result
+    except SpecValidationError as refuse:
+        return {"skipped": True, "reason": str(refuse)}
 
 __all__ = ["main", "run_taskbook"]
 
@@ -204,6 +299,8 @@ def run_taskbook(taskbook_path: str) -> dict:
             )
             weather_summary = weather.to_dict()
 
+    propeller_summary = _design_propeller_at_service(data, balance, hydro_design)
+
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
         "ship_type": spec.ship_type,
@@ -232,6 +329,7 @@ def run_taskbook(taskbook_path: str) -> dict:
         "gz_curve": gz_summary,
         "stability_criteria": criteria_summary,
         "weather_criterion": weather_summary,
+        "propeller_design": propeller_summary,
     }
     return summary
 

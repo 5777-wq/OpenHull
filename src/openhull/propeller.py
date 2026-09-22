@@ -46,6 +46,7 @@ import math
 from dataclasses import dataclass
 from typing import Callable, Sequence, Tuple
 
+from . import b_series
 from .spec import SpecValidationError
 
 __all__ = [
@@ -63,6 +64,7 @@ __all__ = [
     "solve_optimal_propeller",
     "terminal_design",
     "TerminalDesign",
+    "b_series_open_water",
 ]
 
 #: standard atmosphere, Pa (book: pa = 10330 kgf/m^2 = 101326 Pa)
@@ -629,4 +631,69 @@ def solve_speed_thrust_balance(
         thrust_required_n=tr,
         eta_o=series.eta_o(j, pitch_ratio),
         series_name=series.name,
+    )
+
+
+def b_series_open_water(
+    z: int,
+    aear: float,
+    *,
+    rn: float | None = None,
+) -> OpenWaterSeries:
+    """The whitelisted Wageningen B-series regression as a series.
+
+    z blades, expanded-area ratio aear, optionally evaluated at a
+    Reynolds number rn (corrections apply above 2e6; None keeps the
+    2e6 baseline).  Range guards per the report's own validity
+    statement; the J band is the design-practical band of the
+    regression (the polynomials stay smooth there; the printed
+    reliability caveat at the P/D - A_E/A_O corner extremes is
+    inherited from the report).
+    """
+    if not 2 <= z <= 7:
+        raise SpecValidationError(
+            "z", z, "2 <= Z <= 7",
+            "the B-series regression covers two to seven blades "
+            "(report p.6 / PDF p.18).")
+    if not 0.30 <= aear <= 1.05:
+        raise SpecValidationError(
+            "aear", aear, "0.30 <= A_E/A_O <= 1.05",
+            "the B-series regression covers this expanded-area-ratio "
+            "band (report p.6 / PDF p.18).")
+    if rn is not None and rn <= 0:
+        raise SpecValidationError(
+            "rn", rn, "> 0 when given",
+            "a Reynolds number must be positive.")
+    prov = (
+        "Bernitsas/Ray/Kinley (1981), U-M Report No. 237, TABLE 1/2 "
+        "(report pp.4-5), valid Z 2-7, A_E/A_O 0.30-1.05, P/D 0.5-1.40; "
+        f"evaluated at Z={z}, A_E/A_O={aear:.2f}, "
+        f"Rn={'2e6 baseline' if rn is None else f'{rn:.3e}'}")
+    j_domain = (0.05, 1.35)
+    pd_domain = (0.5, 1.4)
+
+    def kt(j: float, pd: float) -> float:
+        if not 0.5 <= pd <= 1.4:
+            raise SpecValidationError(
+                "pitch_ratio", pd, "0.5 <= P/D <= 1.40",
+                "outside the B-series regression validity (report "
+                "p.6 / PDF p.18).")
+        return b_series.kt(j, pd, aear, z, rn)
+
+    def kq(j: float, pd: float) -> float:
+        if not 0.5 <= pd <= 1.4:
+            raise SpecValidationError(
+                "pitch_ratio", pd, "0.5 <= P/D <= 1.40",
+                "outside the B-series regression validity (report "
+                "p.6 / PDF p.18).")
+        return b_series.kq(j, pd, aear, z, rn)
+
+    return OpenWaterSeries(
+        name=f"B{z}-{round(aear * 100):02d}",
+        kt=kt,
+        kq=kq,
+        j_domain=j_domain,
+        pd_domain=pd_domain,
+        aeao_available=aear,
+        provenance=prov,
     )

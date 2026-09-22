@@ -10,8 +10,9 @@ Status: **stages 1–2 complete** (dimensions + hydrostatics core +
 parametric hull generation on real offsets); stage 3 in progress —
 stability pillar complete (3.4/3.5/3.5b), resistance estimation
 (3.1, Ayre), propulsion factors with the service-speed solver (3.2),
-and the Burrill cavitation check (3.3 stage 1) delivered.
-261 tests green.
+and the propeller module (3.3): Burrill cavitation check, the
+Wageningen B-series open-water regression and the optimum-propeller /
+terminal-design engine.  279 tests green.
 `openhull run` reproduces the chain end to end — dimensions,
 hydrostatics, the large-angle GZ curve, the general criteria verdict
 and the weather criterion (with `requirements.kg_m` and the
@@ -373,11 +374,32 @@ These are features of the current stage, not hidden weaknesses:
     without the vapour pressure subtracted); both book examples are
     reproducible.  Extending the line to the full σ range needs a
     verified full-curve source (data-acquisition backlog).
+16. **B-series open-water regression and design engine (task 3.3).**
+    The open-water model is the Wageningen B-series regression of
+    Bernitsas/Ray/Kinley, U-M Report No. 237 (May 1981), page-
+    referenced coefficients; acceptance = the report's own figure 41
+    overlay plus two independent referees (table 8-12 optimum-line
+    ηo within 1.5 %; NMRI MP687 measured table, mean |dηo| < 4 %,
+    declared B-vs-AU cross-family and model-scale-Rn caveats).
+    Family difference is physical: at equal (J, P/D) the B series
+    carries ~13 % less thrust than the AU chart readings while ηo
+    agrees — the design engine balances thrust anyway.  The
+    table 8-12 terminal design run with B5-50 reproduces the book
+    (AU5-50) attainable speed to 0.07 kn (16.04 vs 16.11 kn,
+    tolerance ±0.15); the fixed 0.50 area honestly reports a
+    cavitation shortfall at this design point (required ≈ 0.62,
+    consistent with the book's AU5-65 needing 0.642).  The Rn
+    correction's logarithm base is stated as an assumption
+    (log10); the report's own "not fully reliable at the extremes"
+    caveat is inherited at the domain corners.  TB-001 itself sits
+    BELOW the Ayre speed-length band at 14.5 kn (V/√L = 0.486), so
+    its CLI propeller design block skips with a declared reason
+    until a whitelisted effective-power source covers that band.
 
 ## Reproducing
 
 ```bash
-uv run pytest                        # 261 tests
+uv run pytest                        # 279 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

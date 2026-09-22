@@ -91,6 +91,17 @@ constraints:
                                      # -> factor k = 1.0
       length_waterline_m: 285        # [NMRI] L_WL of the JBC
 
+propeller:                       # preliminary design point (task 3.3,
+                                 # series per AGENTS.md section 5 whitelist)
+  blades_z: 5                    # [NMRI] MP687 benchmark propeller, Z = 5
+  expanded_area_ratio: 0.50      # [NMRI] MP687 A_E/A_0 = 0.5000
+  rpm: 127                       # [ASSUMED] slow-speed diesel service rate;
+                                 # drives the diameter - owner review pending
+  shaft_immersion_m: 8.5         # [ASSUMED] shaft centre above base line
+  shaft_efficiency: 0.98         # [ASSUMED]
+  relative_rotative_eff: 0.982   # [ASSUMED] value of the section 8-2 worked
+                                 # example (Ship Theory table 8-12)
+
 validation_anchors:              # hard numbers the OpenHull test suite
                                  # asserts against (tolerances as noted,
                                  # recorded in examples/data/DATA_SOURCES.md)

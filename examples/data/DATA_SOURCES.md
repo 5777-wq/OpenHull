@@ -30,6 +30,26 @@ container fields.
 - Rudder geometry: <https://t2015.nmri.go.jp/file/Geometry_IGES_files/jbc/jbc-rudder.igs>
 - Model propeller MP687 particulars (AU 5-blade, full radial distributions):
   <https://t2015.nmri.go.jp/file/Geometry_IGES_files/jbc/MP687_particulars.zip>
+- MP687 open-water characteristics (official numeric table, obtained
+  2026-09-22): <https://t2015.nmri.go.jp/Instructions_JBC/instruction_JBC_files/Open_Water_Tests_for_JBC_NMRI.txt>
+  - model propeller No. 687: AU-type, Z=5, P/D=0.750, A_E/A_0=0.500,
+    D_p 0.203 m, n 10.87 rps, Rn(d) 4.0e5; 15-point K_T / K_Q / eta_O
+    table (internally consistent via eta_O = J*K_T/(2*pi*K_Q))
+  - used as an independent referee for the B-series regression
+    (tests/test_b_series.py; declared cross-family and model-scale-Rn
+    caveats); full table archived internally, see DATA_SOURCES note
+    below and the internal library
+- Wageningen B-series open-water regression (implemented in
+  `openhull/b_series.py`, task 3.3): transcribed from Bernitsas, M.M.,
+  Ray, D., Kinley, P. (1981), "K_T, K_Q and Efficiency Curves for the
+  Wageningen B-Series Propellers", University of Michigan Dept. of
+  Naval Architecture and Marine Engineering Report No. 237, May 1981.
+  Canonical record: UM Deep Blue handle 2027.42/91702 (geo-blocked at
+  access time; content obtained bit-exact from a public mirror of the
+  same scan).  Coefficients: TABLE 1 (report p.4) 39 K_T + 47 K_Q
+  terms at Rn = 2e6, reproduced therein from Oosterveld & van
+  Oossanen (1974); TABLE 2 (report p.5) Rn corrections.  Page
+  references are carried alongside every coefficient in the module.
 - Conditions & conditions table: <https://t2015.nmri.go.jp/jbc_gc.html>
 - NMRI JBC database (reports): <https://www.nmri.go.jp/en/study/intellectual/db/jbc/>
 

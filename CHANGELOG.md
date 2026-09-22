@@ -8,6 +8,27 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- Wageningen B-series open-water regression, optimum-propeller
+  engine and terminal design (plan task 3.3): `b_series.py` carries
+  the page-referenced coefficient transcription of Bernitsas/Ray/
+  Kinley, U-M Report No. 237 (May 1981) — 39 K_T + 47 K_Q polynomial
+  terms at Rn = 2e6 plus 9 + 13 Reynolds-correction terms, valid
+  Z 2-7, A_E/A_0 0.30-1.05, P/D 0.50-1.40.  `propeller.py` adds the
+  `OpenWaterSeries` plug-in interface, `solve_optimal_propeller`
+  (the section 8-2 optimum-line construction realised numerically:
+  J-sweep, torque-demand inversion for pitch, golden-section eta_o
+  maximisation), `terminal_design` (the table 8-12 / figure 8-9
+  attainable-speed procedure) and `solve_speed_thrust_balance` for a
+  fixed propeller.  Acceptance: the report's own figure 41 overlay;
+  the textbook table 8-12 optimum-line readings within 1.5 % (B5-50
+  vs the AU5-50 chart); the NMRI MP687 measured open-water table at
+  mean |d eta_o| < 4 % (declared cross-family, model-scale-Rn
+  caveats); the 25,000 t bulk-carrier terminal design run with B5-50
+  reproduces the book's attainable speed to 0.07 kn.  The CLI
+  `propeller` task-book block designs at the service point and
+  reports the Burrill cavitation verdict; TB-001 itself skips with a
+  declared reason (its 14.5 kn service speed lies below the Ayre
+  speed-length band for a 280 m ship).
 - Burrill cavitation check (plan task 3.3, stage 1): `check_cavitation`
   and helpers in `propeller.py` implement the Ship Theory vol. 2
   section 6-5 chain — cavitation number at 0.7R (Eq. 6-14 with the

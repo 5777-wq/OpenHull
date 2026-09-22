@@ -32,6 +32,15 @@ def test_run_returns_stage1_chain_results(summary):
     assert abs(design["km_m"] - 18.59) / 18.59 < 0.02
 
 
+def test_propeller_design_declares_the_ayre_band_skip(summary):
+    # TB-001 at 14.5 kn sits below the Ayre V/sqrt(L) table band for a
+    # 280 m ship - the propeller design block must skip DECLARED, not
+    # extrapolate the resistance method
+    prop = summary["propeller_design"]
+    assert prop["skipped"] is True
+    assert "0.486" in prop["reason"]
+
+
 def test_cli_summary_text(capsys):
     rc = main(["run", TASKBOOK])
     out = capsys.readouterr().out
