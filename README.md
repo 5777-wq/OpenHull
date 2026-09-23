@@ -14,13 +14,13 @@ resistance / propulsion / stability estimates, and drawing outputs (DXF).
 
 ## Status
 
-**v0.2 released** — stages 1–2 complete: task-book weight-buoyancy balance, principal dimensions, hydrostatics, initial stability & trim, freeboard checks, and the parametric hull-form chain — real digitised parent offsets, affine scaling, Lackenby transform, lines-plan output and numerical fairness checks — all validated against the JBC benchmark ship (see [VALIDATION.md](VALIDATION.md)). One command: `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.3 released** — stage 3 complete, the performance loop is closed: Ayre resistance estimation, Holtrop propulsion factors with a service-speed solver, Wageningen B-series propeller design (published regression, Burrill cavitation check, thrust-led design), large-angle stability with the IS Code 2.2 criteria and the severe wind & rolling criterion, plus a design-space optimizer (`openhull optimize`) that sweeps dimension ratios into feasible, criteria-passing designs with a Pareto trade-off chart. Validated against the JBC benchmark ship, DTMB Report 1712 and the measured NMRI MP687 open-water data (see [VALIDATION.md](VALIDATION.md)). One command: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Roadmap
 
 - [x] Stage 1 — Principal dimension iteration & hydrostatics core (**v0.1**)
 - [x] Stage 2 — Parametric hull form generation (mother-ship transformation) (**v0.2**)
-- [ ] Stage 3 — Performance loop: resistance / propulsion / stability
+- [x] Stage 3 — Performance loop: resistance / propulsion / stability (**v0.3**)
 - [ ] Stage 4 — Drawing output (DXF) & design reports
 - [ ] Stage 5 — Documentation & community release (v1.0)
 

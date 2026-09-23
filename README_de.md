@@ -16,13 +16,13 @@ bewertungen und Zeichnungsausgaben (DXF).
 
 ## Status
 
-**v0.2 veröffentlicht** — Stufe 1–2 abgeschlossen: aufgabenbuchgetriebene Gewicht-Auftrieb-Balance, Hauptabmessungen, Hydrostatik, Anfangsstabilität & Trimm, Freibordnachweis sowie die parametrische Rumpfformkette — digitalisierte Mutteroffsets, affine Skalierung, Lackenby-Transformation, Linienriss-Ausgabe und numerische Glättenprüfung — alles gegen das Referenzschiff JBC validiert (siehe [VALIDATION.md](VALIDATION.md)). Ausführen: `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.3 veröffentlicht** — Stufe 3 abgeschlossen, die Leistungsschleife ist geschlossen: Ayre-Widerstandsschätzung, Holtrop-Propulsionsfaktoren mit Dienstgeschwindigkeitslöser, Wageningen-B-Serienpropellerentwurf (veröffentlichte Regression, Burrill-Kavitationsnachweis, schubgeführter Entwurf), Großwinkelstabilität mit den IS-Code-2.2-Kriterien und dem Wind-und-Seegangskriterium, dazu ein Entwurfsraum-Optimierer (`openhull optimize`), der Dimensionsverhältnisse zu zulässigen, kriterienbestehenden Entwürfen durchsucht, inklusive Pareto-Diagramm. Validiert gegen JBC, DTMB Report 1712 und die gemessenen NMRI-MP687-Freiwasserdaten (siehe [VALIDATION.md](VALIDATION.md)). Ausführen: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Fahrplan
 
 - [x] Stufe 1 — Iteration der Hauptabmessungen & hydrostatischer Kern (**v0.1**)
 - [x] Stufe 2 — Parametrische Rumpfformgenerierung (Mutterschiff-Transformation) (**v0.2**)
-- [ ] Stufe 3 — Leistungsschleife: Widerstand / Antrieb / Stabilität
+- [x] Stufe 3 — Leistungsschleife: Widerstand / Antrieb / Stabilität (**v0.3**)
 - [ ] Stufe 4 — Zeichnungsausgabe (DXF) & Entwurfsberichte
 - [ ] Stufe 5 — Dokumentation & Community-Release (v1.0)
 

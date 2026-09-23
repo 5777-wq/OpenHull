@@ -16,13 +16,13 @@ propulsão / estabilidade e desenhos de saída (DXF).
 
 ## Estado
 
-**v0.2 publicado** — etapas 1–2 concluídas: equilíbrio peso-empuxo por livro de tarefas, dimensões principais, hidrostática, estabilidade inicial e aparado, borda livre, além da cadeia paramétrica de formas — offset reais digitalizados do navio-mãe, escala afim, transformação de Lackenby, plano de formas e verificação numérica de suavidade — tudo validado contra o navio de referência JBC (veja [VALIDATION.md](VALIDATION.md)). Executar: `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.3 publicado** — etapa 3 concluída, o ciclo de desempenho está fechado: estimativa de resistência de Ayre, fatores de propulsão de Holtrop com solver de velocidade de serviço, projeto de hélice da série B de Wageningen (regressão publicada, verificação de cavitação de Burrill, projeto guiado por empuxo), estabilidade a grandes ângulos com os critérios IS Code 2.2 e o critério de vento e mar severos, mais um otimizador do espaço de projeto (`openhull optimize`) que varre relações de dimensões para projetos viáveis com diagrama de Pareto. Validado contra o navio de referência JBC, o relatório DTMB 1712 e os dados medidos MP687 do NMRI (veja [VALIDATION.md](VALIDATION.md)). Executar: `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Roteiro
 
 - [x] Etapa 1 — Iteração das dimensões principais e núcleo hidrostático (**v0.1**)
 - [x] Etapa 2 — Geração paramétrica de formas (transformação do navio-mãe) (**v0.2**)
-- [ ] Etapa 3 — Ciclo de desempenho: resistência / propulsão / estabilidade
+- [x] Etapa 3 — Ciclo de desempenho: resistência / propulsão / estabilidade (**v0.3**)
 - [ ] Etapa 4 — Desenhos de saída (DXF) e relatórios de projeto
 - [ ] Etapa 5 — Documentação e lançamento comunitário (v1.0)
 

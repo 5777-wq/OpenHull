@@ -17,13 +17,13 @@ plans (DXF).
 
 ## État d'avancement
 
-**v0.2 publié** — étapes 1–2 terminées : équilibre poids-poussée piloté par cahier des charges, dimensions principales, hydrostatique, stabilité initiale et assiette, franc-bord, ainsi que la chaîne paramétrique de carène — tableaux d'offsets réels numérisés, mise à l'échelle affine, transformation de Lackenby, plan des formes et contrôle numérique de régularité — le tout validé sur le navire de référence JBC (voir [VALIDATION.md](VALIDATION.md)). Exécution : `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.3 publié** — étape 3 terminée, la boucle performance est fermée : estimation de résistance d'Ayre, facteurs de propulsion Holtrop avec solveur de vitesse de service, conception d'hélice de série B de Wageningen (régression publiée, vérification de cavitation de Burrill, conception pilotée par la poussée), stabilité à grands angles avec les critères IS Code 2.2 et le critère de vent et houle sévères, plus un optimiseur d'espace de conception (`openhull optimize`) balayant les rapports de dimensions vers des conceptions réalisables avec diagramme de Pareto. Validé sur le navire de référence JBC, le rapport DTMB 1712 et les données d'eau libre mesurées MP687 du NMRI (voir [VALIDATION.md](VALIDATION.md)). Exécution : `openhull run examples/taskbook_bulk_carrier.yaml`.
 
 ## Feuille de route
 
 - [x] Étape 1 — Itération des dimensions principales & noyau hydrostatique (**v0.1**)
 - [x] Étape 2 — Génération paramétrique de carène (transformation du navire mère) (**v0.2**)
-- [ ] Étape 3 — Boucle performance : résistance / propulsion / stabilité
+- [x] Étape 3 — Boucle performance : résistance / propulsion / stabilité (**v0.3**)
 - [ ] Étape 4 — Sorties graphiques (DXF) & rapports de conception
 - [ ] Étape 5 — Documentation et publication communautaire (v1.0)
 

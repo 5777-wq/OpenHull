@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenHull 技术白皮书 — 首个公开版本 v0.2</title>
+<meta name="description" content="OpenHull 技术白皮书（首个公开版本 v0.2）：Agent 编排的参数化船舶初步设计工具链，每一条数值都能追溯到公开文献的公式号。">
+<style>
+  :root{
+    --paper:#fbf9f5;
+    --paper-2:#f4f1ea;
+    --ink:#111418;
+    --ink-2:#343941;
+    --ink-3:#6b7079;
+    --rule:#d3cdc1;
+    --hair:#e4dfd5;
+    --accent:#1e3a5f;
+    --brass:#8a6a3b;
+    --ok:#2a6350;
+    --warn:#8a5a2b;
+    --serif:"Noto Serif SC","Source Han Serif SC","Songti SC","SimSun",Georgia,serif;
+    --sans:"Inter","Helvetica Neue","PingFang SC","Microsoft YaHei",-apple-system,sans-serif;
+    --mono:"IBM Plex Mono","SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:var(--sans);font-size:15px;line-height:1.86;
+    font-feature-settings:"kern" 1,"liga" 1;
+    text-rendering:optimizeLegibility;
+  }
+  .wrap{max-width:900px;margin:0 auto;padding:0 40px}
+
+  /* ══════════ 封面 ══════════ */
+  .cover{padding:78px 0 0}
+  .cover .topline{
+    display:flex;justify-content:space-between;align-items:baseline;
+    border-top:2px solid var(--ink);padding-top:11px;margin-bottom:74px;
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;
+    text-transform:uppercase;color:var(--ink-3)
+  }
+  .cover .topline b{color:var(--accent);font-weight:500}
+  .cover .series{
+    font-family:var(--mono);font-size:11px;letter-spacing:.26em;
+    text-transform:uppercase;color:var(--brass);margin:0 0 22px
+  }
+  .cover h1{
+    font-family:var(--serif);font-weight:600;font-size:60px;line-height:1.06;
+    margin:0 0 20px;letter-spacing:-.018em
+  }
+  .cover .zh{
+    font-family:var(--serif);font-weight:600;font-size:25px;line-height:1.32;
+    color:var(--ink);margin:0 0 6px;letter-spacing:.02em
+  }
+  .cover .sub{
+    font-family:var(--serif);font-size:18px;line-height:1.6;
+    color:var(--ink-2);margin:0 0 4px;font-weight:400
+  }
+  .cover .motto{
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;
+    color:var(--brass);margin:0 0 40px
+  }
+  .cover .lede{
+    font-family:var(--serif);font-size:17px;line-height:1.78;color:var(--ink-2);
+    max-width:600px;margin:0 0 52px;padding-left:20px;
+    border-left:2px solid var(--brass)
+  }
+  .meta{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    border-top:1px solid var(--rule);border-bottom:1px solid var(--rule)
+  }
+  .meta div{padding:15px 20px 15px 0}
+  .meta div:nth-child(3n+2){padding-left:20px;border-left:1px solid var(--hair)}
+  .meta div:nth-child(3n+3){padding-left:20px;border-left:1px solid var(--hair)}
+  .meta div:nth-child(n+4){border-top:1px solid var(--hair)}
+  .meta dt{
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink-3);margin:0 0 6px
+  }
+  .meta dd{margin:0;font-family:var(--mono);font-size:13px;color:var(--ink)}
+
+  /* ══════════ 前置页：摘要 + 目录 ══════════ */
+  .front{padding:0 0 8px}
+  .part-title{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.24em;
+    text-transform:uppercase;color:var(--brass);
+    padding-bottom:8px;margin:0 0 20px;border-bottom:1px solid var(--rule)
+  }
+  .abstract p{
+    font-family:var(--serif);font-size:15px;line-height:1.9;
+    margin:0 0 14px;color:var(--ink-2)
+  }
+  .abstract p:last-child{margin:0}
+  .abstract strong{color:var(--ink)}
+  .toc{margin:54px 0 0;list-style:none;padding:0}
+  .toc li{
+    display:flex;align-items:baseline;gap:10px;
+    padding:8px 0;border-bottom:1px solid var(--hair)
+  }
+  .toc .n{
+    font-family:var(--mono);font-size:10.5px;color:var(--brass);
+    min-width:22px;letter-spacing:.05em
+  }
+  .toc .t{font-size:14px;color:var(--ink);white-space:nowrap}
+  .toc .d{flex:1;border-bottom:1px dotted var(--rule);transform:translateY(-4px)}
+  .toc .p{font-family:var(--mono);font-size:11.5px;color:var(--ink-3)}
+
+  /* ══════════ 章节 ══════════ */
+  section{padding:56px 0 0;margin:56px 0 0;border-top:1px solid var(--ink)}
+  h2.sec{
+    font-family:var(--serif);font-size:31px;font-weight:600;margin:0 0 10px;
+    line-height:1.3;letter-spacing:-.008em;break-after:avoid
+  }
+  .sec-num{
+    display:block;font-family:var(--mono);font-size:11px;letter-spacing:.22em;
+    color:var(--brass);margin:0 0 11px;font-weight:400
+  }
+  h3{
+    font-family:var(--serif);font-size:19.5px;font-weight:600;
+    margin:42px 0 10px;line-height:1.45;break-after:avoid
+  }
+  h4{
+    font-size:14px;font-weight:700;margin:26px 0 8px;
+    letter-spacing:.015em;break-after:avoid
+  }
+  p{margin:0 0 15px}
+  a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--rule)}
+  a:hover{border-bottom-color:var(--accent)}
+  strong{font-weight:700}
+  em{font-style:normal;background:linear-gradient(transparent 63%,rgba(138,106,59,.26) 0)}
+  code{
+    font-family:var(--mono);font-size:.87em;background:var(--paper-2);
+    padding:1.5px 5px;border-radius:2px;color:var(--ink)
+  }
+  pre{
+    font-family:var(--mono);font-size:12px;line-height:1.75;
+    background:#15171b;color:#e8e4db;padding:20px 22px;margin:20px 0;
+    overflow-x:auto;border-radius:2px
+  }
+  pre code{background:none;padding:0;color:inherit;font-size:inherit}
+  ul,ol{margin:0 0 15px;padding-left:20px}
+  li{margin:0 0 8px}
+  li::marker{color:var(--ink-3)}
+
+  /* ══════════ 表格 ══════════ */
+  .tbl{margin:24px 0;overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  caption{
+    text-align:left;font-family:var(--mono);font-size:10px;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--ink-3);padding:0 0 10px
+  }
+  th{
+    text-align:left;font-weight:700;font-size:11px;letter-spacing:.05em;
+    padding:9px 11px;border-bottom:1px solid var(--ink);white-space:nowrap;
+    color:var(--ink)
+  }
+  td{padding:9px 11px;border-bottom:1px solid var(--hair);vertical-align:top}
+  td.num,th.num{font-family:var(--mono);text-align:right;white-space:nowrap;font-size:12px}
+  tbody tr:hover{background:var(--paper-2)}
+  .ok{color:var(--ok);font-weight:600}
+  .note{
+    font-size:12px;line-height:1.75;color:var(--ink-3);margin:-6px 0 24px;
+    padding-left:14px;border-left:1px solid var(--rule)
+  }
+
+  /* ══════════ 卡片 / 原则 / 图 ══════════ */
+  .cards{display:grid;gap:0;grid-template-columns:1fr 1fr;margin:24px 0}
+  .card{padding:18px 22px;border-top:1px solid var(--rule)}
+  .card:nth-child(odd){border-right:1px solid var(--rule)}
+  .card h4{margin:0 0 7px;font-size:13.5px;color:var(--accent)}
+  .card p{margin:0;font-size:13px;line-height:1.8;color:var(--ink-2)}
+
+  .principle{
+    display:grid;grid-template-columns:46px 1fr;gap:0 18px;
+    padding:20px 0;border-top:1px solid var(--hair)
+  }
+  .principle .pid{
+    font-family:var(--mono);font-size:20px;color:var(--brass);font-weight:400
+  }
+  .principle h4{margin:0 0 6px}
+  .principle p{margin:0;color:var(--ink-2);font-size:13.5px}
+
+  figure{margin:32px 0}
+  figure svg{width:100%;height:auto;display:block}
+  figcaption{
+    font-size:12px;line-height:1.7;color:var(--ink-3);margin-top:13px;
+    padding-top:10px;border-top:1px solid var(--hair)
+  }
+  figcaption b{color:var(--brass);font-family:var(--mono);font-size:10.5px;
+    letter-spacing:.14em;text-transform:uppercase;margin-right:9px}
+
+  .callout{
+    margin:26px 0;padding:18px 22px;border:1px solid var(--rule);
+    background:var(--paper-2)
+  }
+  .callout.warn{border-left:2px solid var(--warn)}
+  .callout h4{margin:0 0 9px}
+  .callout p{margin:0 0 10px;font-size:13.5px}
+  .callout p:last-child{margin:0}
+
+  footer{
+    margin-top:76px;padding:26px 0 70px;border-top:2px solid var(--ink);
+    font-size:12px;line-height:1.8;color:var(--ink-3)
+  }
+  footer .fl{display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px}
+  footer strong{color:var(--ink)}
+
+  @media (max-width:760px){
+    .wrap{padding:0 22px}
+    .cover h1{font-size:40px}
+    .cover .zh{font-size:20px}
+    .cover .sub{font-size:16px}
+    .meta{grid-template-columns:1fr 1fr}
+    .meta div:nth-child(3n+2),.meta div:nth-child(3n+3){padding-left:0;border-left:0}
+    .meta div:nth-child(2n){padding-left:18px;border-left:1px solid var(--hair)}
+    .cards{grid-template-columns:1fr}
+    .card:nth-child(odd){border-right:0}
+    body{font-size:14.5px}
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     A4 印刷版式
+     A4 正文宽 ≈ 174 mm ≈ 657 px，屏幕容器为 820 px：
+     所有按 px 写死的尺寸与 max-width 媒体查询在印刷时会以 A4 宽度重新求值。
+     ══════════════════════════════════════════════════════════════ */
+  @page{ size:A4 portrait; margin:18mm 18mm 20mm; }
+  @media print{
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+
+    /* max-width:760px 的降级在 A4（≈657px）下会被触发，必须显式还原 */
+    /* 印刷品用中文出版的正规搭配：正文宋体 / Times，标题黑体系，图注楷体 */
+    body{
+      font-size:10pt; line-height:1.7; background:#fff; background-image:none;
+      font-family:"Times New Roman",var(--serif);
+      text-align:justify; text-justify:inter-ideograph;
+    }
+    h2.sec, h3, h4, .sec-num, .part-title, .card h4, .callout h4,
+    .cover .zh, .cover .sub, .toc .t{
+      font-family:"Microsoft YaHei","微软雅黑","Segoe UI",sans-serif;
+    }
+    /* 首行缩进 2 字符 —— 中文印刷正文的标准做法 */
+    section > .wrap > p, .abstract p{ text-indent:2em; }
+    section > .wrap > p.note, .callout p, .card p, .principle p{ text-indent:0; }
+    section > .wrap > p{ margin-bottom:.32em; }
+    .note{ font-family:"KaiTi","楷体",var(--serif); }
+    figcaption{ font-family:"Microsoft YaHei","微软雅黑",sans-serif; }
+    li{ text-indent:0; }
+    .wrap{ max-width:none; padding:0; }
+    .cover h1{ font-size:31pt; margin-bottom:14px; }
+    .cover .zh{ font-size:15pt; }
+    .cover .sub{ font-size:11pt; }
+    .cover .motto{ font-size:8.4pt; margin-bottom:26px; }
+    .cover .lede{ font-size:11pt; line-height:1.72; margin-bottom:34px; }
+    .cover .topline{ margin-bottom:48px; font-size:8pt; }
+    .meta{ grid-template-columns:repeat(3,1fr); }
+    .meta div:nth-child(3n+2),.meta div:nth-child(3n+3){
+      padding-left:14px; border-left:1px solid var(--hair); }
+    .meta div:nth-child(2n){ padding-left:14px; }
+    .meta dd{ font-size:9pt; }
+    .cards{ grid-template-columns:1fr 1fr; }
+    .card:nth-child(odd){ border-right:1px solid var(--rule); }
+    a{ border:0; color:var(--ink); }
+
+    /* 分页：封面独占首页，摘要与目录独占次页，其后连续流动 */
+    .cover{ padding:0; break-after:page; }
+    .front{ break-after:page; }
+    section{ padding:12px 0 0; margin:0 0 18px; border-top:1px solid var(--rule);
+             break-before:auto; }
+    section:first-of-type{ margin-top:0; }
+    h2.sec{ font-size:16pt; margin:0 0 7px; break-after:avoid; text-align:left; }
+    .sec-num{ font-size:8pt; margin-bottom:7px; break-after:avoid; }
+    h3{ font-size:11.5pt; margin:17px 0 7px; text-align:left; }
+    h4{ font-size:9.6pt; }
+
+    /* 图与卡片宁可整块跳页；长表允许跨页并重复表头 */
+    figure, .callout, .principle, pre, .cards{ break-inside:avoid; }
+    .tbl{ break-inside:auto; }
+    table{ break-inside:auto; font-size:8.2pt; }
+    tr{ break-inside:avoid; }
+    thead{ display:table-header-group; }
+    caption{ break-inside:avoid; break-after:avoid; font-size:7.6pt; }
+    figcaption, .note{ break-inside:avoid; }
+    th{ font-size:7.8pt; padding:5px 7px; }
+    td{ padding:5px 7px; }
+    td.num,th.num{ font-size:7.8pt; }
+    .abstract p{ font-size:9.6pt; line-height:1.78; }
+    .toc li{ padding:5px 0; }
+    .toc .t{ font-size:9.4pt; }
+    pre{ font-size:7.6pt; background:#f4f1ea; color:var(--ink);
+         border:1px solid var(--rule); padding:12px 14px; }
+    figure{ margin:16px 0; }
+    figcaption{ margin-top:8px; padding-top:6px; font-size:7.8pt; }
+    footer{ margin-top:22px; padding:14px 0 0; font-size:8pt; }
+    .note{ font-size:7.8pt; }
+
+    /* SVG 的 font-size 单位是 viewBox 用户单位。viewBox 宽 1000 落入 657 px 容器
+       → 缩放 0.657，字号须放大 1.40 倍才能在纸面达到屏幕观感。 */
+    figure svg text[font-size="16"]{ font-size:22.4px !important; }
+    figure svg text[font-size="15.5"]{ font-size:21.7px !important; }
+    figure svg text[font-size="14"]{ font-size:19.6px !important; }
+    figure svg text[font-size="13.5"]{ font-size:18.9px !important; }
+    figure svg text[font-size="13"]{ font-size:18.2px !important; }
+    figure svg text[font-size="12.5"]{ font-size:17.5px !important; }
+    figure svg text[font-size="12"]{ font-size:16.8px !important; }
+    figure svg text[font-size="11.5"]{ font-size:16.1px !important; }
+    figure svg text[font-size="11"]{ font-size:15.4px !important; }
+    figure svg text[font-size="10.5"]{ font-size:14.7px !important; }
+    figure svg text[font-size="10"]{ font-size:14.0px !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ 封面（独占第 1 页） ══════════════════ -->
+<header class="cover">
+  <div class="wrap">
+    <div class="topline">
+      <span><b>Technical Whitepaper</b> &nbsp;/&nbsp; OpenHull</span>
+      <span>5777-wq/OpenHull</span>
+    </div>
+
+    <p class="series">首个公开版本 · v0.2.0</p>
+    <h1>OpenHull</h1>
+    <p class="zh">技术白皮书</p>
+    <p class="sub">Agent 编排的参数化船舶初步设计工具链</p>
+    <p class="motto">Design the shell that carries it all.</p>
+
+    <p class="lede">
+      把船舶初步设计中<strong>能写成公式的部分</strong>从闭源软件与人工搬运中解放出来，
+      并让每一个输出的数字都能追溯到公开文献里<strong>具体某一页的某一条公式</strong>。
+    </p>
+
+    <dl class="meta">
+      <div><dt>版本</dt><dd>v0.2.0</dd></div>
+      <div><dt>文档日期</dt><dd>2026-09-20</dd></div>
+      <div><dt>许可证</dt><dd>MIT</dd></div>
+      <div><dt>运行环境</dt><dd>Python ≥ 3.11</dd></div>
+      <div><dt>测试状态</dt><dd>176 passed</dd></div>
+      <div><dt>依赖上限</dt><dd>5 packages</dd></div>
+    </dl>
+  </div>
+</header>
+
+<!-- ══════════════════ 摘要 + 目录（独占第 2 页） ══════════════════ -->
+<div class="front">
+  <div class="wrap">
+    <p class="part-title">摘要 / Executive Summary</p>
+    <div class="abstract">
+      <p>
+        OpenHull 是一个开源（MIT）的参数化船舶初步设计工具链。输入一份 YAML
+        设计任务书——船型、载重吨、服务航速、航区、设计吃水——流水线产出
+        主尺度方案、静水力表、型线型值表与分层 DXF 矢量数据。整条链路可由
+        AI 智能体编排，也可以被工程师当作普通 Python 库调用。
+      </p>
+      <p>
+        本项目的核心主张不在于算法本身——所用的经验公式（Watson、Lackenby、
+        Holtrop&ndash;Mennen、ICLL 干舷规则）全部来自公开教材与国际规范，没有一条是自创的。
+        主张在于<strong>工程化的可信度</strong>：每一条公式必须先进入"公式白名单"才能被实现，
+        并附上书名、章节与公式号；每一次验收只认公开基准船的出版数字；
+        每一处近似与循环论证都写在明处，而不是藏进精度表里。
+      </p>
+      <p>
+        首个公开版本 v0.2 交付三段链路——任务书驱动的重量浮力平衡、主尺度初估、
+        静水力与初稳性，以及参数化型线生成（数字化母型 → 仿射缩放 → Lackenby 变换
+        → 型值表与分层 DXF）。全部通过日本 NMRI 公开基准船 JBC 的验收锚点：
+        排水体积误差 <strong>+0.21 %</strong>（容差 ±1 %）、
+        KM 误差 <strong>+0.000 %</strong>（容差 ±2 %）、
+        方形系数偏差 <strong>+0.0018</strong>（容差 ±0.005）。
+        母型船变换链路另以 1963 年 DTMB Report 1712 的印刷棱形系数与解析闭式解，
+        完成不依赖任何外部拟合数据的非循环验证。
+      </p>
+    </div>
+
+    <ul class="toc">
+      <li><span class="n">01</span><span class="t">问题：初步设计中的三重断裂</span><span class="d"></span><span class="p" data-sec="s1">3</span></li>
+      <li><span class="n">02</span><span class="t">设计立场：四条原则</span><span class="d"></span><span class="p" data-sec="s2">3</span></li>
+      <li><span class="n">03</span><span class="t">系统架构</span><span class="d"></span><span class="p" data-sec="s3">4</span></li>
+      <li><span class="n">04</span><span class="t">技术路径</span><span class="d"></span><span class="p" data-sec="s4">6</span></li>
+      <li><span class="n">05</span><span class="t">验证体系</span><span class="d"></span><span class="p" data-sec="s5">8</span></li>
+      <li><span class="n">06</span><span class="t">开源生态位</span><span class="d"></span><span class="p" data-sec="s6">11</span></li>
+      <li><span class="n">07</span><span class="t">交付范围</span><span class="d"></span><span class="p" data-sec="s7">12</span></li>
+      <li><span class="n">08</span><span class="t">边界：明确不做的事</span><span class="d"></span><span class="p" data-sec="s8">14</span></li>
+      <li><span class="n">09</span><span class="t">适用范围与已知边界</span><span class="d"></span><span class="p" data-sec="s9">14</span></li>
+      <li><span class="n">10</span><span class="t">复现与参与</span><span class="d"></span><span class="p" data-sec="s10">15</span></li>
+    </ul>
+  </div>
+</div>
+
+<!-- ══════════════ 1 问题 ══════════════ -->
+<section id="s1">
+  <div class="wrap">
+  <span class="sec-num">01</span>
+  <h2 class="sec">问题：初步设计中的三重断裂</h2>
+
+  <p>
+    船舶设计的信息化程度并不低——CAD、CFD、船级社计算软件一应俱全。
+    但这些工具高度集中在<strong>详细设计与交付环节</strong>。
+    而在更早的<em>初步设计</em>阶段，即"给定载重吨与航速，这个船长什么样"这一步，
+    工程实践仍然高度依赖人的经验、Excel 台账和零散的内部脚本。
+    这里存在三重断裂。
+  </p>
+
+  <h3>1.1 知识是公开的，工具是闭源的</h3>
+  <p>
+    商业船舶软件真正垄断的是交付链条——出图、送审、生产文件。
+    而初步设计赖以成立的知识内核：母型船统计回归、系列试验图谱、Lackenby 船型变换、
+    Holtrop&ndash;Mennen 阻力估算，全部公开在教材、学位论文与半个世纪前的试验报告里。
+    换句话说，<strong>被锁住的不是知识，而是知识的工程化载体</strong>。
+  </p>
+
+  <h3>1.2 数据在软件之间靠人手搬运</h3>
+  <p>
+    一个典型的初步设计循环是：从任务书读数 → 在 Excel 里估主尺度 →
+    手抄进 CAD 建母型 → 导出型值 → 另开一个脚本算静水力 →
+    把结果抄回 Excel 画曲线。每一次人工搬运都是一次精度损失与一次可追溯性的断裂。
+    本项目要替代的正是这只"在软件之间搬运数据的手"。
+  </p>
+
+  <h3>1.3 可追溯性缺失</h3>
+  <p>
+    开源界并不缺船舶计算代码。生态调研显示，静水力、稳性、Holtrop 阻力都有多个实现，
+    但绝大多数是课程作业级：公式来源不明、适用边界不声明、
+    验收标准是"和某个软件对上了"而非"和出版数据对上了"。
+    对一个要用于真实产品设计的工具，这不可接受——
+    <strong>行家一眼就能看穿一个没有出处的系数</strong>。
+  </p>
+
+  <div class="callout warn">
+    <h4>由此得出的判断</h4>
+    <p>
+      真正的卡点不是"缺少算法"，而是<strong>被验证过的工程知识的数字化，以及由此建立的行业信任</strong>。
+      OpenHull 的全部设计决策都服务于这两件事。
+    </p>
+  </div>
+  </div>
+</section>
+
+<!-- ══════════════ 2 设计立场 ══════════════ -->
+<section id="s2">
+  <div class="wrap">
+  <span class="sec-num">02</span>
+  <h2 class="sec">设计立场：四条原则</h2>
+
+  <p>
+    这四条原则写进了项目宪法 <code>AGENTS.md</code>，是该仓库中优先级最高的一份文件——
+    任何代码、测试或文档与它冲突，以它为准。英文版为准，中文版同步维护。
+  </p>
+
+  <div class="principle">
+    <div class="pid">P1</div>
+    <div>
+      <h4>每一个输出结果都必须可追溯至某条公式或公开文献</h4>
+      <p>
+        公式必须先被列入宪法第五节的白名单才能实现；每个实现旁附引用注释，
+        写明书名、章节与公式号，且页码必须在实现时对着纸质或 PDF 原文核对——
+        禁止凭记忆写页码。
+      </p>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="pid">P2</div>
+    <div>
+      <h4>与公开基准船数据的验证，优先于新功能开发</h4>
+      <p>
+        任何一条数值若没有出版来源或经业主批准的锚点，就不允许被测试断言。
+        估计值永远不能充当验证目标。这意味着功能进度可以慢，验证不能欠账。
+      </p>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="pid">P3</div>
+    <div>
+      <h4>经验公式必须声明适用范围，超范围的输入一律拒绝</h4>
+      <p>
+        每个经验公式把它适用的 Froude 数、船型系数区间与尺度区间作为<em>数据</em>
+        写在实现旁边。超出范围时模块<strong>抛错并说明违反了哪条边界</strong>，
+        而不是静默外推。静默外推是开源工程代码最危险的失效模式。
+      </p>
+    </div>
+  </div>
+
+  <div class="principle">
+    <div class="pid">P4</div>
+    <div>
+      <h4>能写成公式的交给自动化，写不成公式的留给工程师</h4>
+      <p>
+        这条边界决定了项目范围。船型变换、静水力积分、规则校核可以自动化；
+        舱室划分的合理性、总布置的工艺判断、与船东的权衡，不在此列，
+        也不试图用启发式规则假装解决。
+      </p>
+    </div>
+  </div>
+
+  <p>
+    工程上，P3 与 P4 直接塑造了架构：<strong>算法以注册表形式暴露</strong>。
+    每个计算步骤（主尺度初估、重量估算、船型变换……）都是一个可以挂多个
+    <em>具名算法</em>的策略点，每个算法携带稳定的 id、它的白名单引用、
+    以及适用范围数据。任务书因此可以逐步指定算法，未来的图形前端可以据此
+    把超出范围的选项置灰。
+  </p>
+  </div>
+</section>
+
+<!-- ══════════════ 3 架构 ══════════════ -->
+<section id="s3">
+  <div class="wrap">
+  <span class="sec-num">03</span>
+  <h2 class="sec">系统架构</h2>
+
+  <p>
+    架构只有一条硬要求：<strong>数值内核与调用方式解耦</strong>。
+    CLI 与 YAML 任务书构成稳定契约，全部计算是「输入经过校验的数据类、
+    输出可 JSON 序列化的纯函数」。这样 MCP server、Skill 或图形界面
+    可以在不触碰任何一个数值的前提下包装整套能力。
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="OpenHull 系统架构：输入契约、计算链路、成果与 Agent 编排层">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6d7280"/>
+        </marker>
+      </defs>
+
+      <text x="40" y="34" font-family="IBM Plex Mono,monospace" font-size="11"
+            letter-spacing="2" fill="#8a6a3b">INPUT</text>
+      <rect x="40" y="48" width="250" height="86" fill="#f4f1ea" stroke="#111418" stroke-width="1.4"/>
+      <text x="58" y="76" font-family="Noto Serif SC,serif" font-size="15.5" font-weight="600" fill="#111418">设计任务书 YAML</text>
+      <text x="58" y="98" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">TB-001 · schema_version 1</text>
+      <text x="58" y="116" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">[NMRI] [DERIV] [ASSUMED]</text>
+
+      <rect x="40" y="150" width="250" height="86" fill="none" stroke="#d3cdc1" stroke-width="1.2"/>
+      <text x="58" y="178" font-family="Noto Serif SC,serif" font-size="15.5" font-weight="600" fill="#111418">算法注册表</text>
+      <text x="58" y="200" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">id · 白名单引用 · 适用域</text>
+      <text x="58" y="218" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">策略模式，逐步可选</text>
+
+      <line x1="290" y1="196" x2="372" y2="196" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)"/>
+
+      <text x="388" y="34" font-family="IBM Plex Mono,monospace" font-size="11"
+            letter-spacing="2" fill="#8a6a3b">COMPUTE CORE</text>
+      <g font-family="Noto Serif SC,serif" font-size="14" fill="#111418">
+        <rect x="388" y="48" width="286" height="52" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="406" y="79">重量—浮力平衡迭代</text>
+
+        <rect x="388" y="112" width="286" height="52" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="406" y="143">主尺度初估</text>
+
+        <rect x="388" y="176" width="286" height="52" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="406" y="199" font-size="13.5">型线生成</text>
+        <text x="406" y="217" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">母型→仿射→Lackenby</text>
+
+        <rect x="388" y="240" width="286" height="52" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="406" y="271">静水力计算</text>
+
+        <rect x="388" y="304" width="286" height="52" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="406" y="327" font-size="13.5">初稳性 · 浮态 · 干舷校核</text>
+        <text x="406" y="345" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">GM / trim / ICLL 1966</text>
+      </g>
+      <g stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)">
+        <line x1="531" y1="100" x2="531" y2="110"/>
+        <line x1="531" y1="164" x2="531" y2="174"/>
+        <line x1="531" y1="228" x2="531" y2="238"/>
+        <line x1="531" y1="292" x2="531" y2="302"/>
+      </g>
+
+      <line x1="674" y1="196" x2="742" y2="196" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)"/>
+
+      <text x="752" y="34" font-family="IBM Plex Mono,monospace" font-size="11"
+            letter-spacing="2" fill="#8a6a3b">OUTPUT</text>
+      <g font-size="13">
+        <rect x="752" y="48" width="208" height="46" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
+        <text x="768" y="76" font-family="Noto Serif SC,serif" fill="#111418">主尺度方案</text>
+
+        <rect x="752" y="106" width="208" height="46" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
+        <text x="768" y="134" font-family="Noto Serif SC,serif" fill="#111418">静水力表 CSV / JSON</text>
+
+        <rect x="752" y="164" width="208" height="46" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
+        <text x="768" y="192" font-family="Noto Serif SC,serif" fill="#111418">型值表 · 分层 DXF</text>
+
+        <rect x="752" y="222" width="208" height="46" fill="none" stroke="#d3cdc1" stroke-width="1.2"/>
+        <text x="768" y="250" font-family="Noto Serif SC,serif" fill="#343941">校核结论与声明</text>
+      </g>
+
+      <line x1="40" y1="404" x2="960" y2="404" stroke="#d3cdc1" stroke-width="1"/>
+      <rect x="40" y="428" width="920" height="72" fill="none" stroke="#1e3a5f" stroke-width="1.6"/>
+      <text x="60" y="457" font-family="Noto Serif SC,serif" font-size="15.5"
+            font-weight="600" fill="#1e3a5f">Agent 编排层</text>
+      <text x="60" y="481" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">
+        CLI + YAML 稳定契约 → 纯函数 · JSON 可序列化 · 算法注册表即枚举参数
+      </text>
+      <text x="700" y="457" font-family="Noto Serif SC,serif" font-size="13" fill="#343941">MCP Server</text>
+      <text x="700" y="481" font-family="Noto Serif SC,serif" font-size="13" fill="#343941">Skill · 插件（零侵入）</text>
+      <line x1="640" y1="464" x2="684" y2="464" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)"/>
+
+      <text x="40" y="540" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
+        第三方依赖仅限 numpy · matplotlib · ezdxf · pyyaml · pytest（dev）
+      </text>
+      <text x="40" y="560" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
+        积分、变换、求解器全部包内自实现 —— 不引黑箱
+      </text>
+    </svg>
+    <figcaption>
+      <b>图 1</b>系统架构。数值内核（中列）是纯函数与校验数据类；调用方式（底部蓝框）
+      可随生态演进而替换，内核不受影响。
+    </figcaption>
+  </figure>
+
+  <h3>3.1 任务书即输入契约</h3>
+  <p>
+    唯一的用户输入是一份 YAML 任务书。它不只是参数清单，更是<strong>出处登记表</strong>：
+    每一个数字都带来源标签。以仓库中的 TB-001（Capesize 散货船）为例：
+  </p>
+  <ul>
+    <li><code>[NMRI]</code> —— 取自日本 NMRI 官方发布的 JBC 条件表（设计吃水 16.500 m、服务航速 14.5 kn、方形系数 0.8580）</li>
+    <li><code>[DERIV]</code> —— 由 <code>[NMRI]</code> 值按行内写明的公式导出（如排水量 = 1.025 t/m³ × 178 369.9 m³）</li>
+    <li><code>[ASSUMED]</code> —— 工程假设，需业主批准并留痕（如载重吨 149 920 t：JBC 是虚拟基准船，NMRI 不公布载重吨）</li>
+  </ul>
+  <p>
+    这个设计的直接后果是：<strong>任何一个人拿到仓库，都能区分"这是公开数据"与"这是假设"</strong>，
+    而不必去猜某个数字的出处。载重吨这一处最典型——它由业主批准、
+    取载重吨系数 0.82 的中点值，任务书里连"曾考虑过 0.86 但未采纳"都写了进去。
+  </p>
+
+  <h3>3.2 算法作为数据</h3>
+  <p>
+    重量估算模块同时注册了三种算法：载重吨系数法（迭代起点）、
+    成分立方模数法（默认）、成分指数法。默认算法为
+    <code>component_cubic</code>，其引用字段直接写进每一次运行的输出：
+  </p>
+  <pre><code>"citation": "Xie Yunping et al., section 2.2.2: Eq.(2-13) steel cubic
+modulus, Eq.(2-42) outfit area modulus, Table 2-3 component shares of
+lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
+  <p>
+    这意味着结果本身携带审计路径。更进一步，算法还携带<strong>适用域</strong>——
+    例如散货船载重吨系数的回归式只认 0.5 万至 6 万吨，TB-001 的 14.99 万吨
+    会被<em>正确地拒绝</em>；这个拒绝行为有专门的测试钉死，防止将来有人"顺手放宽"。
+  </p>
+
+  <h3>3.3 报错也要讲道理</h3>
+  <p>
+    输入校验的失败消息包含四要素：字段、值、允许范围、<strong>以及物理或数学上的原因</strong>。
+    如果给一个方形系数 1.5，返回的不是"值非法"，而是
+    「排水体积塞不进外接矩形框，因此 Cb ≤ 1」并附定义式。
+    测试直接断言错误文本中含公式，防止将来退化成一句无信息量的报错。
+    同时所有错误消息保持纯 ASCII——Windows 的 GBK 控制台不会因此崩溃。
+  </p>
+  </div>
+</section>
+
+<!-- ══════════════ 4 技术路径 ══════════════ -->
+<section id="s4">
+  <div class="wrap">
+  <span class="sec-num">04</span>
+  <h2 class="sec">技术路径</h2>
+
+  <h3>4.1 重量—浮力平衡迭代</h3>
+  <p>
+    主尺度不是一次算出来的，而是"重量等于浮力"这个方程的不动点。
+    流水线从载重吨系数法给出迭代起点，再用成分法计算空船重量
+    （钢料立方模数 + 舾装面积模数 + 机电占比），反复逼近。
+    判停准则采用《船体结构强度》§3.2.2 式(3-27) 的下限
+    ——两次迭代之间 |W − B|/W ≤ 0.1 %。
+  </p>
+  <p>
+    迭代同时输出<em>诺曼系数</em>作为物理诊断：它应当大于 1，
+    因为它描述的是"增加一吨载重会导致排水量增长多少"（增量还包括为此增加的船体本身）。
+    TB-001 的实测值为 <strong>1.160</strong>，量级合理。
+    超过 30 轮未收敛则拒绝返回——避免用无限迭代掩盖一个本就不自洽的输入。
+  </p>
+
+  <h3>4.2 型线生成：从母型船变换，而不是从零生成</h3>
+  <p>
+    这是型线生成的技术核心，也是本项目的差异化所在。
+    船体型线是一个光顺性约束极强的连续曲面，从零生成一条可用的型线
+    是数学上的硬骨头。项目的选择是<strong>只做母型船变换</strong>：
+    以一条已知光顺的真实母型为基础，通过仿射缩放改尺度，
+    再通过 Lackenby 变换调整棱形系数与浮心纵向位置。这条路径的可控性远高于生成式方法。
+  </p>
+  <p>完整链路共四步：</p>
+  <ol>
+    <li>
+      <strong>母型数字化</strong>。包内携带的是 1963 年 DTMB Report 1712 表 7 的
+      25 站型值表（Model 4214W-B4，总棱形系数 0.805），逐格对着 300 dpi 渲染页核对过。
+      附带一条纪律上的收获：报告按<em>棱形系数</em>命名系列母型，
+      文献里常说的 "Series 60, Cb = 0.80" 指的其实是 Cp = 0.805 的这条母型——
+      这个术语陷阱已写进数据源文档。
+    </li>
+    <li>
+      <strong>仿射缩放</strong>。把母型缩放到平衡后的主尺度上。船型系数是仿射不变量，
+      因此这一步有精确的验收标准：半尺度的船排水量必须恰好是全尺度的 1/8（测试断言 rel 1e-9）。
+    </li>
+    <li>
+      <strong>Lackenby 变换</strong>。按二次变换函数 <code>dx = c(1−x)(x+d)</code>
+      移动站线，前后体分别分配棱形系数增量，平行中体保持不动，
+      以同时命中目标的 Cb 与 LCB。
+    </li>
+    <li>
+      <strong>表格层收敛</strong>（见下）。这是让一阶方法变得可靠的关键。
+    </li>
+  </ol>
+
+  <figure>
+    <svg viewBox="0 0 1000 490" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="Lackenby 变换的表格层收敛环">
+      <defs>
+        <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#6d7280"/>
+        </marker>
+      </defs>
+      <text x="40" y="32" font-family="IBM Plex Mono,monospace" font-size="11"
+            letter-spacing="2" fill="#8a6a3b">TABLES-LEVEL CONVERGENCE LOOP</text>
+
+      <g font-family="Noto Serif SC,serif" font-size="13.5" fill="#111418">
+        <rect x="40" y="60" width="286" height="58" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="58" y="86">① 目标 ΔCb / ΔLCB</text>
+        <text x="58" y="105" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">一阶解析估出所需增量</text>
+
+        <rect x="357" y="60" width="286" height="58" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="375" y="86">② 前后体分配 + 平行中体</text>
+        <text x="375" y="105" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">式(5-44)(5-45)(5-46)(5-47)</text>
+
+        <rect x="674" y="60" width="286" height="58" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="692" y="86">③ 移动站线，承载型值表</text>
+        <text x="692" y="105" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">在移动后站位插值母型</text>
+
+        <line x1="326" y1="89" x2="355" y2="89" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar2)"/>
+        <line x1="643" y1="89" x2="672" y2="89" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar2)"/>
+      </g>
+
+      <path d="M817,118 L817,168 L183,168 L183,122" fill="none"
+            stroke="#8a6a3b" stroke-width="1.5" stroke-dasharray="5 4" marker-end="url(#ar2)"/>
+      <text x="368" y="161" font-family="IBM Plex Mono,monospace" font-size="10.5"
+            fill="#8a6a3b" stroke="#fbf9f5" stroke-width="4" paint-order="stroke">
+        ④ 在承载体上实测 Cb / LCB —— 不信任一阶公式的解析结果
+      </text>
+
+      <rect x="280" y="196" width="440" height="58" fill="#f4f1ea" stroke="#111418" stroke-width="1.4"/>
+      <text x="300" y="222" font-family="Noto Serif SC,serif" font-size="13.5" fill="#111418">⑤ 残差 ≤ 1e-4 ？</text>
+      <text x="300" y="241" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">
+        否 → 修正增量（0.8 阻尼，≤ 8 轮）；大扰动自动拆分
+      </text>
+      <line x1="500" y1="254" x2="500" y2="292" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar2)"/>
+
+      <rect x="280" y="300" width="440" height="56" fill="#1e3a5f" stroke="#1e3a5f" stroke-width="1.4"/>
+      <text x="300" y="325" font-family="Noto Serif SC,serif" font-size="13.5" fill="#fbf9f5">
+        ⑥ 输出型值表（21 站 × 27 水线）
+      </text>
+      <text x="300" y="344" font-family="IBM Plex Mono,monospace" font-size="10" fill="#c8d3e0">
+        Cm 全程不变 · 平行中体位移场恒为 0
+      </text>
+
+      <text x="40" y="392" font-family="Noto Serif SC,serif" font-size="12.5" fill="#343941">
+        验收锚：恒等请求逐位返回母型（diff = 0）
+      </text>
+      <text x="40" y="413" font-family="Noto Serif SC,serif" font-size="12.5" fill="#343941">
+        ΔCb = +0.02 实测 +0.0200，LCB 漂移 0.0017 %L
+      </text>
+      <text x="40" y="434" font-family="Noto Serif SC,serif" font-size="12.5" fill="#343941">
+        抛物线闭合校验：Cp = 2/3、x_bf = 3/8、K² = 1/5、B_f = 3/5 —— 钉死公式转录口径
+      </text>
+      <text x="40" y="460" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
+        该闭合校验捕获了一处按教科书直读不闭环的公式转录问题；这是解析自证的价值。
+      </text>
+    </svg>
+    <figcaption>
+      <b>图 2</b>Lackenby 变换的表格层收敛环。一阶代数方法忽略二阶项，
+      因此每一次都回<em>实际承载的型值表</em>上测量真实结果再修正，
+      把一阶方法的不精确性收敛掉，而不是让误差累积进成果。
+    </figcaption>
+  </figure>
+
+  <p>
+    还有一个细节值得单独记录：教科书中该变换的公式在直读时<strong>不闭合</strong>。
+    项目引入了抛物线闭合检验——用一条解析上完全已知的抛物线型线
+    反推公式中各系数的取值，结果应当精确等于 2/3、3/8、1/5、3/5。
+    正是这个检验定位到公式转录的口径问题，从而避免了整条链路建立在错误解读上。
+    <em>解析闭式自证的价值就在这里：它不需要任何外部数据，就能证伪一个实现。</em>
+  </p>
+
+  <h3>4.3 静水力内核自实现，不用黑箱积分器</h3>
+  <p>
+    辛普森第一/第二法则与梯形法都在包内手写实现。这不是重复造轮子，而是
+    <strong>可追溯性的要求</strong>——积分口径直接决定 Cb、LCB、KM 的取值，
+    而不同积分实现的插值约定差异会悄悄改变结果。
+    内核提供三向积分：沿水线的纵向要素积分（水线面积、LCF）、
+    沿垂向的体积与浮心积分、以及沿吃水的邦戎曲线积分。
+  </p>
+  <p>积分器本身有独立的验收：</p>
+  <ul>
+    <li>箱形船与抛物线型线对闭式解精确到 <code>1e-9</code></li>
+    <li>抛物线型线的 Cb 必须等于解析值 2/3</li>
+    <li><strong>交叉通量检验</strong>：邦戎曲线的纵向积分与静水力模块的垂向积分，
+      两条完全独立的路径必须给出同一个排水体积（实测相对偏差 <code>1e-4</code>）</li>
+  </ul>
+  <p>
+    第三条尤其重要。一个积分实现即使内部约定写错，也可能在单一方向自洽；
+    只有两条独立路径互相校对，才能真正排除口径错误。
+  </p>
+
+  <h3>4.4 数值光顺检查</h3>
+  <p>
+    型值表的微小凹凸在 CAD 里会被放大成难看的鼓包，但肉眼在数值表上发现不了。
+    模块 <code>fairness</code> 用二阶差分的<strong>局部对比度</strong>做检测：
+    把每个点的二阶差分与邻近点的中位数比较，取 MAD 鲁棒的 z 分数，
+    再叠加一个绝对下限形成双门槛。
+  </p>
+  <p>
+    绝对下限的标定方式值得一提：拿已知光顺的数字化 Series 60 母型实测其最大曲率对比度
+    （27 条水线 × 21 站，得 <strong>12.2</strong>），把报警下限设在它的约两倍
+    （<strong>25</strong>），并留出"最大对比度 < 0.7 × 下限"的裕量测试。
+    这样既有明确的物理依据，又不会在将来微调数据时立刻失效。
+  </p>
+  <p>
+    除了曲率检测，还有两项几何检查：单瓣单调性（仅对 0.5 吃水以上的水线，
+    球鼻艏区豁免）、以及平行中体的恒定性与摆动判别。
+    验收是双向的：真实母型<strong>零报警</strong>，
+    而人工种植的单点尖峰、斜率折角、破瓣、平行段凹陷<strong>全部被检出</strong>。
+    只做前者会把门槛设得过宽，只做后者会误报连连，两个方向必须同时成立。
+  </p>
+  </div>
+</section>
+
+<!-- ══════════════ 5 验证体系 ══════════════ -->
+<section id="s5">
+  <div class="wrap">
+  <span class="sec-num">05</span>
+  <h2 class="sec">验证体系</h2>
+
+  <p>
+    这一章是白皮书的重点，也是 OpenHull 与多数同类开源实现的分水岭。
+    项目的答案是：<strong>不是"相信我们的代码"，而是"给你一套可以独立复核的证据链"</strong>。
+  </p>
+
+  <h3>5.1 锚点分层：不同强度的证据不能混用</h3>
+  <p>
+    验证最难的地方在于自证循环——如果用"自己拟合出来的结果"去验证"自己"，
+    那只是把假设重述了一遍。因此项目对锚点做了严格分层，
+    并要求在报告里把不同强度的证据分开陈述。
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 1000 372" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="验证锚点分层：从出版值锚到定义恒等">
+      <text x="40" y="30" font-family="IBM Plex Mono,monospace" font-size="11"
+            letter-spacing="2" fill="#8a6a3b">ANCHOR STRATA</text>
+
+      <g font-family="Noto Serif SC,serif" font-size="13.5">
+        <rect x="40" y="48" width="640" height="52" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="58" y="72" fill="#fbf9f5" font-weight="600">① 出版值锚 —— 最硬</text>
+        <text x="58" y="91" font-family="IBM Plex Mono,monospace" font-size="10" fill="#c8d3e0">
+          JBC [NMRI] 官方条件表 · DTMB 1712 表 7 印刷棱形系数 · 教材算例原始数字
+        </text>
+
+        <rect x="40" y="110" width="700" height="52" fill="#fff" stroke="#111418" stroke-width="1.3"/>
+        <text x="58" y="134" font-weight="600">② 非循环锚 —— 从未参与任何拟合</text>
+        <text x="58" y="153" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">
+          JBC 压载工况 ∇ 89 185.9 m³ / 首尾吃水 10.015 / 7.215 m —— 独立复现，误差 −0.7 % / −1.0 %
+        </text>
+
+        <rect x="40" y="172" width="760" height="52" fill="#f4f1ea" stroke="#111418" stroke-width="1.3"/>
+        <text x="58" y="196" font-weight="600">③ 解析闭式自证 —— 不需要外部数据即可证伪</text>
+        <text x="58" y="215" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">
+          箱形船 / 抛物线型线对闭式解精确 ≤ 1e-9 · 抛物线闭合校验 Cp = 2/3 · 半尺度船体积恰 1/8
+        </text>
+
+        <rect x="40" y="234" width="820" height="52" fill="#f4f1ea" stroke="#d3cdc1" stroke-width="1.3"/>
+        <text x="58" y="258" font-weight="600">④ 定义恒等 —— 与构造方式的一致性</text>
+        <text x="58" y="277" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">
+          TPC ≡ 1.025 · Aw / 100 · KM ≡ KB + BMT（属性派生，防不一致）· 仿射不变量
+        </text>
+
+        <rect x="40" y="296" width="880" height="52" fill="none" stroke="#d3cdc1" stroke-width="1.3"/>
+        <text x="58" y="320" font-weight="600" fill="#343941">⑤ 交叉通量 —— 两条独立路径必须给出同一答案</text>
+        <text x="58" y="339" font-family="IBM Plex Mono,monospace" font-size="10" fill="#6b7079">
+          邦戎纵向积分 vs 水线垂向积分体积 —— 相对偏差 1e-4
+        </text>
+      </g>
+    </svg>
+    <figcaption>
+      <b>图 3</b>验证锚点分层。越靠上证据强度越高。当某一量确实<em>没有</em>出版值时，
+      正确的做法是降级到 ③④⑤ 并明确声明"无锚"，而不是找一个估计值凑数。
+    </figcaption>
+  </figure>
+
+  <p>
+    分层的直接应用例证：静水力表里的 <code>TPC</code>、<code>Aw</code>、
+    <code>KB</code>、<code>LCF</code> 这几项，NMRI 并没有公布 JBC 的对应值。
+    项目的处理不是"拿一个估计值凑上"，而是明确写出这几个量
+    <strong>无出版锚</strong>，改用定义恒等与交叉通量验证，
+    并给出可执行的替代方案（在真实型值表链路上补做基准核对）。
+  </p>
+
+  <h3>5.2 JBC 基准验证结果</h3>
+
+  <div class="tbl">
+    <table>
+      <caption>表 1 主尺度反推 —— 由任务书载重吨反推，对照 JBC 主尺度</caption>
+      <thead><tr>
+        <th>量</th><th class="num">JBC 公开值</th><th class="num">计算结果</th>
+        <th class="num">误差</th><th class="num">容差</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>Lpp</td><td class="num">280.000 m</td><td class="num">272.375 m</td><td class="num">−2.72 %</td><td class="num">±5 %</td></tr>
+        <tr><td>B</td><td class="num">45.000 m</td><td class="num">45.396 m</td><td class="num">+0.88 %</td><td class="num">±5 %</td></tr>
+        <tr><td>T</td><td class="num">16.500 m</td><td class="num">16.813 m</td><td class="num">+1.90 %</td><td class="num">±5 %</td></tr>
+        <tr><td>D</td><td class="num">25.000 m</td><td class="num">24.319 m</td><td class="num">−2.72 %</td><td class="num">±5 %</td></tr>
+        <tr><td>Cb</td><td class="num">0.8580</td><td class="num">任务书钉定</td><td class="num">—</td><td class="num">±0.02</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">
+    表 1 为主尺度<strong>独立估算</strong>口径的结果。端到端链路在重量平衡之后会得到
+    略窄的尺度（Lpp 271.633 m，误差 −2.99 %），同样落在 ±5 % 内。
+    两者口径不同，不可混引——详见 5.3 节口径说明。
+  </p>
+
+  <div class="tbl">
+    <table>
+      <caption>表 2 重量—浮力平衡</caption>
+      <thead><tr><th>检查项</th><th class="num">结果</th><th>准则</th></tr></thead>
+      <tbody>
+        <tr><td>平衡收敛</td><td class="num">3 轮，终值 0.018 %</td><td>|W − B|/W ≤ 0.1 %（式 3-27）</td></tr>
+        <tr><td>排水量复现</td><td class="num">181 306 t vs 锚 182 829.1 t → <span class="ok">−0.83 %</span></td><td>&lt; 1 %</td></tr>
+        <tr><td>诺曼系数</td><td class="num">1.160</td><td>&gt; 1（物理必需）</td></tr>
+        <tr><td>零循环锚</td><td class="num">教材算例：钢料 7 384 t（立方模数）/ 7 378 t（指数法）</td><td>逐位复现出版数字</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <caption>表 3 静水力</caption>
+      <thead><tr>
+        <th>量</th><th class="num">基准</th><th class="num">计算</th>
+        <th class="num">误差</th><th class="num">容差</th>
+      </tr></thead>
+      <tbody>
+        <tr><td>设计吃水排水体积</td><td class="num">178 369.9 m³ [NMRI]</td><td class="num">178 741.5 m³</td><td class="num ok">+0.21 %</td><td class="num">±1 %</td></tr>
+        <tr><td>KM = KB + BMT</td><td class="num">18.59 m [NMRI]</td><td class="num">18.590 m</td><td class="num ok">+0.000 %</td><td class="num">±2 %</td></tr>
+        <tr><td>方形系数 Cb</td><td class="num">0.8580 [NMRI]</td><td class="num">0.85975</td><td class="num ok">+0.0018</td><td class="num">±0.005</td></tr>
+        <tr><td>LCB</td><td class="num">+2.5475 %Lpp [NMRI]</td><td class="num">+2.5397 %Lpp</td><td class="num">−0.008 %Lpp</td><td class="num">声明项</td></tr>
+        <tr><td>积分器自证</td><td class="num">箱形 / 抛物线闭式解</td><td class="num">精确</td><td class="num">&lt; 1e-9</td><td class="num">—</td></tr>
+        <tr><td>交叉通量</td><td class="num">邦戎 vs 水线路径</td><td class="num">—</td><td class="num ok">−0.001 %</td><td class="num">声明项</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="tbl">
+    <table>
+      <caption>表 4 初稳性、浮态、干舷、母型变换与光顺检查</caption>
+      <thead><tr><th>模块</th><th>检查项</th><th class="num">结果</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="3">初稳性与浮态</td>
+          <td>满载 GM（KG 13.29 m）</td>
+          <td class="num">5.300 m vs 5.30 m [NMRI] <span class="ok">✓</span></td></tr>
+        <tr><td>压载工况（<strong>非循环锚</strong>，从未参与拟合）</td><td class="num">吃水 −0.7 % / −1.0 %</td></tr>
+        <tr><td>箱形船纵倾对闭式解</td><td class="num">精确 1e-3</td></tr>
+
+        <tr><td rowspan="3">干舷校核</td>
+          <td>规则最小干舷（ICLL 1966 B 型）</td>
+          <td class="num">6 555.8 mm</td></tr>
+        <tr><td>实舷（D − T）</td><td class="num">8 500 mm</td></tr>
+        <tr><td>判定</td><td class="num"><span class="ok">PASS</span>，裕量 1 944 mm</td></tr>
+
+        <tr><td rowspan="4">Lackenby 变换</td>
+          <td>装载母型棱形系数 Cp 总/前/后</td>
+          <td class="num">0.8033 / 0.8564 / 0.7501 vs 印刷 0.805 / 0.861 / 0.750</td></tr>
+        <tr><td>恒等请求</td><td class="num">逐位返回母型，diff = 0</td></tr>
+        <tr><td>ΔCb = +0.02</td><td class="num">实测 +0.0200，LCB 漂移 0.0017 %L</td></tr>
+        <tr><td>Series 60 → JBC 演示</td><td class="num">两步 14 轮落 0.8579 / +2.5429 %L</td></tr>
+
+        <tr><td rowspan="3">光顺检查</td>
+          <td>Series 60 母型（27 水线 × 21 站）</td>
+          <td class="num"><span class="ok">零报警</span></td></tr>
+        <tr><td>种植尖峰 / 折角 / 破瓣 / 平行段摆动</td><td class="num">全部检出</td></tr>
+        <tr><td>93 m 实船型值表</td><td class="num">273 格逐格核对印刷表</td></tr>
+
+        <tr><td rowspan="2">分层 DXF</td>
+          <td>图层 / 标题栏 / 曲线</td>
+          <td class="num">8 层 A3 图框，PCHIP 密集折线</td></tr>
+        <tr><td>编码安全</td><td class="num">全部文字 ASCII，任意 locale 无乱码</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>5.3 端到端链路与 CLI</h3>
+  <p>
+    端到端链路的船体不是解析构造，而是<strong>真实型值表</strong>：
+    包内数字化的 Series 60 母型（与仓库内 CSV 逐字节一致，有专测钉死，
+    且已验证随 wheel 一起打包）→ 仿射缩放到平衡后的尺度 →
+    Lackenby 变换到任务书钉定的方形系数。
+  </p>
+
+  <div class="tbl">
+    <table>
+      <caption>表 5 CLI 实跑结果（TB-001）</caption>
+      <thead><tr><th>量</th><th class="num">数值</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>载重吨 → 排水量</td><td class="num">149 920 t → 181 306.2 t</td><td>vs JBC 锚 182 829.1 t，−0.83 %</td></tr>
+        <tr><td>空船重量</td><td class="num">31 386.2 t</td><td>成分立方模数法</td></tr>
+        <tr><td>平衡轮数 / 诺曼系数</td><td class="num">3 / 1.1599</td><td>判停 |W−B|/W ≤ 0.1 %</td></tr>
+        <tr><td>Lpp / B / D / T</td><td class="num">271.633 / 45.272 / 24.253 / 16.767 m</td><td>误差 −2.99 % / +0.60 % / −2.99 % / +1.62 %</td></tr>
+        <tr><td>达成载重吨系数</td><td class="num">0.8269</td><td>任务书设定 0.82 邻域</td></tr>
+        <tr><td>型线变换轮数</td><td class="num">13 passes</td><td>Cb 目标 0.8580 → 达成 0.8578</td></tr>
+        <tr><td>16.50 m 处排水体积</td><td class="num">173 874.7 m³</td><td><strong>估算尺度上积分</strong>，见下方口径说明</td></tr>
+        <tr><td>Cb / Cm / Cw</td><td class="num">0.85692 / 0.99045 / 0.91449</td><td>Cb 与目标偏差 &lt; 0.005</td></tr>
+        <tr><td>KB + BMT = KM</td><td class="num">8.492 + 10.205 = 18.6978 m</td><td>vs 锚 18.59 m，+0.58 %（容差 ±2 %）</td></tr>
+        <tr><td>TPC / MTC</td><td class="num">115.27 t/cm / 2 234.86 t·m/cm</td><td>Aw 11 245.83 m²</td></tr>
+        <tr><td>LCB</td><td class="num">+2.5250 %Lpp</td><td>vs 锚 +2.5475 %Lpp</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="callout warn">
+    <h4>口径说明：估算尺度 ≠ JBC 尺度</h4>
+    <p>
+      CLI 端到端跑的是<strong>完整估算链路</strong>——从载重吨出发估主尺度，
+      再在<em>估算出来的尺度</em>（Lpp 271.633 m）上积分静水力。
+      而 JBC 的排水体积锚（178 369.9 m³）对应的是 Lpp 280 m 的船。
+      两者相差 3 % 的船长，排水体积自然不能直接相比。
+    </p>
+    <p>
+      因此链路验收（±1 %）是在 <strong>JBC 尺度与目标上</strong>进行的；
+      而 CLI 端到端只断言 Cb ≤ ±0.005 与 KM ≤ ±2 %。若把 CLI 输出的 ∇
+      直接和 JBC 锚并列，得出的"−2.5 %"是一个<em>尺度差异</em>，不是静水力误差。
+      <strong>把这两件事分开报，是本项目验证纪律的一部分。</strong>
+    </p>
+  </div>
+
+  <h3>5.4 把弱点写在明处：循环性与近似清单</h3>
+  <p>
+    很少有技术文档会主动列出自己的循环论证。本项目的立场是：
+    隐藏的循环性是缺陷，<strong>声明过的循环性只是设计选择的结果</strong>。
+    <code>VALIDATION.md</code> 中专门有一节列出全部九条，择要如下：
+  </p>
+
+  <div class="tbl">
+    <table>
+      <caption>表 6 声明清单（节选）</caption>
+      <thead><tr><th>#</th><th>声明内容</th><th>影响与处置</th></tr></thead>
+      <tbody>
+        <tr><td class="num">1</td>
+          <td>载重吨 149 920 t 与 η_dw = 0.82 为业主批准的假设</td>
+          <td>JBC 是虚拟基准船，NMRI 不公布载重吨；已在任务书留痕</td></tr>
+        <tr><td class="num">2</td>
+          <td>重量系数按 JBC 邻域标定</td>
+          <td>标准母型船做法，已在模块内声明</td></tr>
+        <tr><td class="num">3</td>
+          <td>KM 锚：拟合母型以 GM + KG 为目标，故 GM 校验属一致性校验</td>
+          <td>非循环验证改由压载工况（从未参与拟合）与教材钢料算例承担</td></tr>
+        <tr><td class="num">4</td>
+          <td>统计比例 L/B = 6.0、B/T = 2.7、L/D = 11.2 为标定值</td>
+          <td>落在双壳散货船统计带内；Watson 1977 已注册为可选算法，系数须以原文为准填入</td></tr>
+        <tr><td class="num">5</td>
+          <td>解析拟合母型：水线族几何相似、球鼻艏外伸（285 m &gt; Lpp 280 m）未建模，Cw 为拟合产物</td>
+          <td>该母型保留在测试中作交叉校验；交付链路使用真实数字化型值表</td></tr>
+        <tr><td class="num">6</td>
+          <td>干舷按平甲板、标准舷弧、不做规则减免计算</td>
+          <td>偏保守侧；国内法规版本不在本版本范围</td></tr>
+        <tr><td class="num">7</td>
+          <td>Lackenby 一阶代数忽略二阶项</td>
+          <td>由表格层迭代收敛吸收，残差 ≤ 1e-4；大扰动自动拆分为串联子变换</td></tr>
+        <tr><td class="num">8</td>
+          <td>承载剖面采用线性插值</td>
+          <td>数字化网格与出版表的站位约定不同；误差体现在装载锚 −0.0017 Cp 内，接受带 ±0.005</td></tr>
+        <tr><td class="num">9</td>
+          <td>平行中体检测用面积曲线峰值 0.05 % 带</td>
+          <td>可由显式 dl 目标覆盖</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    这套纪律带来一个不太常见的结果：项目的 <code>CHANGELOG</code> 里有一条
+    <strong>更正记录</strong>，主动撤回了一项此前的对外声明——
+    早期曾称光顺检查器在 94 m 实船的艉部船底标出三处异常，
+    后续查明那是演示网格构造的产物（底端高于基线的站被左填充），
+    并非型值表缺陷。业主随后提供印刷型值表逐格复核，
+    273 格全部吻合，另有 4 格在 CAD 文字图层与印刷表之间有差异、以印刷表为准更正。
+    这类记录留在公开变更日志里，本身就是项目可信度的一部分。
+  </p>
+  </div>
+</section>
+
+<!-- ══════════════ 6 生态位 ══════════════ -->
+<section id="s6">
+  <div class="wrap">
+  <span class="sec-num">06</span>
+  <h2 class="sec">开源生态位</h2>
+
+  <p>
+    在动手之前，项目对 GitHub 开源生态做了一轮系统普查（约 30 组关键词与
+    topic 查询，短名单逐一核对许可证、最近提交、README 与文件树），
+    结论对定位很关键。
+  </p>
+
+  <h3>6.1 空白在哪里</h3>
+  <div class="cards">
+    <div class="card">
+      <h4>Lackenby 变换：全网无可用实现</h4>
+      <p>
+        关键词检索零命中。唯一声称实现该方法的仓库，翻开源码只有 IGES 导入测试脚本，
+        README 第五步是愿望而非代码。这既是空白，也是本项目选择自研的原因——
+        公式源取自教材白名单并做了 300 dpi 视觉核对。
+      </p>
+    </div>
+    <div class="card">
+      <h4>Agent 编排层：没有人做成</h4>
+      <p>
+        静水力、稳性、Holtrop 阻力都有小型开源实现，但绝大多数是课程级：
+        无出处、无适用边界、验收靠"和某软件对上"。把整套链路做成
+        <em>可被 AI 直接调用的稳定契约</em>，目前没有直接竞品。
+      </p>
+    </div>
+    <div class="card">
+      <h4>与 ML 生成线互补而非竞争</h4>
+      <p>
+        MIT 实验室的 ShipD（30 000 条参数化船体）与 ShipGen（扩散模型生成船体）
+        在机器学习生成路线上领先。OpenHull 走工程验证路线，
+        与它们是对话关系——ShipD 的十吃水几何量恰好可作为静水力引擎的
+        大规模回归语料。
+      </p>
+    </div>
+    <div class="card">
+      <h4>可依赖的成熟基础件</h4>
+      <p>
+        capytaine（线性势流 BEM，Apache-2.0，Nemoh 后继）是水动力模块的
+        求解器级依赖候选；vesseljs（NTNU，MIT）可作为静水力的第三方交叉验证锚。
+      </p>
+    </div>
+  </div>
+
+  <h3>6.2 许可证纪律</h3>
+  <p>项目以 MIT 发布，因此对外部代码采取明确的分级策略：</p>
+  <ul>
+    <li><strong>MIT / Apache-2.0 / BSD</strong> —— 可依赖、可移植，保留署名</li>
+    <li><strong>GPL / AGPL / 无许可证</strong> —— 一行代码都不复制。
+      GPL 软件的合法用法仅限于"运行它以产生对照数字"；
+      AGPL 因网络服务传染性，连阅读源码都不建议；
+      无许可证的仓库若功能清单与本项目重合，只能当作<em>功能对照表</em></li>
+    <li><strong>数据集</strong> —— 先核清条款再入库。基准船几何一律用官方源头
+      （NMRI / DTIC），不用 GitHub 上的二手副本</li>
+    <li><strong>参考实现</strong> —— 只作交叉验证锚，不作真值。
+      验收数字只认自己跑出来的结果加白名单文献</li>
+  </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 7 交付范围 ══════════════ -->
+<section id="s7">
+  <div class="wrap">
+  <span class="sec-num">07</span>
+  <h2 class="sec">交付范围</h2>
+
+  <p>
+    一个容易混淆的点：本项目不是一个"部分实现的船舶设计软件"，
+    而是一条<strong>按设计步骤切分的计算链路</strong>。
+    每个步骤的验收准则在建链之前就已写入项目宪法的容差总表，
+    再按准则逐个交付。因此判断某个步骤是否可用，标准不是"代码写完了没有"，
+    而是"它是否通过了表里那一行的容差"。
+  </p>
+
+  <figure>
+    <svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="设计链路交付范围：本版本已验收的步骤与后续版本覆盖的步骤">
+      <text x="40" y="32" font-family="IBM Plex Mono,monospace" font-size="11"
+            letter-spacing="2" fill="#8a6a3b">DESIGN CHAIN — DELIVERY SCOPE</text>
+
+      <text x="40" y="74" font-family="Noto Serif SC,serif" font-size="12.5" fill="#1e3a5f">
+        本版本交付 · 已通过 JBC 基准验收
+      </text>
+      <g font-family="Noto Serif SC,serif" font-size="11.5" text-anchor="middle">
+        <rect x="40" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="112" y="114" fill="#fbf9f5">重量—浮力平衡</text>
+
+        <rect x="195" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="267" y="114" fill="#fbf9f5">主尺度初估</text>
+
+        <rect x="350" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="422" y="114" fill="#fbf9f5">型线生成</text>
+
+        <rect x="505" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="577" y="114" fill="#fbf9f5">静水力计算</text>
+
+        <rect x="660" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="732" y="114" fill="#fbf9f5">初稳性与浮态</text>
+
+        <rect x="815" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="887" y="114" fill="#fbf9f5">干舷校核</text>
+      </g>
+
+      <text x="40" y="172" font-family="Noto Serif SC,serif" font-size="12.5" fill="#8a6a3b">
+        后续版本覆盖 · 验收准则已在宪法容差表中先行确定
+      </text>
+      <g font-family="Noto Serif SC,serif" font-size="10.5" text-anchor="middle">
+        <rect x="40" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="102" y="212" fill="#343941">阻力估算</text>
+
+        <rect x="172" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="234" y="212" fill="#343941">推进与航速</text>
+
+        <rect x="304" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="366" y="212" fill="#343941">螺旋桨初步设计</text>
+
+        <rect x="436" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="498" y="212" fill="#343941">大倾角稳性</text>
+
+        <rect x="568" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="630" y="212" fill="#343941">稳性衡准</text>
+
+        <rect x="700" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="762" y="212" fill="#343941">设计循环寻优</text>
+
+        <rect x="832" y="184" width="128" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="896" y="212" fill="#343941">报告与图纸</text>
+      </g>
+
+      <text x="40" y="266" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
+        深色 = 本版本交付并已通过容差验收；描边 = 准则已定，按同一纪律继续交付
+      </text>
+      <text x="40" y="286" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
+        判断一个步骤是否可用，只看它是否通过了宪法容差表里那一行 —— 而不是看代码写了多少
+      </text>
+    </svg>
+    <figcaption>
+      <b>图 4</b>设计链路的交付范围。步骤划分与验收准则先于实现确定，
+      因此每一个步骤的"完成"都有客观判据，不依赖主观评价。
+    </figcaption>
+  </figure>
+
+  <h3>7.1 本版本交付内容</h3>
+  <div class="tbl">
+    <table>
+      <caption>表 7 v0.2 交付模块与验收状态</caption>
+      <thead><tr><th>模块</th><th>方法来源（白名单）</th><th class="num">验收</th></tr></thead>
+      <tbody>
+        <tr><td>重量—浮力平衡</td><td>谢云平《船舶设计原理》§2.2.2；林焰《船舶设计原理》§2.1.3；《船体结构强度》§3.2.2 式(3-27)</td><td class="num ok">通过</td></tr>
+        <tr><td>主尺度初估</td><td>两本教材的载重吨系数法；母型船比例法</td><td class="num ok">通过</td></tr>
+        <tr><td>型线生成</td><td>DTMB Report 1712 表 7 数字化母型；林焰 §5 Lackenby 法</td><td class="num ok">通过</td></tr>
+        <tr><td>静水力计算</td><td>盛振邦《船舶原理》上册 ch.2/3、§4-2、§4-4</td><td class="num ok">通过</td></tr>
+        <tr><td>初稳性与浮态</td><td>《船舶原理》上册 §4-3、§4-7；《船体结构强度》§3.2.2 式(3-25)(3-26)</td><td class="num ok">通过</td></tr>
+        <tr><td>干舷校核</td><td>ICLL 1966（经 1988 议定书修正）；林焰 §3.4.2 表 3-9 与式(3-15)–(3-20)</td><td class="num ok">通过</td></tr>
+        <tr><td>光顺性数值检查</td><td>包内自实现（局部对比度 + 单瓣单调性 + 平行中体）</td><td class="num ok">通过</td></tr>
+        <tr><td>分层 DXF 导出</td><td>ezdxf R2018，A3 图框，8 图层</td><td class="num ok">通过</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>7.2 后续步骤的验收准则（先行确定）</h3>
+  <p>
+    链路尚未交付的部分，其方法来源与验收准则同样已经先行写入。
+    这是项目宪法"验证优先于功能开发"的直接体现——
+    <strong>标准先定，实现后追；不达标就不交付</strong>。
+  </p>
+  <div class="tbl">
+    <table>
+      <caption>表 8 设计链路后续步骤的方法与准则</caption>
+      <thead><tr><th>步骤</th><th>方法与来源</th><th>验收准则</th></tr></thead>
+      <tbody>
+        <tr><td>阻力估算</td><td>Holtrop &amp; Mennen (1982)；ITTC 1957 相关线</td><td>有效功率误差 ±10&ndash;15 %</td></tr>
+        <tr><td>推进与航速</td><td>伴流分数与推力减额经验公式</td><td>服务航速复现 ±0.5 kn</td></tr>
+        <tr><td>螺旋桨初步设计</td><td>AU 系列设计图谱</td><td>桨叶要素与手册图谱吻合</td></tr>
+        <tr><td>大倾角稳性</td><td>《船舶原理》上册 ch.5 静稳性臂积分</td><td>最大静稳性角 ±5°</td></tr>
+        <tr><td>稳性衡准</td><td>IMO MSC.267(85) IS Code 2008</td><td>逐条判定与资料一致</td></tr>
+        <tr><td>设计循环寻优</td><td>约束内参数空间扫描</td><td>单次产出 ≥50 个通过全部衡准的可行方案</td></tr>
+      </tbody>
+    </table>
+  </div>
+  </div>
+</section>
+
+<!-- ══════════════ 8 边界 ══════════════ -->
+<section id="s8">
+  <div class="wrap">
+  <span class="sec-num">08</span>
+  <h2 class="sec">边界：明确不做的事</h2>
+
+  <p>
+    范围蔓延是这类项目最常见的死因。项目宪法里有一节专门写"禁区"，
+    这些不是"暂时没做"，而是<strong>刻意的排除</strong>：
+  </p>
+
+  <div class="tbl">
+    <table>
+      <thead><tr><th>不做</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td><strong>CFD</strong></td>
+          <td>阻力来自白名单经验公式；OpenFOAM 级别的仿真属 v2.0 之后的议题</td></tr>
+        <tr><td><strong>从零生成自由曲面</strong></td>
+          <td>船体只能由母型船型值经 Lackenby 变换产生。从零生成光顺曲面是硬骨头，
+            在变换路径被充分验证之前不碰</td></tr>
+        <tr><td><strong>详细设计</strong></td>
+          <td>不做结构构件尺寸、不做船级社送审流程、不做舾装。
+            输出明确限定在<strong>初步设计级别</strong></td></tr>
+        <tr><td><strong>出品图纸</strong></td>
+          <td>几何成果以<em>型值表 + 分层 DXF 矢量数据</em>交付，图纸由 CAD 端生成。
+            PNG/SVG 渲染仅为开发辅助，不是交付物。（此决策由项目所有者拍板，宪法红线已双语更新）</td></tr>
+        <tr><td><strong>估计值冒充出版值</strong></td>
+          <td>出处标签是强制项。没有来源的数字必须显式标为假设</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>
+    最后一条值得多解释一句，因为它看起来像是能力上的退让，实际上是判断力的体现。
+    项目一度探索过用 FreeCAD TechDraw 的纯 OCC HLR 投影出图，技术路线已经打通
+    （93 m 实船三视图 SVG/PDF 实际产出过）。
+    但结论是：<strong>几何数据链是精确可靠且有锚验证的，而图面渲染的精度与美感不是 AI 的强项</strong>。
+    与其交付一批"看起来像图纸"但需要工程师逐项返修的东西，
+    不如把精确的矢量数据和型值表交出去，让 CAD 端做它擅长的事。
+  </p>
+  </div>
+</section>
+
+<!-- ══════════════ 9 适用边界 ══════════════ -->
+<section id="s9">
+  <div class="wrap">
+  <span class="sec-num">09</span>
+  <h2 class="sec">适用范围与已知边界</h2>
+
+  <p>
+    以下边界不影响已验证结论的成立，但决定了这套工具当前适用的场景。
+    它们同时也是使用者判断"这个结果能不能用"的依据。
+  </p>
+
+  <ul>
+    <li>
+      <strong>主尺度统计比例为标定值。</strong>
+      L/B、B/T、L/D 三个比例取自《船舶设计原理》双壳散货船统计带内的合理值；
+      Watson &amp; Gilfillan (1977) 已注册为可选算法，其系数按宪法要求必须以原文为准填入，
+      不得凭记忆写入。这意味着主尺度反推的 −2.7 % 量级误差是<em>可解释且可改进</em>的。
+    </li>
+    <li>
+      <strong>重量系数为母型船标定。</strong>
+      钢料立方模数、舾装面积模数与机电占比按 TB-001 母型拆分标定，
+      并显式声明其循环性；零循环验证由教材算例承担。
+    </li>
+    <li>
+      <strong>解析拟合母型仅作交叉校验。</strong>
+      其水线族假设几何相似、球鼻艏外伸未建模、Cw 是拟合产物。
+      交付链路使用真实数字化型值表；该拟合母型保留在测试套件中。
+    </li>
+    <li>
+      <strong>承载剖面采用线性插值。</strong>
+      数字化网格是 21 等距站，而出版表按 20 站加半站给出，
+      艉部横梁剖面在水线间非线性，线性插值会低估其积分。
+      该影响体现在装载锚的 −0.0017 棱形系数偏差内，在 ±0.005 的接受带中。
+    </li>
+    <li>
+      <strong>干舷校核偏保守。</strong> 按平甲板、标准舷弧、不做规则减免计算，
+      且 Cb(0.85D) 以设计吃水的 Cb 替代（水线表只到设计吃水）。
+      国内法规版本因长度上限 230 m 够不到基准船，不在本版本范围内。
+    </li>
+    <li>
+      <strong>完整验收在散货船船型上完成。</strong>
+      主验收船为 JBC（Capesize 散货船），Series 60 母型承担型线变换与光顺检查的验证。
+      其他船型在经验公式适用域内的使用，需自行核对边界守卫的返回结果。
+    </li>
+  </ul>
+  </div>
+</section>
+
+<!-- ══════════════ 10 参与 ══════════════ -->
+<section id="s10">
+  <div class="wrap">
+  <span class="sec-num">10</span>
+  <h2 class="sec">复现与参与</h2>
+
+  <h3>10.1 三步复现</h3>
+  <pre><code># 1. 环境（uv 管理，Python ≥ 3.11）
+git clone https://github.com/5777-wq/OpenHull.git
+cd OpenHull &amp;&amp; uv sync
+
+# 2. 跑一遍完整测试套件（176 条，含全部基准锚点断言）
+uv run pytest
+
+# 3. 一条命令跑通设计链路
+uv run openhull run examples/taskbook_bulk_carrier.yaml
+</code></pre>
+  <p>
+    CLI 只向标准输出流式写结果、不自行落盘——<code>--csv</code> 重定向得到
+    带 BOM 的表格（Excel 可直接打开，GBK 管道不会崩），
+    <code>--json</code> 得到完整可序列化结果。同一份任务书两次运行结果逐位相同。
+  </p>
+
+  <h3>10.2 什么样的贡献最有价值</h3>
+  <div class="cards">
+    <div class="card">
+      <h4>文献与公式源</h4>
+      <p>
+        项目最大的瓶颈不是编码能力，而是<strong>公式原文的获取与核对</strong>。
+        Watson &amp; Gilfillan (1977)、Holtrop &amp; Mennen (1982) 原文、
+        B 系列螺旋桨回归多项式系数表，都是当前明确挂账的缺口。
+      </p>
+    </div>
+    <div class="card">
+      <h4>独立交叉验证</h4>
+      <p>
+        用一个完全独立的实现（异构语言、异构算法）复算本项目的输出，
+        是最有价值的贡献形式。项目已把第三方交叉验证列为挂账项。
+      </p>
+    </div>
+    <div class="card">
+      <h4>新的基准船与工况</h4>
+      <p>
+        更多带公开数据的船型（不同船种、不同尺度）能同时检验算法与适用边界，
+        也是 v1.0 发布门槛的直接支撑。
+      </p>
+    </div>
+    <div class="card">
+      <h4>缺陷与反例</h4>
+      <p>
+        最受欢迎的是能复现的<em>反例</em>：一个超出适用边界却没有报错的输入，
+        一个应该被光顺检查抓到却没抓到的型值表，一处声明与实现不符。
+      </p>
+    </div>
+  </div>
+
+  <h3>10.3 项目宪法与协作规范</h3>
+  <p>
+    仓库根目录的 <code>AGENTS.md</code>（中文版 <code>AGENTS_zh.md</code>）
+    是项目的宪章：单位制与符号表、验证基准与容差总表、公式白名单、
+    适用边界守卫、禁区清单、代码规范与仓库纪律，共九节。
+    它同时约束人类与 AI 贡献者——<strong>任何与之冲突的代码、测试或文档，
+    按定义就是错的</strong>。修改该文件需要项目所有者明确批准并记录在案。
+  </p>
+
+  <div class="callout">
+    <h4>引用</h4>
+    <p>
+      仓库内提供 <code>CITATION.cff</code>，支持学术引用格式。
+      许可为 MIT。基准数据来源与链接记录在
+      <code>examples/data/DATA_SOURCES.md</code>，完整验证表在
+      <code>VALIDATION.md</code>。
+    </p>
+  </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fl">
+      <div>
+        <strong>OpenHull 技术白皮书</strong><br>
+        首个公开版本 v0.2.0 &nbsp;·&nbsp; 2026-09-20 &nbsp;·&nbsp; MIT License
+      </div>
+      <div style="text-align:right">
+        github.com/5777-wq/OpenHull<br>
+        5777-wq.github.io/openhull-site
+      </div>
+    </div>
+    <p style="margin-top:20px;max-width:600px">
+      本白皮书中的全部数值来自仓库的实际运行与测试输出，未经估算或修饰。
+      基准船数据来源：日本 NMRI 公开的 JBC 条件表，
+      以及美国 DTMB Report 1712（1963，公有领域）。
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
