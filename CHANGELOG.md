@@ -22,6 +22,32 @@ is semantic (MAJOR.MINOR.PATCH).
   source in hand); Wigley referee data and ShipD licence decision
   await verifiable sources; GZ paper anchor accepted as documented.
 
+## [1.0.0] - 2026-09-23
+
+### Added
+
+- Stage 5 — documentation and community release: MkDocs site
+  (auto-assembled from VALIDATION/CHANGELOG/CONTRIBUTING on GitHub
+  Pages), bilingual CONTRIBUTING guide, bug/formula-proposal issue
+  templates, PR provenance checklist, repository description and
+  topics.
+- Kwon speed-loss estimation (owner-approved open-source retrieval):
+  whitelisted from the open-access transcription (Cheng et al.,
+  JMSE 2025, 13(1), 42, section 2.2, page-verified against the
+  archived PDF; primary literature Kwon 1981 Newcastle thesis
+  archived).  Percent speed loss and weather/calm speed ratio by
+  block coefficient, Froude number, Beaufort number, displacement,
+  weather direction and loading; the paper's own KCS comparison
+  reproduces within 0.01 of f_w; non-positive corrections are
+  refused, not faked.
+
+### Changed
+
+- Backlog dispositions recorded (AGENTS.md section 5): speed loss
+  implemented via Kwon; ShipD confirmed MIT-licensed (compatible);
+  Wigley exact-table referee remains open pending a page-verifiable
+  table source.
+
 ## [0.4.0] - 2026-09-23
 
 ### Added

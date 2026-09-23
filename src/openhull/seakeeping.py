@@ -54,6 +54,10 @@ __all__ = [
     "heave_period_waterplane",
     "heave_period_cv",
     "tuning_factor",
+    "kwon_delta_r",
+    "kwon_cm",
+    "kwon_cf",
+    "kwon_speed_loss_percent",
     "is_in_resonance_band",
     "roll_amplification_resonant",
     "roll_amplification",
@@ -503,3 +507,153 @@ def estimate_seakeeping(
                    "Ship Theory vol. 2, damping chain Eqs.(3-51)/(3-57)-"
                    "(3-59) and tables 3-6/3-7, pp.392-394"),
     )
+
+
+# ---- Kwon speed-loss method (whitelisted 2026-09-23) ------------------
+#
+# Transcription source (page-verified against the archived PDF):
+# Cheng, C.-W. et al., J. Marine Science and Engineering 2025,
+# 13(1), 42 (MDPI, open access CC-BY), section 2.2, equations (1)/(2)
+# and tables 2-4, quoting Kwon, Y.J., "Speed Loss Due to Added
+# Resistance in Wind and Waves", The Naval Architect, RINA, 2008.
+# Primary literature archived: Kwon, Y.J. (1981), "On Ship Speed
+# Performance", PhD thesis, Newcastle University.
+# Applicability (as printed): Cb 0.55-0.85, Fr 0.05-0.30.
+#
+# dV/V1 [%] = C_mu * dR * C_F ;  V1 = Fr*sqrt(Lpp*g)
+#
+# Table 2 prints the DOUBLED direction coefficient 2*C_mu; the
+# paper's own usage fixes C_mu = 1.0 for head seas, i.e. C_mu is
+# half the printed value.  Declared: a non-positive dR (possible at
+# low Fr x high Cb, e.g. Cb 0.85 loaded below Fr ~ 0.157) is OUTSIDE
+# the correlation's meaningful range and is refused, not faked.
+
+_KWON_DELTA_R: dict[tuple[float, str], tuple[float, float, float]] = {
+    (0.55, "normal"): (1.7, -1.4, -7.4),
+    (0.60, "normal"): (2.2, -2.5, -9.7),
+    (0.65, "normal"): (2.6, -3.7, -11.6),
+    (0.70, "normal"): (3.1, -5.3, -12.4),
+    (0.75, "loaded"): (2.4, -10.6, -9.5),
+    (0.80, "loaded"): (2.6, -13.1, -15.1),
+    (0.85, "loaded"): (3.1, -18.7, -28.0),
+    (0.75, "ballast"): (2.6, -12.5, -13.5),
+    (0.80, "ballast"): (3.0, -16.3, -21.6),
+    (0.85, "ballast"): (3.4, -20.9, -31.8),
+}
+
+_KWON_CF: dict[tuple[str, str], tuple[float, float]] = {
+    # (ship type, loading): (linear coefficient, denominator of BN^6.5)
+    ("general", "loaded"): (0.5, 2.7),
+    ("general", "ballast"): (0.7, 2.7),
+    ("container", "normal"): (0.7, 22.0),
+}
+
+
+def kwon_delta_r(cb: float, fr: float, loading: str = "loaded") -> float:
+    """Speed correction factor dR, table 3 of the archived source.
+
+    The table is discrete in Cb; a cb between printed rows uses the
+    NEAREST printed Cb (declared).  loading: 'normal', 'loaded' or
+    'ballast' (ballast rows exist for Cb >= 0.75 only).
+    """
+    _require(math.isfinite(cb) and 0.55 - 1e-9 <= cb <= 0.85 + 1e-9,
+             "cb", cb, "0.55 <= Cb <= 0.85",
+             "Kwon's correlation is printed for block coefficients "
+             "0.55-0.85")
+    _require(math.isfinite(fr) and 0.05 - 1e-9 <= fr <= 0.30 + 1e-9,
+             "fr", fr, "0.05 <= Fr <= 0.30",
+             "Kwon's correlation is printed for Froude numbers "
+             "0.05-0.30")
+    _require(loading in ("normal", "loaded", "ballast"),
+             "loading", loading, "normal | loaded | ballast",
+             "unknown loading condition")
+    candidates = [key for key in _KWON_DELTA_R
+                  if key[1] == loading
+                  or (loading == "normal" and key[1] == "loaded")]
+    key = min(candidates, key=lambda k: abs(k[0] - cb))
+    a, b, c = _KWON_DELTA_R[key]
+    value = a + b * fr + c * fr * fr
+    _require(value > 0.0, "fr", fr, "dR > 0",
+             f"Kwon's correction dR = {value:.3f} is non-positive at "
+             f"this Fr x Cb combination: the correlation is outside "
+             f"its meaningful range (nearest printed Cb {key[0]})")
+    return value
+
+
+def kwon_cm(direction: str, bn: float) -> float:
+    """Weather direction reduction coefficient C_mu, table 2.
+
+    The source prints the DOUBLED values (2*C_mu); C_mu is half of
+    the printed value (the paper's usage fixes head seas at 1.0).
+    """
+    _require(math.isfinite(bn) and 0.0 <= bn <= 12.0,
+             "bn", bn, "0 <= BN <= 12",
+             "Beaufort number out of the wind scale")
+    factors = {
+        "head": lambda: 1.0,
+        "bow": lambda: (1.7 - 0.03 * (bn - 4.0) ** 2) / 2.0,
+        "beam": lambda: (0.9 - 0.06 * (bn - 6.0) ** 2) / 2.0,
+        "following": lambda: (0.4 - 0.03 * (bn - 8.0) ** 2) / 2.0,
+    }
+    _require(direction in factors,
+             "direction", direction, "head | bow | beam | following",
+             "unknown weather direction")
+    value = factors[direction]()
+    _require(value > 0.0, "bn", bn, "C_mu > 0",
+             f"direction coefficient vanishes at BN {bn:.1f} "
+             f"({direction} sea): outside the meaningful range")
+    return value
+
+
+def kwon_cf(bn: float, nabla_m3: float, ship_type: str = "general",
+            loading: str = "loaded") -> float:
+    """Ship form coefficient C_F, table 4 of the archived source.
+
+    ship_type 'general' covers all ships except container ships;
+    the container row is printed for normal loading only.  nabla_m3
+    is the displacement volume in cubic metres.
+    """
+    _require(math.isfinite(bn) and 0.0 <= bn <= 12.0,
+             "bn", bn, "0 <= BN <= 12",
+             "Beaufort number out of the wind scale")
+    _require(math.isfinite(nabla_m3) and nabla_m3 > 0.0,
+             "nabla_m3", nabla_m3, "finite displacement volume > 0",
+             "displacement volume must be positive")
+    # the printed general-ship row reads "loaded or normal": one row
+    # covers both, so normal resolves to it (declared); the container
+    # row is printed for normal loading only and stays as-is
+    effective_loading = ("loaded" if loading == "normal" and
+                         ship_type == "general" else loading)
+    key = (ship_type, effective_loading)
+    _require(key in _KWON_CF,
+             "ship_type/loading", key,
+             "(general, loaded) | (general, ballast) | "
+             "(container, normal)",
+             "no printed ship-form row for this combination")
+    linear, denom = _KWON_CF[key]
+    nabla_23 = nabla_m3 ** (2.0 / 3.0)
+    return linear * bn + bn ** 6.5 / (denom * nabla_23)
+
+
+def kwon_speed_loss_percent(
+    cb: float, fr: float, bn: float, nabla_m3: float,
+    direction: str = "head", ship_type: str = "general",
+    loading: str = "loaded",
+) -> tuple[float, float]:
+    """Percentage speed loss and the weather/calm speed ratio.
+
+    Returns (dV_over_V1_percent, V2/V1) per the archived Kwon
+    transcription.  Raises SpecValidationError outside the printed
+    applicability or where the correction turns non-positive.
+    """
+    c_mu = kwon_cm(direction, bn)
+    d_r = kwon_delta_r(cb, fr, loading)
+    c_f = kwon_cf(bn, nabla_m3, ship_type, loading)
+    percent = c_mu * d_r * c_f
+    _require(percent > 0.0, "bn", bn, "dV/V1 > 0",
+             "the Kwon correction chain yields a non-positive speed "
+             "loss at this combination")
+    _require(percent <= 100.0, "bn", bn, "dV/V1 <= 100 %",
+             f"the Kwon correction yields {percent:.0f} % speed loss "
+             f"at BN {bn:.0f}: beyond the method's physical range")
+    return percent, 1.0 - percent / 100.0

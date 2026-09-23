@@ -16,7 +16,7 @@ propulsão / estabilidade e desenhos de saída (DXF).
 
 ## Estado
 
-**v0.4 publicado** — etapa 4 concluída: primeiros entregáveis de desenhos e relatórios num só comando (veja [examples/demo_outputs](examples/demo_outputs)) — curvas hidrostáticas em layout de livro, esquema de arranjo geral como gráfico e DXF em camadas, e relatório de projeto em Markdown chinês. A navegabilidade entra no ciclo em dois níveis: estimativas de livro (períodos naturais, veredictos de ressonância) e RAO a velocidade zero via a extensão opcional capytaine (`pip install 'openhull[seakeeping]'`). Cada número rastreável à lista branca de fórmulas (veja [VALIDATION.md](VALIDATION.md)). Comando: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
+**v1.0 publicado** — as cinco etapas do roteiro estão concluídas: o ciclo do livreto de tarefas a dimensões, estabilidade IS Code, desempenho, navegabilidade (nível de livro + RAO capytaine opcional), uma estimativa de perda de velocidade de Kwon, desenhos (curvas hidrostáticas, esquema GA, DXF em camadas) e relatório de projeto em Markdown chinês está fechado. Saídas de exemplo em [examples/demo_outputs](examples/demo_outputs); site de documentação, modelos de contribuição e a disciplina de lista branca de fórmulas em [CONTRIBUTING.md](CONTRIBUTING.md). Registro de validação: [VALIDATION.md](VALIDATION.md). Comando: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
 
 ## Roteiro
 
@@ -24,7 +24,7 @@ propulsão / estabilidade e desenhos de saída (DXF).
 - [x] Etapa 2 — Geração paramétrica de formas (transformação do navio-mãe) (**v0.2**)
 - [x] Etapa 3 — Ciclo de desempenho: resistência / propulsão / estabilidade (**v0.3**)
 - [x] Etapa 4 — Desenhos e relatórios: curvas hidrostáticas, esquema GA (DXF), relatório de projeto; navegabilidade em dois níveis (+ RAO capytaine opcional) (**v0.4**)
-- [ ] Etapa 5 — Documentação e lançamento comunitário (v1.0)
+- [x] Etapa 5 — Documentação e lançamento comunitário (**v1.0**)
 
 ## Princípios de projeto
 

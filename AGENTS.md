@@ -445,6 +445,30 @@ resonance check)**
     implementing from memory.  Wigley public-RAO referee data and
     the ShipD licence decision likewise await a verifiable source.
 
+  - Speed loss, Kwon's method (backlog resolved 2026-09-23, owner
+    instruction "find usable sources online"): transcription source
+    Cheng, C.-W. et al., J. Marine Science and Engineering 2025,
+    13(1), 42 (MDPI, open access, CC-BY) section 2.2, archived PDF
+    (23 pp., mdpi-res.com direct link) page-verified 2026-09-23;
+    primary literature archived: Kwon, Y.J. (1981), "On Ship Speed
+    Performance", PhD thesis, Newcastle University (349 pp.); the
+    2008 closed-form tables (Kwon, The Naval Architect, RINA) are
+    known through the open transcription only — declared.  Equations
+    (paper Eq.(1)/(2)) and tables 2-4 transcribed verbatim in the
+    internal archive note (知识库/Kwon_speed_loss/SOURCE_NOTES.md):
+    dV/V1 [%] = C_mu*dR*C_F; V1 = Fr*sqrt(Lpp*g); table 2 prints the
+    DOUBLED direction coefficient (appendix example fixes head sea
+    C_mu = 1.0); table 3 dR quadratic per Cb/loading; table 4
+    C_F = (0.5 or 0.7)BN + BN^6.5/(2.7 or 22.0)nabla^(2/3) by
+    loading/ship type; applicability Cb 0.55-0.85, Fr 0.05-0.30.
+    Acceptance: the paper's own appendix worked example (nabla
+    52,030 m3, Fr 0.26, BN 6, head, Cb 0.65 normal, container) is
+    reproduced: dR 0.854, C_F 5.06, dV/V 4.32 %, V2 15.50 kn.
+    Declared: a non-positive dR (possible at low Fr x high Cb) is
+    REFUSED, not faked to zero.
+  - Owner approval: backlog batch ("缺东西可以自己先去网上找",
+    2026-09-23).
+
 **Seakeeping stage 2: BEM RAOs via capytaine (external solver, optional)**
 - Owner decisions recorded (2026-09-23): the owner approved pushing
   task 3.8 stage 2 AND stage 4.1 together ("可以两个都往下推");

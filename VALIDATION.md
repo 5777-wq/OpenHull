@@ -524,10 +524,39 @@ These are features of the current stage, not hidden weaknesses:
     the ShipD licence decision likewise await a verifiable source;
     the GZ paper anchor is accepted as documented (owner option 1).
 
+22. **Kwon speed-loss estimation (backlog resolved by approved
+    open-source retrieval, 2026-09-23).** Owner instruction: find
+    usable sources online.  Archived and page-verified: the
+    open-access transcription Cheng, C.-W. et al., J. Marine
+    Science and Engineering 2025, 13(1), 42 (MDPI, CC-BY),
+    section 2.2 (real 23-page PDF from mdpi-res.com after the
+    main /pdf endpoint returned a bot page), and the primary
+    literature Kwon, Y.J. (1981), Newcastle PhD thesis (349 pp.).
+    Equations (1)/(2) and tables 2-4 transcribed verbatim (internal
+    知识库/Kwon_speed_loss/SOURCE_NOTES.md); the 2008 RINA original
+    is not freely available — declared.  Checks:
+
+| Check | Result | Criterion |
+|---|---|---|
+| Table 3 dR rows | printed quadratics reproduced (0.65 normal at Fr 0.26 = 0.854) | verbatim transcription |
+| Table 2 doubling convention | head sea C_mu = 1.0 (printed 2*C_mu = 2) | paper usage |
+| Table 4 C_F forms | 0.5/0.7 linear + BN^6.5/(2.7 or 22.0)nabla^(2/3) | verbatim transcription |
+| KCS cross-check (paper table 15: Kwon f_w = 0.932 at SS5) | computed f_w 0.929 | within 0.01, input ambiguity declared |
+| Non-positive dR (Cb 0.85 loaded, Fr 0.14) | refused with declared message, not faked | honest-domain guard |
+| dV/V1 > 100 % (BN 8 x small nabla) | refused: beyond the method's physical range | guard |
+| Domain guards | Cb 0.55-0.85, Fr 0.05-0.30, BN 0-12, printed row set | guards |
+
+    Other backlog dispositions the same day: ShipD confirmed
+    MIT-licensed (github.com/noahbagz/ShipD, arXiv:2305.08279) —
+    compatible with this MIT project, available for future use;
+    Wigley exact-table referee remains open (capytaine wheels ship
+    no test data; published Wigley RAOs are figures only — needs a
+    page-verifiable table source).
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 330 tests
+uv run pytest                        # 348 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

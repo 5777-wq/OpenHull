@@ -14,7 +14,7 @@ DXF 图纸等成果。
 
 ## 当前状态
 
-**v0.4 已发布** —— 阶段 4 完成：工具链交付首批图纸与报告成果，一条命令出齐（见 [examples/demo_outputs](examples/demo_outputs)）——教材版式静水力曲线图、总布置简图（图+分层 DXF）、中文 Markdown 设计报告。耐波性两级并入闭环：书内公式第一级（固有周期与谐摇判定）+ 可选 capytaine 扩展的零航速 RAO（`pip install 'openhull[seakeeping]'`）。每个数可溯源至公式白名单（见 [VALIDATION.md](VALIDATION.md)）。一条命令：`openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`。
+**v1.0 已发布** —— 路线图五个阶段全部完成：任务书到主尺度、IS Code 稳性、性能、耐波性（书内层+可选 capytaine RAO）、Kwon 失速估算、图纸（静水力曲线图/总布置简图/分层 DXF）与中文设计报告的闭环贯通。样例输出见 [examples/demo_outputs](examples/demo_outputs)；文档站、贡献模板与公式白名单纪律见 [CONTRIBUTING.md](CONTRIBUTING.md)。验证记录：[VALIDATION.md](VALIDATION.md)。一条命令：`openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`。
 
 ## 路线图
 
@@ -22,7 +22,7 @@ DXF 图纸等成果。
 - [x] 阶段 2 —— 参数化船型生成（母型船变换）（**v0.2**）
 - [x] 阶段 3 —— 性能闭环：阻力 / 推进 / 稳性（**v0.3**）
 - [x] 阶段 4 —— 图纸与报告：静水力曲线图、总布置简图（DXF）、设计报告；耐波性两级（含可选 capytaine RAO）（**v0.4**）
-- [ ] 阶段 5 —— 文档完善与社区发布（v1.0）
+- [x] 阶段 5 —— 文档与社区发布（**v1.0**）
 
 ## 设计原则
 

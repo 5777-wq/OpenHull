@@ -15,7 +15,7 @@ AI 에이전트가 오케스트레이션하는 오픈소스 파라메트릭 선�
 
 ## 현재 상태
 
-**v0.4 출시** — 4단계 완료: 한 명령으로 도면과 보고서 산출물 생성([examples/demo_outputs](examples/demo_outputs) 참조) — 교과서 레이아웃의 정수력 곡선도, 일반배치 개략도(도면+레이어 DXF), 중국어 Markdown 설계 보고서. 내파성은 두 계층으로 루프에 합류: 교과서 공식의 1차 추정(고유 주기, 공진 판정)과 선택적 capytaine 확장의 영속도 RAO(`pip install 'openhull[seakeeping]'`). 모든 수치는 공식 화이트리스트로 추적 가능([VALIDATION.md](VALIDATION.md) 참조). 실행: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
+**v1.0 출시** — 로드맵 5단계 모두 완료: 과업서에서 주요치, IS Code 복원성, 성능, 내파성(교과서 층+선택적 capytaine RAO), Kwon 감속 추정, 도면(정수력 곡선도, GA 개략도, 레이어 DXF), 중국어 Markdown 설계 보고서까지 루프가 닫혔습니다. 샘플 출력은 [examples/demo_outputs](examples/demo_outputs); 문서 사이트, 기여 템플릿, 공식 화이트리스트 규율은 [CONTRIBUTING.md](CONTRIBUTING.md). 검증 기록: [VALIDATION.md](VALIDATION.md). 실행: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
 
 ## 로드맵
 
@@ -23,7 +23,7 @@ AI 에이전트가 오케스트레이션하는 오픈소스 파라메트릭 선�
 - [x] 스테이지 2 — 파라메트릭 선형 생성(모선 변환)(**v0.2**)
 - [x] 스테이지 3 — 성능 루프: 저항 / 추진 / 복원성(**v0.3**)
 - [x] 스테이지 4 — 도면 및 보고서: 정수력 곡선도, GA 개략도(DXF), 설계 보고서; 내파성 두 계층(+선택적 capytaine RAO)(**v0.4**)
-- [ ] 스테이지 5 — 문서화 및 커뮤니티 릴리스 (v1.0)
+- [x] 스테이지 5 — 문서 및 커뮤니티 릴리스(**v1.0**)
 
 ## 설계 원칙
 

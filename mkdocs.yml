@@ -1,0 +1,15 @@
+site_name: OpenHull
+site_description: "Agent-orchestrated parametric ship preliminary design — every number traceable to a formula whitelist."
+site_url: https://5777-wq.github.io/OpenHull/
+repo_url: https://github.com/5777-wq/OpenHull
+repo_name: 5777-wq/OpenHull
+
+theme:
+  name: mkdocs
+  highlightjs: true
+
+nav:
+  - Home: index.md
+  - Validation: validation.md
+  - Changelog: changelog.md
+  - Contributing: contributing.md

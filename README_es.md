@@ -16,7 +16,7 @@ propulsión / estabilidad y planos de salida (DXF).
 
 ## Estado
 
-**v0.4 publicado** — etapa 4 completada: primeros entregables de planos e informes en un solo comando (véase [examples/demo_outputs](examples/demo_outputs)) — curvas hidrostáticas en formato de libro de texto, esquema de disposición general como gráfico y DXF por capas, e informe de diseño en Markdown en chino. La estabilidad en la mar se incorpora en dos niveles: estimaciones de libro de primer nivel (periodos naturales, veredictos de resonancia) y RAO a velocidad cero vía la extensión opcional capytaine (`pip install 'openhull[seakeeping]'`). Cada número trazable a la lista blanca de fórmulas (véase [VALIDATION.md](VALIDATION.md)). Comando: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
+**v1.0 publicado** — las cinco etapas del mapa están completas: el ciclo del libreto de tareas a dimensiones, estabilidad IS Code, rendimiento, estabilidad en la mar (nivel de libro + RAO capytaine opcional), una estimación de pérdida de velocidad de Kwon, planos (curvas hidrostáticas, esquema GA, DXF por capas) y un informe de diseño en Markdown chino está cerrado. Salidas de ejemplo en [examples/demo_outputs](examples/demo_outputs); sitio de documentación, plantillas de contribución y la disciplina de lista blanca de fórmulas en [CONTRIBUTING.md](CONTRIBUTING.md). Registro de validación: [VALIDATION.md](VALIDATION.md). Comando: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
 
 ## Hoja de ruta
 
@@ -24,7 +24,7 @@ propulsión / estabilidad y planos de salida (DXF).
 - [x] Etapa 2 — Generación paramétrica de formas (transformación del buque madre) (**v0.2**)
 - [x] Etapa 3 — Bucle de rendimiento: resistencia / propulsión / estabilidad (**v0.3**)
 - [x] Etapa 4 — Planos e informes: curvas hidrostáticas, esquema GA (DXF), informe de diseño; estabilidad en la mar en dos niveles (+ RAO capytaine opcional) (**v0.4**)
-- [ ] Etapa 5 — Documentación y lanzamiento comunitario (v1.0)
+- [x] Etapa 5 — Documentación y lanzamiento comunitario (**v1.0**)
 
 ## Principios de diseño
 

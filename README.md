@@ -14,7 +14,7 @@ resistance / propulsion / stability estimates, and drawing outputs (DXF).
 
 ## Status
 
-**v0.4 released** — stage 4 complete: the toolchain now ships its first DRAWING AND REPORT deliverables from one command (see [examples/demo_outputs](examples/demo_outputs)) — a hydrostatic curves chart in the textbook layout, a general-arrangement schematic as chart and layered DXF, and a Chinese Markdown design report. Seakeeping joins the loop in two layers: textbook first-level estimates (natural periods, resonance verdicts against reference seas) and zero-speed RAOs via the optional capytaine extra (`pip install 'openhull[seakeeping]'`). Every number traceable to the formula whitelist (see [VALIDATION.md](VALIDATION.md)). One command: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
+**v1.0 released** — all five roadmap stages complete: the loop from task book to dimensions, IS Code stability, performance, seakeeping (textbook + optional capytaine RAOs), a Kwon speed-loss estimate, drawings (hydrostatic curves, GA schematic, layered DXF) and a Chinese Markdown design report is closed. Demo outputs in [examples/demo_outputs](examples/demo_outputs); docs site, contribution templates and the formula-whitelist discipline in [CONTRIBUTING.md](CONTRIBUTING.md). Validation record: [VALIDATION.md](VALIDATION.md). One command: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
 
 ## Roadmap
 
@@ -22,7 +22,7 @@ resistance / propulsion / stability estimates, and drawing outputs (DXF).
 - [x] Stage 2 — Parametric hull form generation (mother-ship transformation) (**v0.2**)
 - [x] Stage 3 — Performance loop: resistance / propulsion / stability (**v0.3**)
 - [x] Stage 4 — Drawings & reports: hydrostatic curves, GA schematic (DXF), design report; seakeeping two-layer (+ optional capytaine RAOs) (**v0.4**)
-- [ ] Stage 5 — Documentation & community release (v1.0)
+- [x] Stage 5 — Documentation & community release (**v1.0**)
 
 ## Design principles
 

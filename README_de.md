@@ -16,7 +16,7 @@ bewertungen und Zeichnungsausgaben (DXF).
 
 ## Status
 
-**v0.4 veröffentlicht** — Stufe 4 abgeschlossen: ergebnisorientierte Zeichnungen und Berichte aus einem Befehl (siehe [examples/demo_outputs](examples/demo_outputs)) — Hydrostatikkurven im Lehrbuchlayout, ein Generalarrangement-Schema als Grafik und geschichtetes DXF sowie ein chinesischer Markdown-Entwurfsbericht. Seegang in zwei Ebenen: Formel-Estimates der ersten Stufe (Eigenperioden, Resonanzurteile) und nullgeschwindige RAOs über das optionale capytaine-Extra (`pip install 'openhull[seakeeping]'`). Jede Zahl rückverfolgbar zur Formel-Whitelist (siehe [VALIDATION.md](VALIDATION.md)). Befehl: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
+**v1.0 veröffentlicht** — alle fünf Roadmap-Stufen abgeschlossen: der Kreislauf vom Aufgabenbuch über Dimensionen, IS-Code-Stabilität, Leistung, Seegang (Lehrbuchebene + optionale capytaine-RAOs), eine Kwon-Fahrtgeschwindigkeitsverlustschätzung, Zeichnungen (Hydrostatikkurven, GA-Schema, geschichtetes DXF) und einen chinesischen Markdown-Entwurfsbericht ist geschlossen. Beispieloutputs in [examples/demo_outputs](examples/demo_outputs); Dokumentationsseite, Beitragsvorlagen und die Formel-Whitelist-Disziplin in [CONTRIBUTING.md](CONTRIBUTING.md). Validierungsnachweis: [VALIDATION.md](VALIDATION.md). Befehl: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
 
 ## Fahrplan
 
@@ -24,7 +24,7 @@ bewertungen und Zeichnungsausgaben (DXF).
 - [x] Stufe 2 — Parametrische Rumpfformgenerierung (Mutterschiff-Transformation) (**v0.2**)
 - [x] Stufe 3 — Leistungsschleife: Widerstand / Antrieb / Stabilität (**v0.3**)
 - [x] Stufe 4 — Zeichnungen & Berichte: Hydrostatikkurven, GA-Schema (DXF), Entwurfsbericht; Seegang zweistufig (+ optionale capytaine-RAOs) (**v0.4**)
-- [ ] Stufe 5 — Dokumentation & Community-Release (v1.0)
+- [x] Stufe 5 — Dokumentation & Community-Release (**v1.0**)
 
 ## Entwurfsgrundsätze
 

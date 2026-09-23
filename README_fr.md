@@ -17,7 +17,7 @@ plans (DXF).
 
 ## État d'avancement
 
-**v0.4 publié** — étape 4 terminée : premiers livrables de dessins et de rapports en une seule commande (voir [examples/demo_outputs](examples/demo_outputs)) — courbes hydrostatiques en mise en page de manuel, schéma d'aménagement général en graphique et DXF par calques, et rapport de conception en Markdown chinois. La tenue à la mer rejoint la boucle en deux niveaux : estimations de manuel (périodes propres, verdicts de résonance) et RAO à vitesse nulle via l'extension optionnelle capytaine (`pip install 'openhull[seakeeping]'`). Chaque nombre est traçable vers la liste blanche de formules (voir [VALIDATION.md](VALIDATION.md)). Commande : `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
+**v1.0 publié** — les cinq étapes de la feuille de route sont terminées : la boucle du livret de tâches aux dimensions, à la stabilité IS Code, aux performances, à la tenue à la mer (niveau manuel + RAO capytaine optionnel), à une estimation de perte de vitesse de Kwon, aux dessins (courbes hydrostatiques, schéma GA, DXF par calques) et au rapport de conception en Markdown chinois est fermée. Exemples dans [examples/demo_outputs](examples/demo_outputs) ; site de documentation, modèles de contribution et discipline de liste blanche dans [CONTRIBUTING.md](CONTRIBUTING.md). Registre de validation : [VALIDATION.md](VALIDATION.md). Commande : `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
 
 ## Feuille de route
 
@@ -25,7 +25,7 @@ plans (DXF).
 - [x] Étape 2 — Génération paramétrique de carène (transformation du navire mère) (**v0.2**)
 - [x] Étape 3 — Boucle performance : résistance / propulsion / stabilité (**v0.3**)
 - [x] Étape 4 — Dessins & rapports : courbes hydrostatiques, schéma GA (DXF), rapport de conception ; tenue à la mer en deux niveaux (+ RAO capytaine optionnel) (**v0.4**)
-- [ ] Étape 5 — Documentation et publication communautaire (v1.0)
+- [x] Étape 5 — Documentation et publication communautaire (**v1.0**)
 
 ## Principes de conception
 
