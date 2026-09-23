@@ -1,0 +1,130 @@
+"""Design-space scan tests (plan task 3.6).
+
+The CI grid is deliberately small (a full 192-point acceptance scan of
+the TB-001S scenario is recorded in VALIDATION.md).  The assertions
+cover the chain integrity, the declared refusal gates, determinism and
+the Pareto extraction.
+"""
+
+import dataclasses
+
+import pytest
+
+from openhull.optimize import (
+    ScanCandidate,
+    ScanConfig,
+    SweepGrid,
+    design_space_scan,
+    pareto_front,
+)
+from openhull.spec import ShipSpec, knots_to_ms
+
+# TB-001S scan scenario: the 14.5 kn [NMRI] service speed sits below
+# the whitelisted Ayre speed-length band for a 280 m ship, so the scan
+# scenario studies 16.0 kn (declared deviation, see the scenario task
+# book and VALIDATION.md)
+SPEC = ShipSpec(
+    deadweight=149920.0,
+    service_speed=knots_to_ms(16.0),
+    cb=0.85,
+    draft=16.5,
+)
+CONFIG_KW = dict(kg_m=13.29, shaft_immersion_m=8.5,
+                 relative_rotative_eff=0.982)
+
+SMALL_GRID = SweepGrid(
+    l_over_b=(5.8, 6.2, 2),
+    b_over_t=(2.7, 3.1, 2),
+    cb=(0.82, 0.85, 2),
+)
+
+
+@pytest.fixture(scope="module")
+def scan():
+    return design_space_scan(SPEC, kg_m=13.29, grid=SMALL_GRID,
+                             config=ScanConfig(**CONFIG_KW))
+
+
+def test_small_grid_finds_feasible_designs(scan):
+    assert 1 <= len(scan.feasible) <= 8
+    assert len(scan.rejected) + len(scan.feasible) == 8
+
+
+def test_every_feasible_candidate_carries_a_full_record(scan):
+    for cand in scan.feasible:
+        d = cand.to_dict()
+        for key in ("lpp_m", "beam_m", "draft_m", "displacement_t",
+                    "gm_m", "eta_open_water", "propeller_diameter_m",
+                    "propeller_pitch_ratio", "advance_coefficient",
+                    "thrust_n"):
+            assert key in d
+        # stability and weather gates passed by construction; the
+        # recorded numbers must be physical
+        assert cand.gm_m > 0.5
+        assert 0.40 <= cand.eta_open_water <= 0.85
+        assert cand.lpp_m > 0 and cand.beam_m > 0 and cand.draft_m > 0
+
+
+def test_speed_at_reference_power_present(scan):
+    assert scan.reference_power_kw is not None
+    for cand in scan.feasible:
+        assert cand.speed_at_reference_power_kn is not None
+
+
+def test_scan_is_deterministic():
+    a = design_space_scan(SPEC, kg_m=13.29, grid=SMALL_GRID,
+                          config=ScanConfig(**CONFIG_KW))
+    b = design_space_scan(SPEC, kg_m=13.29, grid=SMALL_GRID,
+                          config=ScanConfig(**CONFIG_KW))
+    assert a.to_dicts() == b.to_dicts()
+    assert ([(r.stage, r.reason) for r in a.rejected]
+            == [(r.stage, r.reason) for r in b.rejected])
+
+
+def test_ayre_band_gate_declares_the_short_speed():
+    # the original TB-001 task book: 14.5 kn on a ~280 m hull gives
+    # V/sqrt(L) below the Ayre band - every point must be refused at
+    # the declared gate, none silently evaluated
+    slow = ShipSpec(
+        deadweight=149920.0,
+        service_speed=knots_to_ms(14.5),
+        cb=0.85,
+        draft=16.5,
+    )
+    one = SweepGrid(l_over_b=(6.2, 6.2, 1), b_over_t=(2.7, 2.7, 1),
+                    cb=(0.85, 0.85, 1))
+    res = design_space_scan(slow, kg_m=13.29, grid=one,
+                            config=ScanConfig(**CONFIG_KW))
+    assert res.feasible == []
+    assert len(res.rejected) == 1
+    assert res.rejected[0].stage == "ayre_band"
+
+
+def test_pareto_front_is_non_dominated():
+    def cand(speed, disp, gm):
+        return ScanCandidate(
+            l_over_b=0, b_over_t=0, cb=0, lpp_m=0, beam_m=0, draft_m=0,
+            depth_m=0, displacement_t=disp, gm_m=gm, gz_max_m=0,
+            eta_open_water=0.6, delivered_power_kw=0, shaft_power_kw=0,
+            propeller_diameter_m=0, propeller_pitch_ratio=0,
+            advance_coefficient=0, thrust_n=0, cp=0.85, cm=0.99, cwp=0.9,
+            lcb_pct_fwd=2.5, cavitation_ok=None,
+            cavitation_aeao_required=None,
+            speed_at_reference_power_kn=speed)
+
+    pool = [cand(15.0, 180.0, 5.0), cand(16.0, 185.0, 5.5),
+            cand(14.0, 200.0, 4.0),   # dominated by the second
+            cand(16.0, 190.0, 5.0)]   # dominated by the second
+    front = pareto_front(pool)
+    assert len(front) == 2
+    speeds = {c.speed_at_reference_power_kn for c in front}
+    assert speeds == {15.0, 16.0}
+
+
+def test_grid_values_cover_the_requested_axes():
+    grid = SweepGrid(l_over_b=(5.0, 6.0, 3), b_over_t=(2.0, 3.0, 2),
+                     cb=(0.80, 0.86, 2))
+    values = list(grid.values())
+    assert len(values) == 12
+    assert values[0] == (5.0, 2.0, 0.8)
+    assert values[-1] == (6.0, 3.0, 0.86)

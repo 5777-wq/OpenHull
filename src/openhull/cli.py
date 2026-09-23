@@ -33,6 +33,13 @@ import yaml
 from .geometry import jbc_parent_offsets  # noqa: F401  (1.x fitted parent,
 #   kept for the validation tests; the run chain uses real offsets - 2.6)
 from .hydrostatics import hydrostatics_table
+from .optimize import (
+    ScanConfig,
+    ScanResult,
+    SweepGrid,
+    design_space_scan,
+    write_tradeoff_chart,
+)
 from .linesplan import parent_to_taskbook
 from .propeller import b_series_open_water, check_cavitation, solve_optimal_propeller
 from .propulsion import propulsion_factors
@@ -471,6 +478,29 @@ def main(argv: list[str] | None = None) -> int:
         "--json", action="store_true",
         help="print the full result as JSON",
     )
+    opt = sub.add_parser(
+        "optimize",
+        help="scan the dimension-ratio space for feasible designs "
+             "(plan task 3.6)",
+    )
+    opt.add_argument("taskbook", help="path to the task book YAML")
+    opt.add_argument(
+        "--grid-lob", default="5.2:7.0:8",
+        help="L/B sweep lo:hi:steps (default 5.2:7.0:8)")
+    opt.add_argument(
+        "--grid-bt", default="2.5:3.5:6",
+        help="B/T sweep lo:hi:steps (default 2.5:3.5:6)")
+    opt.add_argument(
+        "--grid-cb", default="0.81:0.87:4",
+        help="Cb sweep lo:hi:steps (default 0.81:0.87:4)")
+    opt.add_argument(
+        "--out", default="optimize_out",
+        help="directory for the CSV/JSON/PNG outputs (default "
+             "./optimize_out)")
+    opt.add_argument(
+        "--json", action="store_true",
+        help="print the scan summary as JSON",
+    )
     args = parser.parse_args(argv)
 
     try:
@@ -482,6 +512,8 @@ def main(argv: list[str] | None = None) -> int:
                 _print_json(summary)
             else:
                 _print_summary(summary)
+        elif args.command == "optimize":
+            _run_optimize(args)
     except SpecValidationError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
@@ -489,6 +521,111 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 3
     return 0
+
+
+
+
+def _parse_axis(spec: str) -> tuple[float, float, int]:
+    lo, hi, steps = spec.split(":")
+    return float(lo), float(hi), int(steps)
+
+
+def _run_optimize(args) -> None:
+    data = _load_taskbook(Path(args.taskbook))
+    spec, _design_draft = _ship_spec_from_taskbook(data)
+    requirements = data.get("requirements") or {}
+    stability = (data.get("constraints") or {}).get("stability") or {}
+    weather_block = stability.get("weather_criterion") or {}
+    kg_m = requirements.get("kg_m")
+    if kg_m is None:
+        raise SpecValidationError(
+            "requirements.kg_m", None,
+            "the stability part of the scan needs the loading KG",
+            "the scan evaluates the IS Code criteria per candidate, "
+            "which requires the loading KG in the task book.")
+    flooding = stability.get("flooding_angle_deg")
+    grid = SweepGrid(
+        l_over_b=_parse_axis(args.grid_lob),
+        b_over_t=_parse_axis(args.grid_bt),
+        cb=_parse_axis(args.grid_cb),
+    )
+    config = ScanConfig(
+        kg_m=float(kg_m),
+        flooding_angle_deg=None if flooding is None else float(flooding),
+        windage_area_m2=weather_block.get("windage_area_m2"),
+        windage_lever_z_m=weather_block.get("windage_lever_z_m"),
+        bilge_keel_area_m2=float(
+            weather_block.get("bilge_keel_area_m2") or 0.0),
+        length_waterline_m=weather_block.get("length_waterline_m"),
+        shaft_immersion_m=(
+            float(propeller_block["shaft_immersion_m"])
+            if (propeller_block := (data.get("propeller") or {})).get(
+                "shaft_immersion_m") is not None else None),
+        propeller_blades=int(
+            (data.get("propeller") or {}).get("blades_z", 5)),
+        propeller_aear=float(
+            (data.get("propeller") or {}).get(
+                "expanded_area_ratio", 0.50)),
+        propeller_rpm=float(
+            (data.get("propeller") or {}).get("rpm") or 127.0),
+        relative_rotative_eff=float(
+            (data.get("propeller") or {}).get(
+                "relative_rotative_eff") or 1.0),
+    )
+
+    def progress(done: int, total: int, label: str) -> None:
+        print("[%d/%d] %s" % (done + 1, total, label),
+              end=" ", flush=True)
+
+    result = design_space_scan(
+        spec, kg_m=float(kg_m), grid=grid, config=config,
+        progress=None if args.json else progress)
+    print()
+    out_dir = Path(args.out)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    csv_path = out_dir / "feasible_designs.csv"
+    rows = result.to_dicts()
+    if rows:
+        keys = list(rows[0].keys())
+        with csv_path.open("w", encoding="utf-8-sig", newline="") as fh:
+            writer = __import__("csv").DictWriter(fh, fieldnames=keys)
+            writer.writeheader()
+            writer.writerows(rows)
+    chart_path = out_dir / "tradeoff_speed_displacement_gm.png"
+    write_tradeoff_chart(result, chart_path)
+    front = [c.to_dict() for c in __import__(
+        "openhull.optimize", fromlist=["pareto_front"]).pareto_front(
+        result.feasible)]
+    summary = {
+        "taskbook_id": data.get("taskbook_id", ""),
+        "grid": {"l_over_b": args.grid_lob, "b_over_t": args.grid_bt,
+                 "cb": args.grid_cb},
+        "feasible": len(result.feasible),
+        "rejected": len(result.rejected),
+        "rejection_histogram": result.rejection_histogram(),
+        "reference_power_kw": result.reference_power_kw,
+        "pareto_count": len(front),
+        "outputs": {"csv": str(csv_path), "chart": str(chart_path)},
+        "designs": rows,
+        "pareto": front,
+    }
+    json_path = out_dir / "scan_summary.json"
+    json_path.write_text(json.dumps(summary, indent=1), encoding="utf-8")
+    if args.json:
+        print(json.dumps(summary, indent=1))
+        return
+    print("=" * 64)
+    print(f"OpenHull optimize - {summary['taskbook_id'] or '(task book)'}")
+    print("=" * 64)
+    print(f"candidates         : {len(result.feasible) + len(result.rejected)}"
+          f"  (feasible {len(result.feasible)}, refused "
+          f"{len(result.rejected)})")
+    print(f"refusal histogram  : {result.rejection_histogram()}")
+    print(f"reference power    : {result.reference_power_kw} kW delivered")
+    print(f"pareto front       : {len(front)} designs")
+    print(f"outputs            : {csv_path}")
+    print(f"                     {chart_path}")
+    print(f"                     {json_path}")
 
 
 def _package_version() -> str:

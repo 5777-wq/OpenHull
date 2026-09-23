@@ -94,3 +94,18 @@ def test_nonexistent_taskbook_file_exit_code_2(capsys):
     err = capsys.readouterr().err
     assert rc == 2
     assert "existing YAML file" in err
+
+
+def test_optimize_subcommand_runs_and_writes_outputs(tmp_path):
+    out = tmp_path / "scan"
+    rc = main([
+        "optimize", "examples/taskbook_bulk_carrier_scan16kn.yaml",
+        "--grid-lob", "5.8:6.2:2",
+        "--grid-bt", "2.7:3.1:2",
+        "--grid-cb", "0.82:0.85:2",
+        "--out", str(out),
+    ])
+    assert rc == 0
+    assert (out / "feasible_designs.csv").exists()
+    assert (out / "tradeoff_speed_displacement_gm.png").exists()
+    assert (out / "scan_summary.json").exists()

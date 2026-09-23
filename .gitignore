@@ -28,3 +28,4 @@ output/
 
 # Benchmark ship vendor packages (kept local only; see DATA_SOURCES.md)
 examples/data/vendor/
+optimize_out/

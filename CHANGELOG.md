@@ -8,6 +8,18 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- Design-space scan and trade-off extraction (plan task 3.6):
+  `optimize.py` sweeps the dimension-ratio grid (L/B, B/T, C_b),
+  evaluates every candidate through the full whitelisted chain
+  (weight balance, Lackenby hull, hydrostatics, IS Code criteria,
+  weather criterion, Ayre resistance, B-series propeller design)
+  and records every refusal at its refusing stage.  New CLI
+  subcommand `openhull optimize` writes the feasible-design CSV,
+  a speed-displacement-GM trade-off chart and a JSON summary.
+  Acceptance (TB-001S 16 kn scan scenario): 192 candidates ->
+  64 feasible designs, all stability criteria passing, 14-design
+  Pareto front; TB-001 at its 14.5 kn service speed returns an
+  empty set with every refusal declared.
 - Wageningen B-series open-water regression, optimum-propeller
   engine and terminal design (plan task 3.3): `b_series.py` carries
   the page-referenced coefficient transcription of Bernitsas/Ray/

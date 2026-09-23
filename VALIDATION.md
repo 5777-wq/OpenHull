@@ -395,6 +395,30 @@ These are features of the current stage, not hidden weaknesses:
     BELOW the Ayre speed-length band at 14.5 kn (V/√L = 0.486), so
     its CLI propeller design block skips with a declared reason
     until a whitelisted effective-power source covers that band.
+17. **Design-space scan (task 3.6).** The scan orchestrates only
+    whitelisted methods; a candidate refused by any method is
+    recorded at its refusing stage (nothing extrapolated).  The
+    task 3.2 solver's eta_o sanity band (0.40-0.85) and the
+    tip-clearance gate (D <= 0.75 T, declared) apply per candidate;
+    the B-series search itself caps eta_o at 0.75 (the plotted
+    series maximum) because the polynomial eta_o inflates towards
+    the K_Q zero crossing.  The windage input of the weather
+    criterion is taken from the task book unchanged across
+    candidates (not rescaled with ship size).  The attainable-speed
+    axis is the speed reached at a fixed reference delivered power
+    (median shaft power of the feasible set) - an orchestration
+    definition, stated wherever a speed is reported.  Acceptance
+    run (TB-001S scenario, 16.0 kn - the 14.5 kn [NMRI] value lies
+    below the Ayre speed-length band for this ship): 192 candidates
+    -> 64 feasible, all passing the IS Code 2.2 criteria and the
+    weather criterion; refusals: Ayre C_0 band 68, Ayre speed band
+    35, propeller envelope 14, weather 9, hydrostatics 2; Pareto
+    front 14 designs at the median reference power 24,730.8 kW.
+    TB-001 at its [NMRI] 14.5 kn correctly returns an empty
+    feasible set with every refusal declared - no design of this
+    deadweight satisfies the whitelisted method domains at that
+    speed (the C_0 digitised band L/Delta^(1/3) >= 4.88 and the
+    Ayre band V/sqrt(L) >= 0.50 cannot both hold).
 
 ## Reproducing
 
