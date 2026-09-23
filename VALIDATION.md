@@ -472,10 +472,30 @@ These are features of the current stage, not hidden weaknesses:
 | Print defects found and excluded (lid at waterline kills the FK integral; unit mismatch rho = 1000 default vs 1.025 chain; omega-sorted dataset vs submission order) | all fixed and pinned by tests | engineering log |
 | CLI `rao` subcommand | TB-001: 1134 panels, head/beam table printed, JSON schema | end-to-end |
 
+20. **Arrangement schematic (task 4.2) and design report (task
+    4.3).** Both are DECLARATIVE deliverables: no empirical formula,
+    no feedback into any calculation.  The arrangement layout comes
+    from the task book's optional ``arrangement`` block or from the
+    declared default bulk-carrier scheme (module docstring:
+    aft peak 0-0.03 Lpp, engine room 0.03-0.095, holds 0.095-0.940
+    evenly divided, fore peak 0.94-1.0, double bottom max(B/20,
+    1.0 m)); the report restates the run summary verbatim.
+    Checks:
+
+| Check | Result | Criterion |
+|---|---|---|
+| Default scheme rules (ordering, containment, hold tiling) | peaks at the ends, holds tile 0.095-0.940 Lpp without gaps, ER above the double bottom | pinned by tests |
+| Double-bottom height | max(B/20, 1.0 m) convention (2.25 m at B = 45) | declared |
+| Task-book overrides | n_holds, double_bottom_top_m, full compartment table | parsing tests |
+| GA chart visual review | independent review FAILED once (unlabelled narrow aft peak) -> fixed (rotated label, threshold 0.02 Lpp) -> PASS | visual gate |
+| DXF export | layers GA-SIDE / GA-PLAN / GA-DB / GA-LABELS, reopens in ezdxf | task 2.4 convention |
+| Report faithfulness | Lpp/Cb/DW/Delta/GM/roll periods of the summary appear verbatim; skipped blocks declared (e.g. the TB-001 propeller Ayre-band skip) | content tests |
+| End-to-end | TB-001 with --report --arrangement-dxf --arrangement-chart --hydro-curve-chart writes all four artefacts and echoes the paths | wiring test |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 323 tests
+uv run pytest                        # 330 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

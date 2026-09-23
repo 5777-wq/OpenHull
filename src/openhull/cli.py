@@ -229,15 +229,19 @@ def _hydrostatics_rows(hydro_table) -> list[dict]:
 
 
 def run_taskbook(taskbook_path: str,
-                 hydro_curve_chart: str | None = None) -> dict:
+                 hydro_curve_chart: str | None = None,
+                 report_path: str | None = None,
+                 arrangement_dxf_path: str | None = None,
+                 arrangement_chart_path: str | None = None) -> dict:
     """Run the design chain for one task book; returns the summary dict.
 
     Pure computation and stdout formatting live apart: this function
     only computes and returns; the caller decides how to render.
     With hydro_curve_chart set, also renders the task 4.1 hydrostatic
     curves chart (a finer draft table than the summary CSV, same
-    task 1.4 computation) and reports the written path in the
-    summary.
+    task 1.4 computation).  With report_path / arrangement_dxf_path
+    set, writes the task 4.3 Markdown design report and the task 4.2
+    layered DXF arrangement schematic.
     """
     data = _load_taskbook(Path(taskbook_path))
     spec, design_draft = _ship_spec_from_taskbook(data)
@@ -344,6 +348,24 @@ def run_taskbook(taskbook_path: str,
             chart_table, hydro_curve_chart,
             title=str(data.get("taskbook_id") or "")))
 
+    from .arrangement import (
+        arrangement_from_taskbook,
+        export_arrangement_dxf,
+        write_arrangement_chart,
+    )
+    arrangement = arrangement_from_taskbook(
+        data, lpp_m=balance.lpp, depth_m=balance.depth,
+        beam_m=balance.beam)
+    arrangement_dxf_written = None
+    if arrangement_dxf_path:
+        arrangement_dxf_written = str(
+            export_arrangement_dxf(arrangement, arrangement_dxf_path))
+    arrangement_chart_written = None
+    if arrangement_chart_path:
+        arrangement_chart_written = str(write_arrangement_chart(
+            arrangement, arrangement_chart_path,
+            title=str(data.get("taskbook_id") or "")))
+
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
         "ship_type": spec.ship_type,
@@ -375,7 +397,20 @@ def run_taskbook(taskbook_path: str,
         "propeller_design": propeller_summary,
         "seakeeping": seakeeping_summary,
         "hydrostatic_curve_chart": hydro_curve_chart_path,
+        "arrangement": arrangement.to_dict(),
     }
+
+    if report_path:
+        from .report import write_report_md
+        written = write_report_md(
+            summary, report_path, chart_path=hydro_curve_chart_path,
+            arrangement_summary=arrangement.to_dict())
+        summary["report_path"] = str(written)
+    if arrangement_dxf_written:
+        summary["arrangement_dxf"] = arrangement_dxf_written
+    if arrangement_chart_written:
+        summary["arrangement_chart"] = arrangement_chart_written
+    return summary
     return summary
 
 
@@ -549,6 +584,19 @@ def main(argv: list[str] | None = None) -> int:
         help="also render the hydrostatic curves chart (task 4.1) to "
              "an image file (e.g. hydrostatic_curves.png)",
     )
+    run.add_argument(
+        "--report", default=None, metavar="PATH",
+        help="also write the Chinese Markdown design report (task 4.3)",
+    )
+    run.add_argument(
+        "--arrangement-dxf", default=None, metavar="PATH",
+        help="also export the layered DXF arrangement schematic "
+             "(task 4.2)",
+    )
+    run.add_argument(
+        "--arrangement-chart", default=None, metavar="PATH",
+        help="also render the arrangement schematic chart (task 4.2)",
+    )
     opt = sub.add_parser(
         "optimize",
         help="scan the dimension-ratio space for feasible designs "
@@ -591,7 +639,10 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "run":
             summary = run_taskbook(args.taskbook,
-                                   hydro_curve_chart=args.hydro_curve_chart)
+                                   hydro_curve_chart=args.hydro_curve_chart,
+                                   report_path=args.report,
+                                   arrangement_dxf_path=args.arrangement_dxf,
+                                   arrangement_chart_path=args.arrangement_chart)
             if args.csv:
                 _print_csv(summary)
             elif args.json:
@@ -601,6 +652,12 @@ def main(argv: list[str] | None = None) -> int:
             if summary.get("hydrostatic_curve_chart"):
                 print(f"hydrostatic curves chart -> "
                       f"{summary['hydrostatic_curve_chart']}")
+            if summary.get("report_path"):
+                print(f"design report -> {summary['report_path']}")
+            if summary.get("arrangement_dxf"):
+                print(f"arrangement DXF -> {summary['arrangement_dxf']}")
+            if summary.get("arrangement_chart"):
+                print(f"arrangement chart -> {summary['arrangement_chart']}")
         elif args.command == "optimize":
             _run_optimize(args)
         elif args.command == "rao":

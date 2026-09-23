@@ -146,3 +146,21 @@ def test_rao_subcommand_json(tmp_path, capsys):
     payload = json.loads(capsys.readouterr().out)
     assert payload["mesh_info"]["n_faces"] > 0
     assert len(payload["points"]) == 2 * 2 * 3
+
+
+def test_report_and_arrangement_flags(tmp_path, capsys):
+    report = tmp_path / "report.md"
+    dxf = tmp_path / "ga.dxf"
+    ga = tmp_path / "ga.png"
+    rc = main(["run", TASKBOOK, "--report", str(report),
+               "--arrangement-dxf", str(dxf),
+               "--arrangement-chart", str(ga)])
+    assert rc == 0
+    text = report.read_text(encoding="utf-8")
+    assert "OpenHull 初步设计报告" in text
+    assert "总布置简图" in text
+    assert dxf.exists() and ga.exists()
+    captured = capsys.readouterr().out
+    assert "design report ->" in captured
+    assert "arrangement DXF ->" in captured
+    assert "arrangement chart ->" in captured

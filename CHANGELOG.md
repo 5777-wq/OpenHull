@@ -8,6 +8,24 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- General-arrangement schematic (plan task 4.2): `arrangement.py`
+  models the compartment layout as data — the task book's optional
+  `arrangement` block overrides everything, otherwise a declared
+  default bulk-carrier scheme applies (aft peak / engine room /
+  five cargo holds / fore peak, double bottom at max(B/20, 1.0 m)).
+  Renders a side-view + deck-plan schematic (`run
+  --arrangement-chart`) and exports a layered DXF
+  (`--arrangement-dxf`, layers GA-SIDE/GA-PLAN/GA-DB/GA-LABELS).
+  Declarative only: no formula, no feedback into calculations.
+  The rendered schematic passed an independent visual review after
+  the narrow-aft-peak labelling defect was fixed.
+- Design report generation (plan task 4.3): `report.py` assembles
+  the run summary into a Chinese Markdown report — principal
+  dimensions, hydrostatics, IS Code stability tables, propeller
+  design (or its declared skip), first-level seakeeping verdicts,
+  the arrangement table and an embedded chart reference; new
+  `run --report PATH` flag.  The report restates computed results
+  and adds no numbers of its own.
 - Hydrostatic curves chart (plan task 4.1): `hydrostatics_chart.py`
   renders the classic textbook layout (draft axis vertical,
   increasing downward) with twelve panels from the task 1.4 table —
