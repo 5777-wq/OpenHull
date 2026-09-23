@@ -27,6 +27,12 @@ speed the candidate would reach at a FIXED REFERENCE delivered power
 speed.  The definition is orchestration, not hydrodynamics, and is
 stated wherever a speed is reported.
 
+Task 3.8 stage-1 seakeeping columns (roll/pitch/heave natural
+periods, roll resonance flags against the two reference sea bands)
+are REPORTED per feasible candidate but are NOT feasibility gates:
+whether to avoid a resonance band is professional judgement, which
+stays with the owner (AGENTS.md red lines).
+
 Only whitelisted methods are called; the windage input of the weather
 criterion is taken from the task book unchanged across candidates
 (declared approximation: it is not rescaled with ship size).
@@ -48,6 +54,7 @@ from .propeller import (
 )
 from .propulsion import propulsion_factors, solve_service_speed
 from .resistance import ayre_effective_power
+from .seakeeping import estimate_seakeeping
 from .spec import ShipSpec, SpecValidationError
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
 from .weight_balance import solve_weight_balance
@@ -152,6 +159,11 @@ class ScanCandidate:
     cavitation_ok: bool | None
     cavitation_aeao_required: float | None
     speed_at_reference_power_kn: float | None = None
+    roll_period_s: float | None = None
+    pitch_period_s: float | None = None
+    heave_period_s: float | None = None
+    roll_resonant_6s: bool | None = None
+    roll_resonant_8s: bool | None = None
 
     def to_dict(self) -> dict:
         return dict(self.__dict__)
@@ -427,6 +439,33 @@ def _evaluate_point(
 
     shaft_power = prop.delivered_power_kw / (
         config.relative_rotative_eff * config.shaft_efficiency)
+
+    # task 3.8 stage-1 seakeeping columns (reported, not a gate):
+    # natural periods and roll resonance against the two reference
+    # sea bands.  Roll uses the GM WITHOUT free-surface correction
+    # (regulation usage, Ship Theory vol. 2 p.391); Cvp = Cb/Cw.
+    roll_period_s = None
+    pitch_period_s = None
+    heave_period_s = None
+    roll_resonant_6s = None
+    roll_resonant_8s = None
+    gm_uncorrected = criteria.gm0_m + criteria.free_surface_correction_m
+    try:
+        seakeep = estimate_seakeeping(
+            beam_m=balance.beam, draft_m=balance.draft, zg_m=config.kg_m,
+            gm_m=gm_uncorrected, cb=cb, cwp=hydro.cw)
+        roll_period_s = round(seakeep.roll_period_s, 2)
+        pitch_period_s = round(seakeep.pitch_period_s, 2)
+        heave_period_s = round(seakeep.heave_period_s, 2)
+        for check in seakeep.resonance_checks:
+            if check.motion == "roll":
+                if check.wave_period_s == 6.0:
+                    roll_resonant_6s = check.in_resonance_band
+                elif check.wave_period_s == 8.0:
+                    roll_resonant_8s = check.in_resonance_band
+    except SpecValidationError:
+        pass  # e.g. GM <= 0.15 m: periods undefined, columns stay None
+
     return ScanCandidate(
         l_over_b=lob,
         b_over_t=bot,
@@ -451,6 +490,11 @@ def _evaluate_point(
         lcb_pct_fwd=round(hydro.lcb, 4),
         cavitation_ok=cav_ok,
         cavitation_aeao_required=cav_req,
+        roll_period_s=roll_period_s,
+        pitch_period_s=pitch_period_s,
+        heave_period_s=heave_period_s,
+        roll_resonant_6s=roll_resonant_6s,
+        roll_resonant_8s=roll_resonant_8s,
     )
 
 

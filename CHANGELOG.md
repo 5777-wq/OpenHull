@@ -4,6 +4,28 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [Unreleased]
+
+### Added
+
+- First-level seakeeping estimate (plan task 3.8, stage 1):
+  `seakeeping.py` implements the whitelisted textbook layer —
+  deep-water wave relations (Eq. 2-7), encounter period/frequency
+  (Eqs. 2-98/2-99), the regulation roll natural period (Eqs.
+  3-49/3-48 with the 3-39/3-27 chain as derivation check, GM > 0.15 m
+  guard), the effective wave-slope coefficient (Eq. 3-3 with the
+  regulation clamp), resonant roll amplification 1/(2 mu) and the
+  0.7-1.3 resonance band, and pitch/heave periods (Eqs. 4-55/4-57/
+  4-60 and 4-62 in its derivation-restored form).  Resonance verdicts
+  against two reference seas (East China Sea T ~ 6 s, ocean swell
+  T = 8 s) are reported in the `run` output and JSON, and ride along
+  as scan columns on every feasible design (reported, not gating —
+  resonance avoidance is professional judgement).  Wave speed loss
+  is out of scope: the source defines the indicator but prints no
+  estimation formula.  Whitelist amendment (AGENTS.md section 5)
+  precedes implementation; two print defects of the source are
+  recorded there and excluded from the code.
+
 ## [0.3.0] - 2026-09-23
 
 ### Added

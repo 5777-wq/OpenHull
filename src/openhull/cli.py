@@ -43,6 +43,7 @@ from .optimize import (
 from .linesplan import parent_to_taskbook
 from .propeller import b_series_open_water, check_cavitation, solve_optimal_propeller
 from .propulsion import propulsion_factors
+from .seakeeping import estimate_seakeeping
 from .resistance import ayre_effective_power
 from .spec import knots_to_ms, ShipSpec, SpecValidationError
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
@@ -308,6 +309,26 @@ def run_taskbook(taskbook_path: str) -> dict:
 
     propeller_summary = _design_propeller_at_service(data, balance, hydro_design)
 
+    # task 3.8 stage-1 seakeeping estimate: natural periods and the
+    # roll resonance verdicts against the two reference sea bands.
+    # Roll uses the GM WITHOUT free-surface correction (regulation
+    # usage, Ship Theory vol. 2 p.391); requires the task-book KG.
+    seakeeping_summary = None
+    if kg_value is not None:
+        try:
+            seakeep = estimate_seakeeping(
+                beam_m=balance.beam,
+                draft_m=balance.draft,
+                zg_m=float(kg_value),
+                gm_m=criteria.gm0_m + criteria.free_surface_correction_m,
+                cb=spec.cb,
+                cwp=hydro_design.cw,
+                speed_ms=spec.service_speed or 0.0,
+            )
+            seakeeping_summary = seakeep.to_dict()
+        except SpecValidationError:
+            seakeeping_summary = None
+
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
         "ship_type": spec.ship_type,
@@ -337,6 +358,7 @@ def run_taskbook(taskbook_path: str) -> dict:
         "stability_criteria": criteria_summary,
         "weather_criterion": weather_summary,
         "propeller_design": propeller_summary,
+        "seakeeping": seakeeping_summary,
     }
     return summary
 
@@ -434,8 +456,36 @@ def _print_summary(summary: dict) -> None:
             f"{weather['area_b_mrad']:.4f} m*rad; overall: "
             f"{'ALL PASS' if weather['all_passed'] else 'FAILURES PRESENT'}"
         )
-    print("-" * 64)
-    print("JSON summary and CSV available via --json / --csv redirection.")
+    seakeep = summary.get("seakeeping")
+    if seakeep is not None:
+        print("-" * 64)
+        print("seakeeping first-level estimate (task 3.8 stage 1):")
+        print(
+            f"  roll natural period   {seakeep['roll_period_s']:>7.2f} s "
+            f"(simple form {seakeep['roll_period_simple_s']:.2f} s)"
+        )
+        print(
+            f"  pitch / heave periods {seakeep['pitch_period_s']:>7.2f} s / "
+            f"{seakeep['heave_period_s']:.2f} s"
+        )
+        print(
+            f"  effective wave slope K {seakeep['effective_wave_slope_k']:.3f}; "
+            f"resonant roll amplification 1/(2 mu) = "
+            f"{seakeep['roll_amplification_resonant']:.1f} at mu "
+            f"{seakeep['roll_mu']:.2f}"
+        )
+        for check in seakeep["resonance_checks"]:
+            verdict = (
+                "RESONANCE BAND"
+                if check["in_resonance_band"] else "outside band"
+            )
+            print(
+                f"  {check['motion']:12s} vs T "
+                f"{check['wave_period_s']:.0f} s: Lambda "
+                f"{check['tuning_factor']:.2f} -> {verdict}"
+            )
+        print("-" * 64)
+        print("JSON summary and CSV available via --json / --csv redirection.")
 
 
 def _print_json(summary: dict) -> None:

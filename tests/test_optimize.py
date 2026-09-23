@@ -71,6 +71,27 @@ def test_speed_at_reference_power_present(scan):
         assert cand.speed_at_reference_power_kn is not None
 
 
+def test_seakeeping_columns_reported_not_gating(scan):
+    # task 3.8 stage-1 columns: natural periods and roll resonance
+    # verdicts ride along on every feasible candidate; they are NOT
+    # feasibility gates (resonance avoidance is the owner's judgement)
+    for cand in scan.feasible:
+        assert cand.roll_period_s is not None
+        assert cand.pitch_period_s is not None
+        assert cand.heave_period_s is not None
+        # a Valemax-class beam (B ~ 45 m) rolls slower than the
+        # 10,000-t cargo class band but far from pitch/heave periods
+        assert 8.0 <= cand.roll_period_s <= 25.0
+        assert 3.0 <= cand.pitch_period_s <= 15.0
+        assert cand.pitch_period_s == pytest.approx(
+            cand.heave_period_s, rel=0.25)
+        assert isinstance(cand.roll_resonant_6s, bool)
+        assert isinstance(cand.roll_resonant_8s, bool)
+    # a 6 s short wave tunes every large-ship roll period out of the
+    # band from below (Lambda > 1.3): the flag must be False here
+    assert all(cand.roll_period_s / 6.0 > 1.3 for cand in scan.feasible)
+
+
 def test_scan_is_deterministic():
     a = design_space_scan(SPEC, kg_m=13.29, grid=SMALL_GRID,
                           config=ScanConfig(**CONFIG_KW))

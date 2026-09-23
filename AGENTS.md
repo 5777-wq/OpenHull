@@ -349,6 +349,75 @@ no page numbers from memory).
   selected the B-series regression.  This entry records that
   decision; the AU route may be revisited as a library extension.
 
+**Seakeeping (first-level estimate: wave relations, natural periods,
+resonance check)**
+- Ship Theory vol. 2 (Sheng Zhenbang & Liu Yingzhong), Part 4
+  (seakeeping).  Page refs are printed pages of the text-layer PDF;
+  PDF page = printed page + 5.  Every equation below was re-verified
+  against a rendered page image at whitelisting time (2026-09-23).
+  - Eq.(2-7) (p.344): deep-water regular-wave relations
+    T = 2*pi*sqrt(lambda/g) ≈ 0.8*sqrt(lambda), lambda ≈ 1.56*T^2,
+    c ≈ 1.25*sqrt(lambda), omega^2 = g*k.  Anchor: book table 3-1
+    (p.383) lambda/T pairs reproduce lambda = 1.56*T^2 in 9 of 10
+    rows (lambda = 40 m row prints 5.2 s vs 5.06 computed — book
+    rounding, declared).
+  - Eqs.(2-98)/(2-99) (p.367): encounter period
+    Te = lambda/(c − V*cos(beta)), encounter frequency
+    omega_e = omega − (omega^2/g)*V*cos(beta); beta = encounter
+    angle (0 deg following, 180 deg head); head seas shorten Te /
+    raise omega_e.
+  - Eq.(3-3) (p.377): effective wave-slope coefficient
+    K = 0.13 + 0.60*(zg/d) with the regulation clamp
+    zg/d ∈ [0.917, 1.45].  Eq.(3-5) KB = 1 − sqrt(Cw)*(B/lambda)^2
+    (the sqrt(Cw) factor is present in print and was lost in the
+    OCR extraction) is noted but NOT implemented: it needs the
+    finite-draft factor KT from chart figure 3-3 (digitisation
+    backlog), so this layer uses Eq.(3-3) only.
+  - Roll natural period: Eq.(3-27) T_phi = 2*pi*sqrt(Ixx'/(D*GM))
+    (applicable only for GM > 0.15 m, stated p.391); Eq.(3-39)
+    Duell inertia Ixx' = D/(12*g)*(B^2 + 4*zg^2); Eq.(3-49)
+    T_phi = 0.58*sqrt((B^2 + 4*zg^2)/GM) — the printed 0.58 absorbs
+    g (= 2*pi/sqrt(12*g) = 0.57927, i.e. the book's rounding;
+    the 3-39 → 3-27 chain reproduces 3-49 to 0.13 %, so the
+    radical contains NO g); Eq.(3-48) scheme-stage form
+    T_phi ≈ 0.8*B/sqrt(GM).  Sanity ranges (p.391): cargo ships
+    (10,000-t class) 8–13 s, passenger ships (1,000–10,000 t)
+    9–15 s.  Regulation usage: GM taken WITHOUT free-surface
+    correction (p.391).
+  - Damping and resonance (pp.383, 427): nondimensional decay
+    coefficients mu — roll 0.05–0.07 (ch.3 general statement
+    "usually < 0.1"), pitch mu_theta 0.3–0.5, heave mu_z 0.3–0.4;
+    resonance amplification Eq.(3-29) phi_A/alpha_m0 = 1/(2*mu);
+    resonance band 0.7 < Lambda < 1.3 with
+    Lambda = omega_wave/omega_ship = T_ship/T_wave; Eq.(3-46)
+    damping lengthens the period negligibly (mu = 0.1 → 1.005).
+  - Pitch/heave natural periods (pp.427–428): Eq.(4-55)/(4-60)
+    T_theta ≈ T_z = 2.8*sqrt(Cvp*d) (g absorbed in the coefficient;
+    derivation chain 4-53 → 4-55 and 4-59 → 4-60 verified);
+    Eq.(4-57) Tamiya T_theta = 2.01*sqrt((0.77*Cb + 0.26)
+    *(0.92*d + 0.44*B)) implemented as cross-check; Eq.(4-62) is
+    printed as T_z = sqrt((d + 0.24*B)/Cw), which is dimensionally
+    incomplete as printed — restored (declared derivation, not a
+    book-printed form) to T_z = 2*pi*sqrt((d + 0.24*B)/(g*Cw)),
+    factor 2*pi/sqrt(g) ≈ 2.006, consistent with the 4-59/4-60
+    chain; Eq.(4-56) prints T_theta = 2.4*sqrt(d), internally
+    inconsistent with Eq.(4-55) at Cvp = 0.9 (which gives
+    2.66*sqrt(d)) — book slip noted, NOT implemented.  Inertia-radius
+    data (p.428): KYY = 0.25*L as comparison default (loaded
+    0.22–0.27 L, ballast 0.27–0.28 L).
+  - Design guidance (ch.5 p.441; ch.3 pp.383–384; ch.4 p.434):
+    lambda/L > 1.3 → pitch/heave moderate regardless of resonance;
+    lambda/L ≤ 3/4 → pitch moderate even at resonance; resonance
+    avoidance examples — East China Sea commonly lambda 50–60 m
+    (T ≈ 6 s) so T_phi > 1.3×6 s preferred; ocean swell lambda ≈
+    100 m (T = 8 s) so T_phi > 10.4 s preferred.
+  - Scope boundary: the whitelisted source defines wave-speed-loss
+    indicators (Eqs.(5-1)–(5-3)) conceptually only and prints NO
+    speed-loss estimation formula; wave speed loss is therefore out
+    of scope for this layer.
+  - Owner approval: task 3.8 stage-1 plan ("textbook formulas first",
+    2026-09-23); whitelist amended before implementation.
+
 **Adding a formula:** propose the source, owner approves, this section is
 amended first, implementation second. A formula without a whitelisted
 source must not be merged.

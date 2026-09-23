@@ -420,10 +420,35 @@ These are features of the current stage, not hidden weaknesses:
     speed (the C_0 digitised band L/Delta^(1/3) >= 4.88 and the
     Ayre band V/sqrt(L) >= 0.50 cannot both hold).
 
+18. **First-level seakeeping estimate (task 3.8, stage 1).** All
+    formulas from Ship Theory vol. 2, Part 4, re-verified against
+    rendered pages of the text-layer PDF at whitelisting time
+    (2026-09-23, AGENTS.md section 5); the whitelist records the two
+    declared print defects kept out of the implementation (Eq. 4-56
+    coefficient slip; Eq. 4-62 missing 2*pi/sqrt(g), restored via its
+    own derivation chain) and the scope boundary (the source prints
+    no wave-speed-loss formula, so speed loss is out of scope).
+    Seakeeping columns are reported per feasible scan candidate but
+    are NOT feasibility gates; resonance avoidance stays with the
+    owner.  Checks and results:
+
+| Check | Result | Criterion |
+|---|---|---|
+| Book table 3-1 wave pairs, 9 rows (p.383) | lambda = 1.56 T^2 reproduces each row within 0.08 s (print coarseness; the lambda = 40 m row's 5.2 s declared as the book's own rounding) | table reproduction |
+| Book resonance example (pp.383-384) | T = 10 s -> 156.0 m; T = 12.5 s -> 243.75 m (book: 156 / 244) | worked example |
+| Eq.(3-49) vs Eq.(3-39)->(3-27) chain | agree to 0.13 % (0.58 = book's rounding of 2*pi/sqrt(12*g) = 0.57927) | identity |
+| Roll period, 25,000-t-class hull (B 23, KG 9, GM 1.8) | 12.63 s — inside the book's cargo-ship (10,000-t class) band 8-13 s (p.391) | sanity band |
+| Pitch: Eq.(4-55) vs Tamiya Eq.(4-57), restored Eq.(4-62) | 8.33 s vs 8.24 s (1.1 %) vs 8.29 s (0.5 %) | cross-formula <= 2 % |
+| Effective wave slope Eq.(3-3) clamps | zg/d 0.917/1.45 enforced; K in [0.680, 1.0] | clamp |
+| GM guard | GM <= 0.15 m refused (p.391 applicability) | guard |
+| Encounter Eqs.(2-98)/(2-99) | head sea T_e 5.13 s < T_w 8 s < following T_e 18.2 s (V 7 m/s); V -> celerity refused | physics |
+| Scan integration (TB-001S CI grid) | every feasible candidate carries roll/pitch/heave periods + two roll-resonance flags; flags are bool, never gates | wiring |
+| CLI `run` | seakeeping block printed; JSON `seakeeping` section; 25,000-t example: roll 13.10 s, pitch/heave 11.1/11.0 s, all Lambda outside both bands | end-to-end |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 279 tests
+uv run pytest                        # 310 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 
