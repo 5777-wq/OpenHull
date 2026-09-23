@@ -56,6 +56,9 @@ __all__ = [
     "tuning_factor",
     "is_in_resonance_band",
     "roll_amplification_resonant",
+    "roll_amplification",
+    "extinction_coefficient",
+    "resonant_roll_amplitude",
     "ResonanceCheck",
     "SeakeepingEstimate",
     "estimate_seakeeping",
@@ -64,9 +67,24 @@ __all__ = [
 #: standard gravity, m/s^2 (AGENTS.md section 1)
 GRAVITY_M_S2 = 9.81
 
-#: roll decay coefficient mu, declared default — book range 0.05-0.07
-#: (p.427), mid-range assumption [ASSUMED]
+#: roll decay coefficient mu, declared default — book range 0.055-0.07
+#: for ships WITH bilge keels (p.394), mid-range assumption [ASSUMED]
 DEFAULT_ROLL_MU = 0.06
+
+#: book mu ranges (p.394): linear range, model-test totals
+ROLL_MU_RANGES = {
+    "no bilge keel": (0.035, 0.05),
+    "with bilge keel": (0.055, 0.07),
+}
+
+#: preliminary-estimate extinction coefficient B20, general ships
+#: (p.393: "在初步估算时, 一般船舶可取 B20 = 0.0200"); the book's
+#: large-cargo-ship table value prints B15 = 0.0190, which folds to
+#: B20 ~ 0.0173 through the 0.32 power law of table 3-6
+DEFAULT_B20 = 0.02
+
+#: resonance amplitude solve convergence
+_AMPLITUDE_TOL = 1e-6
 
 #: resonance band 0.7 < Lambda < 1.3 (p.383)
 RESONANCE_BAND = (0.7, 1.3)
@@ -305,6 +323,83 @@ def roll_amplification_resonant(roll_mu: float) -> float:
     return 1.0 / (2.0 * roll_mu)
 
 
+def roll_amplification(tuning: float, roll_mu: float) -> float:
+    """General roll magnification, Eq.(3-26) p.381.
+
+    phi_A/alpha_m0 = 1/sqrt((1 - Lambda^2)^2 + 4*mu^2*Lambda^2).
+    """
+    _require(math.isfinite(roll_mu) and roll_mu > 0.0,
+             "roll_mu", roll_mu, "finite mu > 0",
+             "decay coefficient must be positive")
+    return 1.0 / math.sqrt((1.0 - tuning**2) ** 2
+                           + 4.0 * roll_mu**2 * tuning**2)
+
+
+def extinction_coefficient(phi_a_deg: float,
+                           b20: float = DEFAULT_B20) -> float:
+    """Amplitude-dependent quadratic-roll extinction coefficient.
+
+    Book closure of table 3-6 (p.393): B = B20*(20/phi_A_deg)^0.32,
+    per DEGREE (the book's extinction curves plot degrees).  B20 is
+    the value at 20 deg: 0.0200 for preliminary estimates of general
+    ships (p.393); the large-cargo-ship table entry prints
+    B15 = 0.0190, folding to B20 ~ 0.0173 through this law.
+    """
+    _require(math.isfinite(phi_a_deg) and phi_a_deg > 0.0,
+             "phi_a_deg", phi_a_deg, "finite phi_A > 0",
+             "roll amplitude must be positive")
+    _require(math.isfinite(b20) and b20 > 0.0,
+             "b20", b20, "finite B20 > 0",
+             "extinction coefficient must be positive")
+    return b20 * (20.0 / phi_a_deg) ** 0.32
+
+
+def equivalent_linear_mu(phi_a_rad: float,
+                         b20: float = DEFAULT_B20) -> float:
+    """Equivalent linear decay coefficient of the quadratic roll
+    damping at amplitude phi_A, Eq.(3-59) p.394.
+
+    2*mu = (2/pi)*phi_A*B with phi_A in RADIANS and B in 1/radian;
+    the book's extinction values are per degree, so the radian
+    conversion is part of this declared implementation.
+    """
+    _require(math.isfinite(phi_a_rad) and phi_a_rad > 0.0,
+             "phi_a_rad", phi_a_rad, "finite phi_A > 0",
+             "roll amplitude must be positive")
+    b_per_rad = extinction_coefficient(
+        math.degrees(phi_a_rad), b20) * (180.0 / math.pi)
+    return phi_a_rad * b_per_rad / math.pi
+
+
+def resonant_roll_amplitude(effective_wave_slope_rad: float,
+                            b20: float = DEFAULT_B20) -> float:
+    """Resonant roll amplitude under quadratic damping, p.394 chain.
+
+    Energy balance at resonance: the linear-theory amplification
+    A/alpha_m0 = 1/(2*mu) (Eq. 3-29) with mu itself amplitude-
+    dependent through the equivalent linearisation (Eq. 3-59), so
+    A solves A = alpha_m0/(2*mu(A)) by fixed-point iteration.  The
+    self-limiting behaviour is physical: a larger amplitude raises
+    the equivalent damping, which caps the growth.  The excitation
+    (effective wave slope alpha_m0 = K * 2*pi*zeta_A/lambda at the
+    roll period) must come from the caller — without a sea state the
+    resonant amplitude is undetermined.
+    """
+    _require(math.isfinite(effective_wave_slope_rad)
+             and effective_wave_slope_rad > 0.0,
+             "effective_wave_slope_rad", effective_wave_slope_rad,
+             "finite alpha_m0 > 0",
+             "the effective wave slope must be positive")
+    amplitude = 0.2  # rad, ~11.5 deg starting point
+    for _ in range(200):
+        mu = equivalent_linear_mu(amplitude, b20)
+        amplitude_new = effective_wave_slope_rad / (2.0 * mu)
+        if abs(amplitude_new - amplitude) < _AMPLITUDE_TOL:
+            return amplitude_new
+        amplitude = amplitude_new
+    return amplitude  # pragma: no cover - fixed point converges quickly
+
+
 @dataclass(frozen=True)
 class ResonanceCheck:
     """Resonance verdict of one natural period against one sea band."""
@@ -404,5 +499,7 @@ def estimate_seakeeping(
         resonance_checks=tuple(checks),
         citations=(_CITATION_WAVE, _CITATION_ENCOUNTER, _CITATION_WAVE_SLOPE,
                    _CITATION_ROLL, _CITATION_PITCH, _CITATION_HEAVE,
-                   _CITATION_RESONANCE),
+                   _CITATION_RESONANCE,
+                   "Ship Theory vol. 2, damping chain Eqs.(3-51)/(3-57)-"
+                   "(3-59) and tables 3-6/3-7, pp.392-394"),
     )

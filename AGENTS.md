@@ -418,6 +418,33 @@ resonance check)**
   - Owner approval: task 3.8 stage-1 plan ("textbook formulas first",
     2026-09-23); whitelist amended before implementation.
 
+  - Damping QUANTIFICATION chain (pp.392-394, printed = PDF - 5),
+    re-verified against rendered pages 2026-09-23: Eq.(3-51)
+    extinction/damping relation (a = N*T_phi/(2*Ixx'),
+    B = (4/3)*W/Ixx'); table 3-6 amplitude dependence with the
+    printed closure B = B20*(20/phi_A_deg)^0.32 (reproduces all four
+    table rows 1.25/1.1/1.0/0.88); table 3-7 class values — LARGE
+    CARGO SHIPS print B15 = 0.0190 (=> B20 ~ 0.0173 via the 0.32
+    law), and the book states B20 = 0.0200 for preliminary
+    estimates of general ships (p.393); Eq.(3-53) linear decay
+    e^(-mu*pi); Eqs.(3-57)-(3-59) energy-equivalent linearisation of
+    the quadratic damping: at resonance 2*mu = (2/pi)*phi_A*B with
+    phi_A in RADIANS and B in 1/rad (the printed extinction values
+    are per degree; the radian conversion is part of the declared
+    implementation), i.e. the resonant roll amplitude follows from
+    phi_A = pi*mu/B(phi_A) by one-line iteration; mu ranges (p.394):
+    no bilge keel 0.035-0.05, with bilge keel 0.055-0.07.
+    Eq.(3-26) (p.381) — the general magnification
+    1/sqrt((1-Lambda^2)^2 + 4*mu^2*Lambda^2) and phase — completes
+    the linear roll RAO curve.
+  - Owner approval: backlog batch ("挂账批准", 2026-09-23) covers
+    the damping quantification above.  Speed loss remains NOT
+    implemented: the in-house design textbooks (Xie 4.3.3, Lin Yan)
+    discuss speed loss qualitatively only, and no page-verifiable
+    Aertssen source is on hand — the whitelist rule forbids
+    implementing from memory.  Wigley public-RAO referee data and
+    the ShipD licence decision likewise await a verifiable source.
+
 **Seakeeping stage 2: BEM RAOs via capytaine (external solver, optional)**
 - Owner decisions recorded (2026-09-23): the owner approved pushing
   task 3.8 stage 2 AND stage 4.1 together ("可以两个都往下推");

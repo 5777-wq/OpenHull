@@ -43,8 +43,9 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from .seakeeping import (
-    DEFAULT_ROLL_MU,  # noqa: F401  (re-exported for the report layer)
+    DEFAULT_ROLL_MU,
     GRAVITY_M_S2,
+    roll_period_regulation,
 )
 from .spec import SpecValidationError
 
@@ -280,6 +281,7 @@ def compute_rigid_rao(
     waterplane_area_m2: float,
     periods_s,
     density: float = 1.025,
+    roll_mu: float = DEFAULT_ROLL_MU,
 ) -> RaoResult:
     """Zero-speed heave/roll/pitch RAOs of the task-2.6 hull.
 
@@ -287,7 +289,13 @@ def compute_rigid_rao(
     t/m^3); kg_m and km_m give the roll stiffness GM_T = km - kg;
     bml_m approximates the pitch stiffness GM_L (task 1.4 declares
     BML as the longitudinal metacentric radius); waterplane_area_m2
-    gives the heave stiffness rho*g*Aw.
+    gives the heave stiffness rho*g*Aw.  roll_mu (book range
+    0.055-0.07 with bilge keels, p.394) calibrates an equivalent
+    linear viscous damping injected on the roll DOF:
+    B_extra = 2*mu*I_roll*omega_phi at the stage-1 roll period
+    lengthened by sqrt(1.25) (the Duell added-inertia share).
+    capytaine's radiation damping adds on top, so the total roll
+    damping is AT LEAST the book value — declared conservative.
     """
     import numpy as np
 
@@ -302,12 +310,18 @@ def compute_rigid_rao(
     gm_t = km_m - kg_m
     _require(gm_t > 0.0, "kg_m", kg_m, "KM > KG",
              "roll stiffness needs positive GM_T")
-    mass = np.diag([disp_mass, disp_mass * kxx2, disp_mass * kyy2])
+    inertia_roll = disp_mass * kxx2
+    mass = np.diag([disp_mass, inertia_roll, disp_mass * kyy2])
     stiff = np.diag([
         density * GRAVITY_M_S2 * waterplane_area_m2,
         disp_mass * GRAVITY_M_S2 * gm_t,
         disp_mass * GRAVITY_M_S2 * float(bml_m),
     ])
+    # book-calibrated equivalent viscous damping on the roll DOF
+    omega_phi = 2.0 * math.pi / (
+        roll_period_regulation(beam, kg_m, gm_t) * math.sqrt(1.25))
+    b_extra_roll = 2.0 * roll_mu * inertia_roll * omega_phi
+    dissipation = np.diag([0.0, b_extra_roll, 0.0])
     dof_names = [str(d) for d in body.dofs]
     order = [dof_names.index("Heave"), dof_names.index("Roll"),
              dof_names.index("Pitch")]
@@ -335,7 +349,10 @@ def compute_rigid_rao(
     points: list[RaoPoint] = []
     notes = (
         "hydrodynamics: capytaine (linear potential flow, zero speed); "
-        "mass/inertia/stiffness: whitelisted chain; surge/sway/yaw "
+        "mass/inertia/stiffness: whitelisted chain; roll viscous "
+        "damping: equivalent linear B = 2*mu*I*omega_phi calibrated "
+        "to the book mu range (p.394) at the stage-1 roll period — "
+        "radiation damping adds on top (conservative); surge/sway/yaw "
         "suppressed; dry strip up to the deck carries Airy-decayed "
         "pressure; roll/pitch coupling neglected",
     )
@@ -344,7 +361,18 @@ def compute_rigid_rao(
         sub["inertia_matrix"] = (("influenced_dof", "radiating_dof"), mass)
         sub["hydrostatic_stiffness"] = (
             ("influenced_dof", "radiating_dof"), stiff)
-        rao = cpt.post_pro.rao(sub)
+        import xarray as xr
+
+        diss = xr.DataArray(
+            dissipation,
+            dims=("influenced_dof", "radiating_dof"),
+            coords={
+                "influenced_dof": [str(d) for d in
+                                   sub.influenced_dof.values],
+                "radiating_dof": [str(d) for d in
+                                  sub.radiating_dof.values],
+            })
+        rao = cpt.post_pro.rao(sub, dissipation=diss)
         rao = rao.assign_coords(
             radiating_dof=[str(d) for d in rao.radiating_dof.values])
         for period in periods:

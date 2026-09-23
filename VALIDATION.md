@@ -492,6 +492,38 @@ These are features of the current stage, not hidden weaknesses:
 | Report faithfulness | Lpp/Cb/DW/Delta/GM/roll periods of the summary appear verbatim; skipped blocks declared (e.g. the TB-001 propeller Ayre-band skip) | content tests |
 | End-to-end | TB-001 with --report --arrangement-dxf --arrangement-chart --hydro-curve-chart writes all four artefacts and echoes the paths | wiring test |
 
+21. **Roll damping quantification (backlog item resolved from the
+    book, 2026-09-23).** The whitelisted source itself carries the
+    damping chain (pp.392-394, page-verified): the table 3-6
+    closure B = B20*(20/phi_A_deg)^0.32 reproduces all four printed
+    rows; the large-cargo-ship table entry prints B15 = 0.0190
+    (folds to B20 ~ 0.0173); preliminary estimates use
+    B20 = 0.0200; the mu ranges are no-bilge-keel 0.035-0.05,
+    with-bilge-keel 0.055-0.07; Eq.(3-26) completes the linear RAO
+    curve.  Implementations: `extinction_coefficient`,
+    `equivalent_linear_mu` (Eq. 3-59, radians declared),
+    `resonant_roll_amplitude` (energy balance
+    A = alpha_m0/(2 mu(A)) — REQUIRES the caller's effective wave
+    slope; the amplitude is undetermined without a sea state), and
+    a book-mu-calibrated equivalent viscous dissipation injected on
+    the roll DOF of the BEM RAO (capytaine radiation adds on top —
+    conservative).  Checks:
+
+| Check | Result | Criterion |
+|---|---|---|
+| Table 3-6 closure vs printed rows | 1.248/1.096/1.000/0.878 vs 1.25/1.1/1.0/0.88 | all four rows |
+| B20 fold of the large-cargo B15 = 0.0190 | 0.0173 | 0.32 power law |
+| Fixed point of the energy balance | A = alpha_m0/(2 mu(A)) holds to 1e-4 relative at three sea severities | self-consistency |
+| Physics of the balance | amplitude monotone in sea severity, capped (< 45 deg) by the quadratic damping | sanity |
+| Eq.(3-26) at Lambda = 1 | equals Eq.(3-29) 1/(2 mu) | identity |
+
+    Backlog dispositions recorded the same day: speed loss stays
+    UNIMPLEMENTED (the in-house design textbooks discuss it
+    qualitatively only — Xie 4.3.3, Lin Yan — and no page-verifiable
+    Aertssen source is on hand); the Wigley public-RAO referee and
+    the ShipD licence decision likewise await a verifiable source;
+    the GZ paper anchor is accepted as documented (owner option 1).
+
 ## Reproducing
 
 ```bash

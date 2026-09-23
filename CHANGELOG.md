@@ -4,6 +4,24 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [Unreleased]
+
+### Added
+
+- Roll damping quantification from the whitelisted source itself
+  (pp.392-394, page-verified): table 3-6 extinction law, table 3-7
+  class values (large cargo ships print B15 = 0.0190 -> B20 ~
+  0.0173; general preliminary estimate B20 = 0.0200), the mu ranges
+  (0.035-0.05 / 0.055-0.07), Eq.(3-26) general magnification, and
+  the Eq.(3-59) energy-equivalent quadratic-damping chain — the
+  resonant roll amplitude now solves from a declared sea state
+  (A = alpha_m0/(2 mu(A))).  The BEM RAO layer injects a
+  book-mu-calibrated equivalent viscous damping on the roll DOF
+  (capytaine radiation adds on top, conservative).  Backlog
+  dispositions: speed loss stays unimplemented (no page-verifiable
+  source in hand); Wigley referee data and ShipD licence decision
+  await verifiable sources; GZ paper anchor accepted as documented.
+
 ## [0.4.0] - 2026-09-23
 
 ### Added

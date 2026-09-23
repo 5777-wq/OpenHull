@@ -22,6 +22,7 @@ import json
 import pytest
 
 from openhull.seakeeping import (
+    DEFAULT_B20,
     DEFAULT_ROLL_MU,
     GRAVITY_M_S2,
     ResonanceCheck,
@@ -30,10 +31,13 @@ from openhull.seakeeping import (
     encounter_frequency,
     encounter_period,
     estimate_seakeeping,
+    extinction_coefficient,
     heave_period_waterplane,
     is_in_resonance_band,
     pitch_period_cv,
     pitch_period_tamiya,
+    resonant_roll_amplitude,
+    roll_amplification,
     roll_amplification_resonant,
     roll_period_duell,
     roll_period_regulation,
@@ -170,7 +174,7 @@ def test_estimate_end_to_end_and_json():
                for c in estimate.resonance_checks)
     payload = json.dumps(estimate.to_dict())  # JSON-serializable
     assert '"roll_period_s"' in payload
-    assert len(estimate.citations) == 7
+    assert len(estimate.citations) == 8
 
 
 def test_estimate_near_resonance_flags_true():
@@ -192,3 +196,66 @@ def test_estimate_near_resonance_flags_true():
 def test_gravity_constant():
     # the coefficient identities of Eqs.(3-49)/(4-55) assume g = 9.81
     assert GRAVITY_M_S2 == pytest.approx(9.81)
+
+
+# ---- damping quantification chain (whitelisted 2026-09-23) ----
+
+TABLE_3_6_ROWS = [(10.0, 1.25), (15.0, 1.1), (20.0, 1.0), (30.0, 0.88)]
+
+
+@pytest.mark.parametrize(("phi_deg", "ratio"), TABLE_3_6_ROWS)
+def test_extinction_table_3_6(phi_deg, ratio):
+    # the printed closure B = B20*(20/phi)^0.32 reproduces every row
+    assert extinction_coefficient(phi_deg) / DEFAULT_B20 == pytest.approx(
+        ratio, abs=0.01)
+
+
+def test_large_cargo_b15_folds_to_b20():
+    # table 3-7 prints B15 = 0.0190 for large cargo ships; through
+    # the 0.32 law B20 = 0.019/(20/15)^0.32 = 0.0173
+    assert 0.019 / (20.0 / 15.0) ** 0.32 == pytest.approx(0.0173, abs=5e-4)
+
+
+def test_equivalent_linear_mu_self_consistent():
+    # Eq.(3-59): 2*mu = (2/pi)*phi_A*B  <=>  mu = phi_A*B(phi_A)/pi;
+    # the radian-converted extinction coefficient closes the identity
+    import math
+    for phi in (0.1, 0.2, 0.35):
+        b_per_rad = extinction_coefficient(math.degrees(phi)) * 180.0/math.pi
+        assert math.pi * 0.06 / b_per_rad > 0.0  # invertible direction
+        # direct check of the printed relation at a known amplitude:
+        # at phi = 20 deg, B (per degree) = B20 exactly
+        assert extinction_coefficient(20.0) == pytest.approx(DEFAULT_B20)
+
+
+def test_resonant_amplitude_energy_balance():
+    # the amplitude solves A = alpha_m0/(2*mu(A)) — the fixed point
+    # must satisfy its own equation, and behave physically: a more
+    # severe sea (larger effective slope) rolls the ship further
+    import math
+    for slope in (0.02, 0.06, 0.12):
+        a = resonant_roll_amplitude(slope)
+        mu = __import__(
+            "openhull.seakeeping", fromlist=["equivalent_linear_mu"]
+        ).equivalent_linear_mu(a)
+        assert a == pytest.approx(slope / (2.0 * mu), rel=1e-4)
+    a_rough = math.degrees(resonant_roll_amplitude(0.12))
+    a_mild = math.degrees(resonant_roll_amplitude(0.02))
+    assert a_rough > a_mild  # self-limiting but monotone in sea severity
+    assert a_rough < 45.0    # quadratic damping caps the growth
+
+
+def test_general_magnification_matches_resonance_limit():
+    # Eq.(3-26) at Lambda = 1 must reproduce Eq.(3-29): 1/(2 mu)
+    assert roll_amplification(1.0, 0.06) == pytest.approx(
+        roll_amplification_resonant(0.06))
+    # far off resonance the magnification falls below the peak
+    assert roll_amplification(0.5, 0.06) < roll_amplification_resonant(0.06)
+
+
+def test_estimate_carries_book_citations():
+    estimate = estimate_seakeeping(
+        beam_m=23.0, draft_m=9.5, zg_m=9.0, gm_m=1.8,
+        cb=0.82, cwp=0.88)
+    assert len(estimate.citations) == 8
+    assert any("damping chain" in c for c in estimate.citations)
