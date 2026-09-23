@@ -14,14 +14,14 @@ resistance / propulsion / stability estimates, and drawing outputs (DXF).
 
 ## Status
 
-**v0.3 released** — stage 3 complete, the performance loop is closed: Ayre resistance estimation, Holtrop propulsion factors with a service-speed solver, Wageningen B-series propeller design (published regression, Burrill cavitation check, thrust-led design), large-angle stability with the IS Code 2.2 criteria and the severe wind & rolling criterion, plus a design-space optimizer (`openhull optimize`) that sweeps dimension ratios into feasible, criteria-passing designs with a Pareto trade-off chart. Validated against the JBC benchmark ship, DTMB Report 1712 and the measured NMRI MP687 open-water data (see [VALIDATION.md](VALIDATION.md)). One command: `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.4 released** — stage 4 complete: the toolchain now ships its first DRAWING AND REPORT deliverables from one command (see [examples/demo_outputs](examples/demo_outputs)) — a hydrostatic curves chart in the textbook layout, a general-arrangement schematic as chart and layered DXF, and a Chinese Markdown design report. Seakeeping joins the loop in two layers: textbook first-level estimates (natural periods, resonance verdicts against reference seas) and zero-speed RAOs via the optional capytaine extra (`pip install 'openhull[seakeeping]'`). Every number traceable to the formula whitelist (see [VALIDATION.md](VALIDATION.md)). One command: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
 
 ## Roadmap
 
 - [x] Stage 1 — Principal dimension iteration & hydrostatics core (**v0.1**)
 - [x] Stage 2 — Parametric hull form generation (mother-ship transformation) (**v0.2**)
 - [x] Stage 3 — Performance loop: resistance / propulsion / stability (**v0.3**)
-- [ ] Stage 4 — Drawing output (DXF) & design reports
+- [x] Stage 4 — Drawings & reports: hydrostatic curves, GA schematic (DXF), design report; seakeeping two-layer (+ optional capytaine RAOs) (**v0.4**)
 - [ ] Stage 5 — Documentation & community release (v1.0)
 
 ## Design principles

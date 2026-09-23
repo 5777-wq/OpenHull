@@ -16,14 +16,14 @@ propulsión / estabilidad y planos de salida (DXF).
 
 ## Estado
 
-**v0.3 publicado** — etapa 3 completada, el bucle de rendimiento está cerrado: estimación de resistencia de Ayre, factores de propulsión de Holtrop con solver de velocidad de servicio, diseño de hélice de la serie B de Wageningen (regresión publicada, comprobación de cavitación de Burrill, diseño guiado por empuje), estabilidad a grandes ángulos con los criterios IS Code 2.2 y el criterio de viento y oleaje severos, más un optimizador del espacio de diseño (`openhull optimize`) que barre relaciones de dimensiones hacia diseños factibles con diagrama de Pareto. Validado contra el buque de referencia JBC, el informe DTMB 1712 y los datos medidos MP687 del NMRI (véase [VALIDATION.md](VALIDATION.md)). Ejecutar: `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.4 publicado** — etapa 4 completada: primeros entregables de planos e informes en un solo comando (véase [examples/demo_outputs](examples/demo_outputs)) — curvas hidrostáticas en formato de libro de texto, esquema de disposición general como gráfico y DXF por capas, e informe de diseño en Markdown en chino. La estabilidad en la mar se incorpora en dos niveles: estimaciones de libro de primer nivel (periodos naturales, veredictos de resonancia) y RAO a velocidad cero vía la extensión opcional capytaine (`pip install 'openhull[seakeeping]'`). Cada número trazable a la lista blanca de fórmulas (véase [VALIDATION.md](VALIDATION.md)). Comando: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
 
 ## Hoja de ruta
 
 - [x] Etapa 1 — Iteración de dimensiones principales y núcleo hidrostático (**v0.1**)
 - [x] Etapa 2 — Generación paramétrica de formas (transformación del buque madre) (**v0.2**)
 - [x] Etapa 3 — Bucle de rendimiento: resistencia / propulsión / estabilidad (**v0.3**)
-- [ ] Etapa 4 — Planos de salida (DXF) e informes de diseño
+- [x] Etapa 4 — Planos e informes: curvas hidrostáticas, esquema GA (DXF), informe de diseño; estabilidad en la mar en dos niveles (+ RAO capytaine opcional) (**v0.4**)
 - [ ] Etapa 5 — Documentación y lanzamiento comunitario (v1.0)
 
 ## Principios de diseño

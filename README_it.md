@@ -16,14 +16,14 @@ propulsione / stabilità e output di disegni (DXF).
 
 ## Stato
 
-**v0.3 pubblicato** — fase 3 completata, il ciclo delle prestazioni è chiuso: stima della resistenza di Ayre, fattori di propulsione di Holtrop con solver della velocità di servizio, progettazione dell'elica della serie B di Wageningen (regressione pubblicata, verifica di cavitazione di Burrill, progetto guidato dalla spinta), stabilità a grandi angoli con i criteri IS Code 2.2 e il criterio di vento e onda severi, più un ottimizzatore dello spazio di progetto (`openhull optimize`) che esplora i rapporti dimensionali verso progetti fattibili con diagramma di Pareto. Validato sulla nave di riferimento JBC, sul rapporto DTMB 1712 e sui dati misurati MP687 del NMRI (vedi [VALIDATION.md](VALIDATION.md)). Esecuzione: `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.4 pubblicato** — fase 4 completata: primi deliverable di disegni e relazioni in un solo comando (vedi [examples/demo_outputs](examples/demo_outputs)) — curve idrostatiche in layout da manuale, schema di disposizione generale come grafico e DXF a strati, e relazione di progetto in Markdown cinese. La tenuta al mare entra nel ciclo su due livelli: stime da manuale (periodi propri, giudizi di risonanza) e RAO a velocità zero tramite l'estensione opzionale capytaine (`pip install 'openhull[seakeeping]'`). Ogni numero è riconducibile alla whitelist delle formule (vedi [VALIDATION.md](VALIDATION.md)). Comando: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
 
 ## Roadmap
 
 - [x] Fase 1 — Iterazione delle dimensioni principali e nucleo idrostatico (**v0.1**)
 - [x] Fase 2 — Generazione parametrica della carena (trasformazione della nave madre) (**v0.2**)
 - [x] Fase 3 — Ciclo delle prestazioni: resistenza / propulsione / stabilità (**v0.3**)
-- [ ] Fase 4 — Output di disegni (DXF) e relazioni di progetto
+- [x] Fase 4 — Disegni e relazioni: curve idrostatiche, schema GA (DXF), relazione di progetto; tenuta al mare a due livelli (+ RAO capytaine opzionale) (**v0.4**)
 - [ ] Fase 5 — Documentazione e rilascio di comunità (v1.0)
 
 ## Principi di progettazione

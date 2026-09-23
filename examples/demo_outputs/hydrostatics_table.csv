@@ -1,0 +1,9 @@
+﻿draft_m,displacement_volume_m3,displacement_t,waterplane_area_m2,lcf_pct_lpp,lcb_pct_lpp,cb,cm,cp,cw,kb_m,bmt_m,bml_m,km_m,tpc_t_per_cm,mtc_tm_per_cm
+4.1250,39973.9888,40973.3386,10355.4804,3.2100,3.5835,0.7880,0.9617,0.8195,0.8421,2.1309,38.8137,1200.4204,40.9446,106.1437,1810.7262
+8.2500,83449.9373,85536.1857,10695.8217,2.6381,3.2375,0.8225,0.9808,0.8387,0.8698,4.2497,19.7790,619.4407,24.0287,109.6322,1950.5977
+12.3750,128093.3664,131295.7006,10948.4686,1.9513,2.9093,0.8417,0.9872,0.8526,0.8903,6.3655,13.3719,428.7870,19.7374,112.2218,2072.5747
+16.5000,173874.7180,178221.5860,11245.8287,0.9404,2.5250,0.8569,0.9904,0.8652,0.9145,8.4925,10.2054,340.6218,18.6978,115.2697,2234.8625
+hydrostatic curves chart -> examples\demo_outputs\hydro_curves.png
+design report -> examples\demo_outputs\design_report.md
+arrangement DXF -> examples\demo_outputs\ga_schematic.dxf
+arrangement chart -> examples\demo_outputs\ga_schematic.png

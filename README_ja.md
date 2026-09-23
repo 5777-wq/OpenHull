@@ -15,14 +15,14 @@ AIエージェントがオーケストレーションする、オープンソー
 
 ## 現在の状況
 
-**v0.3 リリース** —— ステージ 3 完了、性能ループ閉鎖：Ayre 抵抗推定、Holtrop 推進因子とサービス速度ソルバー、バーゲニンゲン B シリーズ・プロペラ設計（公開回帰式 + キャビテーション検査 + 推力主導設計）、大角度復原性の IS Code 2.2 六基準と悪天候風浪基準、さらに設計空間探索（`openhull optimize`：主要目比スキャンで実行可能計画とパレート・トレードオフ図を出力）。JBC 基準船・DTMB 報告 1712・NMRI MP687 実測データで検証済み（[VALIDATION.md](VALIDATION.md) 参照）。実行：`openhull run examples/taskbook_bulk_carrier.yaml`。
+**v0.4 リリース** —— ステージ 4 完了：一コマンドで図面と報告書の成果物を出力（[examples/demo_outputs](examples/demo_outputs) 参照）——教科書レイアウトの静水力曲線図、総配置略図（図＋レイヤー DXF）、中国語 Markdown 設計報告書。耐波性は二層でループに参入：書籍公式による一次推定（固有周期・共振判定）＋オプションの capytaine による零速度 RAO（`pip install 'openhull[seakeeping]'`）。全数値は公式ホワイトリストに追跡可能（[VALIDATION.md](VALIDATION.md) 参照）。実行：`openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`。
 
 ## ロードマップ
 
 - [x] ステージ 1 — 主寸法反復と静水性能計算コア (**v0.1**)
 - [x] ステージ 2 — パラメトリック船型生成（母型船変換）(**v0.2**)
 - [x] ステージ 3 — 性能ループ：抵抗／推進／復原性 (**v0.3**)
-- [ ] ステージ 4 — 図面出力（DXF）と設計報告書
+- [x] ステージ 4 — 図面と報告書：静水力曲線図、総配置略図（DXF）、設計報告書；耐波性二層（＋オプション capytaine RAO）(**v0.4**)
 - [ ] ステージ 5 — ドキュメント整備とコミュニティリリース（v1.0）
 
 ## 設計原則

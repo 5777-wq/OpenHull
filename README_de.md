@@ -16,14 +16,14 @@ bewertungen und Zeichnungsausgaben (DXF).
 
 ## Status
 
-**v0.3 veröffentlicht** — Stufe 3 abgeschlossen, die Leistungsschleife ist geschlossen: Ayre-Widerstandsschätzung, Holtrop-Propulsionsfaktoren mit Dienstgeschwindigkeitslöser, Wageningen-B-Serienpropellerentwurf (veröffentlichte Regression, Burrill-Kavitationsnachweis, schubgeführter Entwurf), Großwinkelstabilität mit den IS-Code-2.2-Kriterien und dem Wind-und-Seegangskriterium, dazu ein Entwurfsraum-Optimierer (`openhull optimize`), der Dimensionsverhältnisse zu zulässigen, kriterienbestehenden Entwürfen durchsucht, inklusive Pareto-Diagramm. Validiert gegen JBC, DTMB Report 1712 und die gemessenen NMRI-MP687-Freiwasserdaten (siehe [VALIDATION.md](VALIDATION.md)). Ausführen: `openhull run examples/taskbook_bulk_carrier.yaml`.
+**v0.4 veröffentlicht** — Stufe 4 abgeschlossen: ergebnisorientierte Zeichnungen und Berichte aus einem Befehl (siehe [examples/demo_outputs](examples/demo_outputs)) — Hydrostatikkurven im Lehrbuchlayout, ein Generalarrangement-Schema als Grafik und geschichtetes DXF sowie ein chinesischer Markdown-Entwurfsbericht. Seegang in zwei Ebenen: Formel-Estimates der ersten Stufe (Eigenperioden, Resonanzurteile) und nullgeschwindige RAOs über das optionale capytaine-Extra (`pip install 'openhull[seakeeping]'`). Jede Zahl rückverfolgbar zur Formel-Whitelist (siehe [VALIDATION.md](VALIDATION.md)). Befehl: `openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`.
 
 ## Fahrplan
 
 - [x] Stufe 1 — Iteration der Hauptabmessungen & hydrostatischer Kern (**v0.1**)
 - [x] Stufe 2 — Parametrische Rumpfformgenerierung (Mutterschiff-Transformation) (**v0.2**)
 - [x] Stufe 3 — Leistungsschleife: Widerstand / Antrieb / Stabilität (**v0.3**)
-- [ ] Stufe 4 — Zeichnungsausgabe (DXF) & Entwurfsberichte
+- [x] Stufe 4 — Zeichnungen & Berichte: Hydrostatikkurven, GA-Schema (DXF), Entwurfsbericht; Seegang zweistufig (+ optionale capytaine-RAOs) (**v0.4**)
 - [ ] Stufe 5 — Dokumentation & Community-Release (v1.0)
 
 ## Entwurfsgrundsätze

@@ -14,14 +14,14 @@ DXF 图纸等成果。
 
 ## 当前状态
 
-**v0.3 已发布** —— 阶段 3 完成，性能闭环贯通：艾亚阻力估算、Holtrop 推进因子与服务航速解算、瓦根宁根 B 系列螺旋桨设计（公开回归式 + 柏利尔空泡校核 + 推力式设计）、大倾角稳性带 IS Code 2.2 六项衡准与恶劣风浪衡准，以及设计空间寻优器（`openhull optimize`：主尺度比扫描输出可行方案集与帕累托权衡图）。全部通过 JBC 基准船、DTMB 1712 报告与 NMRI MP687 实测开敞水数据验证（见 [VALIDATION.md](VALIDATION.md)）。一条命令运行：`openhull run examples/taskbook_bulk_carrier.yaml`。
+**v0.4 已发布** —— 阶段 4 完成：工具链交付首批图纸与报告成果，一条命令出齐（见 [examples/demo_outputs](examples/demo_outputs)）——教材版式静水力曲线图、总布置简图（图+分层 DXF）、中文 Markdown 设计报告。耐波性两级并入闭环：书内公式第一级（固有周期与谐摇判定）+ 可选 capytaine 扩展的零航速 RAO（`pip install 'openhull[seakeeping]'`）。每个数可溯源至公式白名单（见 [VALIDATION.md](VALIDATION.md)）。一条命令：`openhull run examples/taskbook_bulk_carrier.yaml --report design_report.md --hydro-curve-chart curves.png`。
 
 ## 路线图
 
 - [x] 阶段 1 —— 主尺度迭代与静水力内核（**v0.1**）
 - [x] 阶段 2 —— 参数化船型生成（母型船变换）（**v0.2**）
 - [x] 阶段 3 —— 性能闭环：阻力 / 推进 / 稳性（**v0.3**）
-- [ ] 阶段 4 —— 图纸输出（DXF）与设计报告
+- [x] 阶段 4 —— 图纸与报告：静水力曲线图、总布置简图（DXF）、设计报告；耐波性两级（含可选 capytaine RAO）（**v0.4**）
 - [ ] 阶段 5 —— 文档完善与社区发布（v1.0）
 
 ## 设计原则
