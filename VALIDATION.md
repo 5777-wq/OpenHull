@@ -445,10 +445,37 @@ These are features of the current stage, not hidden weaknesses:
 | Scan integration (TB-001S CI grid) | every feasible candidate carries roll/pitch/heave periods + two roll-resonance flags; flags are bool, never gates | wiring |
 | CLI `run` | seakeeping block printed; JSON `seakeeping` section; 25,000-t example: roll 13.10 s, pitch/heave 11.1/11.0 s, all Lambda outside both bands | end-to-end |
 
+19. **Hydrostatic curves chart (task 4.1) and BEM RAOs (task 3.8
+    stage 2).** The task 4.1 chart is a pure visualization of the
+    task 1.4 table (no new formulas; wiring tests assert PNG
+    output); the rendered example passed an independent visual
+    acceptance review after the draft-axis orientation was corrected
+    to the textbook convention (draft increasing downward) — first
+    render failed review on exactly that point.  The stage-2 BEM
+    layer (capytaine, optional extra `openhull[seakeeping]`) is
+    validated by independent-path cross-checks on a 100 m x 20 m x
+    6 m Series 60 hull (KG 3 m); capytaine supplies hydrodynamics
+    only, all RAO mass/stiffness matrices come from the whitelisted
+    chain.  Declared: radiation-only damping (resonance AMPLITUDES
+    are qualitative — no whitelisted viscous-damping source), zero
+    speed, suppressed surge/sway/yaw, wall-sided deck strip at
+    1.15 T, diagonal stiffness.  Checks:
+
+| Check | Result | Criterion |
+|---|---|---|
+| Mesh volume vs table displacement volume (deck at waterline) | 9608.6 vs 9599.3 m3 — ratio 1.001 | panel vs Simpson integrators, <= 1.5 % |
+| Long-wave heave RAO (T = 20 s, lambda/L = 6.25) | head 0.967, beam 0.999 | -> 1 at lambda >> L |
+| Short-wave heave RAO (T = 4 s, lambda = 25 m) | 0.065 (head) | -> 0 at lambda << L |
+| Head-sea roll excitation | max head 0.000 vs beam peak | hull symmetry |
+| Roll RAO peak position | at the stage-1 period x sqrt(1.25) (Duell Jxx = 0.25 Ixx) within one period-grid step | cross-layer consistency |
+| Long-wave pitch RAO | 0.010 rad/m at T = 20 s vs wave slope k = 2*pi/625 = 0.010 | ship follows wave slope |
+| Print defects found and excluded (lid at waterline kills the FK integral; unit mismatch rho = 1000 default vs 1.025 chain; omega-sorted dataset vs submission order) | all fixed and pinned by tests | engineering log |
+| CLI `rao` subcommand | TB-001: 1134 panels, head/beam table printed, JSON schema | end-to-end |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 310 tests
+uv run pytest                        # 323 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

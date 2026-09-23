@@ -228,11 +228,16 @@ def _hydrostatics_rows(hydro_table) -> list[dict]:
     ]
 
 
-def run_taskbook(taskbook_path: str) -> dict:
+def run_taskbook(taskbook_path: str,
+                 hydro_curve_chart: str | None = None) -> dict:
     """Run the design chain for one task book; returns the summary dict.
 
     Pure computation and stdout formatting live apart: this function
     only computes and returns; the caller decides how to render.
+    With hydro_curve_chart set, also renders the task 4.1 hydrostatic
+    curves chart (a finer draft table than the summary CSV, same
+    task 1.4 computation) and reports the written path in the
+    summary.
     """
     data = _load_taskbook(Path(taskbook_path))
     spec, design_draft = _ship_spec_from_taskbook(data)
@@ -329,6 +334,16 @@ def run_taskbook(taskbook_path: str) -> dict:
         except SpecValidationError:
             seakeeping_summary = None
 
+    hydro_curve_chart_path = None
+    if hydro_curve_chart:
+        from .hydrostatics_chart import write_hydrostatic_curves_chart
+        chart_fractions = [0.2 + 0.1 * i for i in range(9)]  # 0.2T..1.0T
+        chart_table = hydrostatics_table(
+            hull, [round(design_draft * f, 4) for f in chart_fractions])
+        hydro_curve_chart_path = str(write_hydrostatic_curves_chart(
+            chart_table, hydro_curve_chart,
+            title=str(data.get("taskbook_id") or "")))
+
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
         "ship_type": spec.ship_type,
@@ -359,6 +374,7 @@ def run_taskbook(taskbook_path: str) -> dict:
         "weather_criterion": weather_summary,
         "propeller_design": propeller_summary,
         "seakeeping": seakeeping_summary,
+        "hydrostatic_curve_chart": hydro_curve_chart_path,
     }
     return summary
 
@@ -528,6 +544,11 @@ def main(argv: list[str] | None = None) -> int:
         "--json", action="store_true",
         help="print the full result as JSON",
     )
+    run.add_argument(
+        "--hydro-curve-chart", default=None, metavar="PATH",
+        help="also render the hydrostatic curves chart (task 4.1) to "
+             "an image file (e.g. hydrostatic_curves.png)",
+    )
     opt = sub.add_parser(
         "optimize",
         help="scan the dimension-ratio space for feasible designs "
@@ -551,19 +572,39 @@ def main(argv: list[str] | None = None) -> int:
         "--json", action="store_true",
         help="print the scan summary as JSON",
     )
+    rao = sub.add_parser(
+        "rao",
+        help="zero-speed rigid-body RAOs via capytaine "
+             "(task 3.8 stage 2; needs openhull[seakeeping])",
+    )
+    rao.add_argument("taskbook", help="path to the task book YAML")
+    rao.add_argument(
+        "--periods", default="5,6,7,8,10,12,16,20",
+        help="comma-separated wave periods in seconds "
+             "(default 5,6,7,8,10,12,16,20)")
+    rao.add_argument(
+        "--json", action="store_true",
+        help="print the RAO result as JSON",
+    )
     args = parser.parse_args(argv)
 
     try:
         if args.command == "run":
-            summary = run_taskbook(args.taskbook)
+            summary = run_taskbook(args.taskbook,
+                                   hydro_curve_chart=args.hydro_curve_chart)
             if args.csv:
                 _print_csv(summary)
             elif args.json:
                 _print_json(summary)
             else:
                 _print_summary(summary)
+            if summary.get("hydrostatic_curve_chart"):
+                print(f"hydrostatic curves chart -> "
+                      f"{summary['hydrostatic_curve_chart']}")
         elif args.command == "optimize":
             _run_optimize(args)
+        elif args.command == "rao":
+            _run_rao(args)
     except SpecValidationError as error:
         print(f"error: {error}", file=sys.stderr)
         return 2
@@ -571,6 +612,62 @@ def main(argv: list[str] | None = None) -> int:
         print(f"error: {error}", file=sys.stderr)
         return 3
     return 0
+
+
+def _run_rao(args) -> None:
+    """Zero-speed rigid-body RAOs on the transformed real hull (3.8-2)."""
+    from .seakeeping_bem import CapytaineUnavailable, compute_rigid_rao
+
+    data = _load_taskbook(Path(args.taskbook))
+    spec, design_draft = _ship_spec_from_taskbook(data)
+    kg_value = (data.get("requirements") or {}).get("kg_m")
+    if kg_value is None:
+        raise SpecValidationError(
+            "requirements.kg_m", None, "the RAO sweep needs the loading KG",
+            "the roll/pitch stiffness needs the loading KG in the "
+            "task book.")
+    balance = solve_weight_balance(spec)
+    hull, _transform = parent_to_taskbook(
+        lpp=balance.lpp,
+        beam=balance.beam,
+        draft=balance.draft,
+        target_cb=spec.cb,
+    )
+    hydro = hydrostatics_table(hull, [round(design_draft * f, 4)
+                                      for f in (0.9, 1.0)]).at(design_draft)
+    periods = [float(p.strip()) for p in str(args.periods).split(",")
+               if p.strip()]
+    try:
+        result = compute_rigid_rao(
+            hull, float(design_draft),
+            displacement_t=balance.displacement_t,
+            kg_m=float(kg_value),
+            km_m=hydro.km,
+            bml_m=hydro.bml,
+            waterplane_area_m2=hydro.aw,
+            periods_s=periods,
+        )
+    except CapytaineUnavailable as error:
+        print(f"error: {error}", file=sys.stderr)
+        raise SystemExit(2)
+    if args.json:
+        print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
+        return
+    info = result.mesh_info
+    print("=" * 64)
+    print(f"zero-speed RAOs - {data.get('taskbook_id') or '(task book)'} "
+          f"({info['n_faces']} panels, deck at {info['deck_z_m']:.2f} m)")
+    print("=" * 64)
+    print(f"{'T (s)':>7} | {'heave m/m':>22} | "
+          f"{'roll deg/m':>22} | {'pitch deg/m':>22}")
+    for seas in ("head", "beam"):
+        for period in result.periods_s:
+            row = {p.motion: p for p in result.points
+                   if p.seas == seas and p.period_s == period}
+            print(f"{period:>7.1f} | "
+                  f"{row['heave'].rao_abs:>22.3f} | "
+                  f"{row['roll'].rao_abs:>22.3f} | "
+                  f"{row['pitch'].rao_abs:>22.3f}   ({seas})")
 
 
 

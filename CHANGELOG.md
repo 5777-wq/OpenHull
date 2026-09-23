@@ -8,6 +8,29 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ### Added
 
+- Hydrostatic curves chart (plan task 4.1): `hydrostatics_chart.py`
+  renders the classic textbook layout (draft axis vertical,
+  increasing downward) with twelve panels from the task 1.4 table —
+  displacement, KB, BMT, KM, BML, TPC, MTC, LCB, LCF, Cb, Cw; new
+  `run --hydro-curve-chart PATH` flag.  Pure visualization: no new
+  formulas, the drawn numbers are exactly the tabulated ones.
+  First render was failed by an independent visual review on the
+  draft-axis direction and re-passed after the fix.
+- Stage-2 seakeeping: zero-speed rigid-body RAOs via capytaine
+  (task 3.8 stage 2).  New optional dependency
+  (`pip install openhull[seakeeping]`, lazy import, clean refusal
+  without it — owner decision 2026-09-23).  `seakeeping_bem.py`
+  lofts the task 2.6 offsets table into a closed panel mesh
+  (baseline-tangent keel strip, wall-sided deck, perpendicular
+  caps, outward winding) and capytaine supplies hydrodynamics only;
+  the RAO mass/inertia/stiffness matrices come from the whitelisted
+  chain (task 1.4 displacement, Duell roll inertia Eq. 3-39,
+  KYY = 0.25 L, rho*g*Aw, rho*grad*GM).  New `openhull rao`
+  subcommand (table or JSON).  Validation = independent-path
+  cross-checks (mesh volume vs table 0.1 %, long-wave heave -> 1,
+  short-wave -> 0, head-sea roll symmetry, roll peak vs stage-1
+  period).  Declared: radiation-only damping (resonance amplitudes
+  qualitative), zero speed, surge/sway/yaw suppressed.
 - First-level seakeeping estimate (plan task 3.8, stage 1):
   `seakeeping.py` implements the whitelisted textbook layer —
   deep-water wave relations (Eq. 2-7), encounter period/frequency

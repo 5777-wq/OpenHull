@@ -109,3 +109,40 @@ def test_optimize_subcommand_runs_and_writes_outputs(tmp_path):
     assert (out / "feasible_designs.csv").exists()
     assert (out / "tradeoff_speed_displacement_gm.png").exists()
     assert (out / "scan_summary.json").exists()
+
+
+def test_hydro_curve_chart_flag_writes_png(tmp_path, capsys):
+    out = tmp_path / "hydro_curves.png"
+    rc = main(["run", TASKBOOK, "--hydro-curve-chart", str(out)])
+    assert rc == 0
+    assert out.exists()
+    assert out.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
+    captured = capsys.readouterr().out
+    assert f"hydrostatic curves chart -> {out}" in captured
+
+
+def test_seakeeping_block_in_summary(summary):
+    # task 3.8 stage 1: the run summary carries the seakeeping layer
+    sk = summary["seakeeping"]
+    assert sk["roll_period_s"] > 0
+    assert len(sk["resonance_checks"]) == 4
+
+
+def test_rao_subcommand_runs(tmp_path, capsys):
+    pytest.importorskip("capytaine",
+                        reason="capytaine not installed")
+    rc = main(["rao", TASKBOOK, "--periods", "8,12,20"])
+    assert rc == 0
+    captured = capsys.readouterr().out
+    assert "zero-speed RAOs" in captured
+    assert "(head)" in captured and "(beam)" in captured
+
+
+def test_rao_subcommand_json(tmp_path, capsys):
+    pytest.importorskip("capytaine",
+                        reason="capytaine not installed")
+    rc = main(["rao", TASKBOOK, "--periods", "8,12", "--json"])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["mesh_info"]["n_faces"] > 0
+    assert len(payload["points"]) == 2 * 2 * 3

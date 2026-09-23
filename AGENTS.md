@@ -418,6 +418,36 @@ resonance check)**
   - Owner approval: task 3.8 stage-1 plan ("textbook formulas first",
     2026-09-23); whitelist amended before implementation.
 
+**Seakeeping stage 2: BEM RAOs via capytaine (external solver, optional)**
+- Owner decisions recorded (2026-09-23): the owner approved pushing
+  task 3.8 stage 2 AND stage 4.1 together ("可以两个都往下推");
+  the stage-2 dependency is packaged as an OPTIONAL extra
+  (`pip install openhull[seakeeping]`, pyproject
+  `[project.optional-dependencies]`) with lazy import and a clean
+  refusal when absent — packaging detail delegated to the
+  implementer under the standing goal delegation.  Clarification of
+  the section 7 red line: "no CFD" concerns viscous-resistance
+  simulation; linear potential-flow seakeeping (task 3.8 stage 2,
+  planned in the roadmap) is in scope.
+- capytaine (Apache-2.0, https://github.com/capytaine/capytaine),
+  pinned `>=3.0` — supplies HYDRODYNAMICS ONLY (added mass,
+  radiation damping, wave excitation) on a panel mesh lofted from
+  the same task 2.6 offsets table; the RAO equation-of-motion
+  matrices come from the whitelisted chain: mass = task 1.4
+  displacement, roll inertia = the Eq.(3-39) Duell radius,
+  pitch inertia = KYY = 0.25*L (p.428), heave stiffness
+  rho*g*Aw, roll stiffness rho*grad*GM_T, pitch stiffness
+  rho*grad*BML.  Declared approximations (module docstring,
+  seakeeping_bem.py): zero forward speed; surge/sway/yaw
+  suppressed; deck closed wall-sided at 1.15*T above the design
+  draft (the task 3.4 approximation) with Airy-decayed pressure on
+  the dry strip; diagonal stiffness (no roll/pitch coupling);
+  beta = 0 head in the Nemoh convention.
+- NOT a formula source: capytaine replaces no whitelisted formula;
+  it numerically solves the potential-flow problem for the same
+  geometry the table layer integrates.  Validation = cross-checks
+  against the table layer (VALIDATION.md item 19).
+
 **Adding a formula:** propose the source, owner approves, this section is
 amended first, implementation second. A formula without a whitelisted
 source must not be merged.
@@ -449,6 +479,10 @@ source must not be merged.
 ## 8. Code standards
 
 - Python ≥ 3.11, managed with uv, src layout (`src/openhull/`).
+- Third-party runtime packages: numpy, matplotlib, ezdxf, pyyaml
+  (core) plus capytaine as an OPTIONAL extra
+  (`openhull[seakeeping]`, task 3.8 stage 2 — imported lazily,
+  never a hard dependency).
 - Type annotations on every public function; dataclasses validated at
   construction (e.g. `Cb = 1.5` must raise, with an explanation of why
   the value is invalid — constraint plus physical/mathematical reason).
