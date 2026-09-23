@@ -1,5 +1,5 @@
 site_name: OpenHull
-site_description: "Agent-orchestrated parametric ship preliminary design — every number traceable to a formula whitelist."
+site_description: "Agent-orchestrated parametric ship preliminary design — every number traceable to a formula whitelist. 船舶初步设计工具链：每个数字可溯源。"
 site_url: https://5777-wq.github.io/OpenHull/
 repo_url: https://github.com/5777-wq/OpenHull
 repo_name: 5777-wq/OpenHull
@@ -9,7 +9,10 @@ theme:
   highlightjs: true
 
 nav:
-  - Home: index.md
-  - Validation: validation.md
-  - Changelog: changelog.md
-  - Contributing: contributing.md
+  - 首页: index.md
+  - 快速上手（中文）: quickstart-zh.md
+  - 方法与数据来源（中文）: methods-zh.md
+  - English:
+      - Validation record: validation.md
+      - Changelog: changelog.md
+      - Contributing: contributing.md

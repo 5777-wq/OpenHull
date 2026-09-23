@@ -1,12 +1,22 @@
-# OpenHull
+# OpenHull 文档站
 
-**Agent-orchestrated parametric ship preliminary design** — from a
-task book to principal dimensions, hydrostatics, IS Code stability,
-resistance/propulsion, propeller design, seakeeping, an arrangement
-schematic and a design report, with **every number traceable to a
-formula whitelist** (AGENTS.md section 5).
+**Design the shell that carries it all.**
 
-## One command
+开源的、由 AI 智能体编排的参数化船舶初步设计工具链：从一份任务书出发，
+自动完成主尺度、静水力、IS Code 稳性、阻力与推进、螺旋桨设计、耐波性、
+失速估算、图纸与设计报告——**每一个数字都可溯源到公式白名单**。
+
+> 🌐 English reference pages: [Validation](validation.md) ·
+> [Changelog](changelog.md) · [Contributing](contributing.md)
+> 🏠 官网主页：[5777-wq.github.io/openhull-site](https://5777-wq.github.io/openhull-site/)
+> 📦 代码仓库：[github.com/5777-wq/OpenHull](https://github.com/5777-wq/OpenHull)
+
+## 三步跑通
+
+**① 写任务书** —— 一份 YAML（船型、载重吨、服务航速、航区），参考
+仓库里的 [examples/taskbook_bulk_carrier.yaml](https://github.com/5777-wq/OpenHull/blob/main/examples/taskbook_bulk_carrier.yaml)。
+
+**② 跑一条命令** ——
 
 ```bash
 uv run openhull run examples/taskbook_bulk_carrier.yaml \
@@ -16,33 +26,21 @@ uv run openhull run examples/taskbook_bulk_carrier.yaml \
   --arrangement-dxf ga.dxf
 ```
 
-Regenerated sample outputs live in
-[examples/demo_outputs](https://github.com/5777-wq/OpenHull/tree/main/examples/demo_outputs).
+**③ 拿成果** —— 设计报告（中文 Markdown）、静水力曲线图、总布置
+简图、分层 DXF；样例输出已随仓库提交在
+[examples/demo_outputs](https://github.com/5777-wq/OpenHull/tree/main/examples/demo_outputs)。
 
-## What the toolchain does
+## 本站目录
 
-| stage | deliverable |
-|---|---|
-| dimensions & weight | Norman-iterated displacement balance |
-| hull form | digitised Series 60 parent + Lackenby transform |
-| hydrostatics | tables, Bonjean, curves chart |
-| stability | IS Code 2.2 criteria + severe wind & rolling |
-| performance | Ayre resistance, Holtrop factors, B-series propeller |
-| design space | grid scan, refusal histogram, Pareto front |
-| seakeeping | textbook first level + capytaine RAOs (optional extra) |
-| speed loss | Kwon's method (Beaufort / direction / loading) |
-| deliverables | DXF, charts, Chinese Markdown report |
+- **[快速上手（中文）](quickstart-zh.md)** —— 安装、五条核心命令逐条讲解
+- **[方法与数据来源（中文）](methods-zh.md)** —— 每个模块用的公式、出处、
+  验收数字
+- **英文参考页**：[Validation record](validation.md) ·
+  [Changelog](changelog.md) · [Contributing](contributing.md)
 
-## Discipline
+## 当前状态
 
-1. every formula whitelisted **before** implementation, page-verified
-   against the source;
-2. acceptance by numbers: book worked examples, independent-path
-   cross-checks, public benchmarks (JBC, DTMB 1712, NMRI MP687);
-3. declared approximations in every module docstring;
-4. professional judgement stays with the naval architect.
-
-See [VALIDATION.md](https://github.com/5777-wq/OpenHull/blob/main/VALIDATION.md)
-for the full acceptance record and
-[CONTRIBUTING.md](https://github.com/5777-wq/OpenHull/blob/main/CONTRIBUTING.md)
-before proposing formulas.
+**v1.0.0**（2026-09-23）——路线图五个阶段全部完成，348 个测试全绿。
+完整验证记录（22 条验收，逐条含数字）见英文
+[Validation](validation.md) 页或仓库
+[VALIDATION.md](https://github.com/5777-wq/OpenHull/blob/main/VALIDATION.md)。
