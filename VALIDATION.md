@@ -410,10 +410,37 @@ These are features of the current stage, not hidden weaknesses:
     definition, stated wherever a speed is reported.  Acceptance
     run (TB-001S scenario, 16.0 kn - the 14.5 kn [NMRI] value lies
     below the Ayre speed-length band for this ship): 192 candidates
-    -> 64 feasible, all passing the IS Code 2.2 criteria and the
-    weather criterion; refusals: Ayre C_0 band 68, Ayre speed band
-    35, propeller envelope 14, weather 9, hydrostatics 2; Pareto
-    front 14 designs at the median reference power 24,730.8 kW.
+    -> 61 feasible, all passing the IS Code 2.2 criteria and the
+    weather criterion; refusals: Ayre C_0 band 69, Ayre speed band
+    35, propeller wake-fraction band 18, weather 9; Pareto front 8
+    designs at the median reference power 41,336.0 kW.
+    **Correction (2026-09-24, v1.0.4).** The numbers recorded here
+    before v1.0.4 were 64 feasible / 14-design front at
+    24,730.8 kW, and they were wrong: `optimize.py` converted the
+    service speed as `service_kn / 0.514444`, dividing where the
+    conversion multiplies, so the propulsion stage of every scan
+    since task 3.6 ran at 3.78x the ship speed (V_A 25.7 m/s for a
+    20 kn ship).  Every gate downstream judged that phantom vessel:
+    whole bands were refused on `d_bounds_m` / `thrust_n` (the
+    reviewer's 100,000 t / 20 kn grid returned 0 feasible), and
+    where the search still bracketed, it designed propellers for the
+    phantom speed - D 10.09-11.25 m, eta_o 0.737-0.750, shaft power
+    22.5-27.3 MW on the TB-001S grid.  With `knots_to_ms` in place
+    the same 192-point grid gives 61 feasible, an 8-design front at
+    41,336.0 kW, D 7.74-8.42 m and eta_o 0.406-0.467, and the
+    reviewer's 100,000 t / 20 kn grid goes from 0 to 100 feasible
+    designs (median 59,946.3 kW).  Pinned by an independent check on
+    every recorded design: the implied advance speed J*n*D must sit
+    inside [0.55, 1.0] x V (`test_propeller_advance_speed_is_the_
+    ship_speed`).  A window that only partly overlaps the series J
+    domain is intersected and searched, never extrapolated; an empty
+    intersection is refused with both bands printed.
+    The attainable-speed axis is populated where the band allows: a
+    design that already absorbs more than the reference power at the
+    Ayre band floor (V/sqrt(L) = 0.50) has no in-band balance and is
+    refused rather than extrapolated - 26 of 61 in the acceptance
+    run, the rest counted as `off_reference_axis` in the scan
+    summary instead of being silently dropped from the Pareto test.
     TB-001 at its [NMRI] 14.5 kn correctly returns an empty
     feasible set with every refusal declared - no design of this
     deadweight satisfies the whitelisted method domains at that
@@ -577,7 +604,7 @@ These are features of the current stage, not hidden weaknesses:
 ## Reproducing
 
 ```bash
-uv run pytest                        # 375 tests
+uv run pytest                        # 381 tests (373 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

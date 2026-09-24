@@ -167,11 +167,17 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
         f"- 载重量比 = {_fmt(summary['deadweight_ratio_achieved'], 4)}",
     ]
     if summary.get("draft_mismatch_m") is not None:
+        # direction words, not a signed number: "差 -0.425 m" makes the
+        # reader decode a sign while the sentence already holds both
+        # drafts (review 2026-09-24, R-3)
+        declared = summary.get("draft_declared_m")
+        balance = summary["draft_m"]
+        side = "高于" if (declared or 0) > balance else "低于"
         lines.append(
-            f"- ⚠ 任务书声明吃水 {_fmt(summary.get('draft_declared_m'), 2)} m "
-            f"与重量平衡吃水 {_fmt(summary['draft_m'], 3)} m 不一致"
-            f"（差 {_fmt(summary['draft_mismatch_m'], 3)} m）——本报告全部"
-            f"结果按**平衡吃水**完成。")
+            f"- ⚠ 任务书声明吃水 {_fmt(declared, 2)} m 与重量平衡吃水 "
+            f"{_fmt(balance, 3)} m 不一致：声明值{side}平衡值 "
+            f"{_fmt(abs(summary['draft_mismatch_m']), 3)} m"
+            f"——本报告全部结果按**平衡吃水**完成。")
         hint = summary.get("draft_mismatch_hint")
         if hint:
             lo, hi = hint["b_over_t_band"]
@@ -223,6 +229,22 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
         ]
         lines += ["| 要素 | 数值 | 单位 |", "|---|---|---|"]
         lines += [f"| {n} | {v} | {u} |" for n, v, u in rows]
+        # two deltas live in this report and they are not the same
+        # number: §1 closes the weight balance, §2 integrates the hull
+        # on its own deepest waterline.  Say so, with the size of the
+        # gap, instead of leaving the reader to find it (review
+        # 2026-09-24, R-2)
+        closed = summary.get("displacement_t")
+        integrated = design.get("displacement_t")
+        if closed and integrated and abs(integrated - closed) > 1e-6:
+            gap = integrated - closed
+            lines.append(
+                f"> 口径注：本表 Δ = {_fmt(integrated, 1)} t 是船体在自身最深"
+                f"水线（{_fmt(design['draft_m'], 3)} m）积分所得；§1 的 "
+                f"Δ = {_fmt(closed, 1)} t 是重量平衡的闭合目标，两者相差 "
+                f"{_fmt(abs(gap), 1)} t（{abs(gap) / closed * 100:.4f}%），"
+                f"源于浮力积分路径与 Lackenby 变换收敛残差，不是两个互相"
+                f"矛盾的数。")
         lines += ["",
                   "> 完整静水力表由 `--csv` 输出；本表仅列设计吃水行。", ""]
 

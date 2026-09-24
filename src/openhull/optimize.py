@@ -55,7 +55,7 @@ from .propeller import (
 from .propulsion import propulsion_factors, solve_service_speed
 from .resistance import ayre_effective_power
 from .seakeeping import estimate_seakeeping
-from .spec import ShipSpec, SpecValidationError
+from .spec import ShipSpec, SpecValidationError, knots_to_ms
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
 from .weight_balance import solve_weight_balance
 
@@ -342,7 +342,15 @@ def _evaluate_point(
     except SpecValidationError as error:
         return RejectedPoint(lob, bot, cb, "ayre", str(error)[:200])
 
-    va_full = service_kn / 0.514444
+    # ship speed in m/s — the scan's propulsion stage must use the same
+    # conversion as the CLI path (knots_to_ms).  Dividing by 0.514444
+    # here instead of multiplying ran this stage at 3.78x the ship
+    # speed for as long as the scan existed: every gate downstream then
+    # judged a phantom vessel (Va 25.7 m/s for a 20 kn ship), refusing
+    # whole bands on d_bounds_m/thrust_n and, where the search survived,
+    # reporting propellers designed for that speed.  Pinned by
+    # test_scan_propeller_advance_speed_is_the_ship_speed.
+    v_ms = knots_to_ms(service_kn)
     d_guess = 0.55 * balance.draft
     d_bounds = (0.35 * balance.draft,
                 config.max_tip_diameter_draft_ratio * balance.draft)
@@ -356,15 +364,15 @@ def _evaluate_point(
                 beam_m=balance.beam, draft_m=balance.draft,
                 cb=cb, cp=hydro.cp, cm=hydro.cm, cwp=hydro.cw,
                 lcb_pct_fwd=hydro.lcb,
-                propeller_diameter_m=d_guess, speed_ms=va_full,
+                propeller_diameter_m=d_guess, speed_ms=v_ms,
                 screw="single", eta_r=config.relative_rotative_eff,
             )
-            va_ms = va_full * (1.0 - factors.w)
+            va_ms = v_ms * (1.0 - factors.w)
             # thrust-led design: the required thrust T = P_E/(V(1-t))
             # is efficiency-independent, so no eta_o fixed-point is
             # needed (the power-led iteration diverges near the
             # series' eta_o pole)
-            thrust_required = pe_kw * 1e3 / (va_full
+            thrust_required = pe_kw * 1e3 / (v_ms
                                              * (1.0 - factors.t))
             prop = solve_optimal_propeller_for_thrust(
                 thrust_required, va_ms, n_rps, series,

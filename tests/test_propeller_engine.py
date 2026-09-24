@@ -149,3 +149,36 @@ def test_thrust_balance_refuses_unbracketed_band():
     with pytest.raises(SpecValidationError):
         solve_speed_thrust_balance(
             MOCK, 0.95, 1.975, 5.5, pe, wake=0.34, thrust_deduction=0.26)
+
+
+def test_disjoint_diameter_window_names_both_bands():
+    """R-4 (review 2026-09-24): the window and the J domain are
+    INTERSECTED here, so a d_bounds_m refusal means the intersection is
+    empty.  When that happens the message must print both bands - the
+    reviewer saw 73 of these and could not tell a bad window from a bad
+    speed unit, which is exactly how the scan's unit defect (Va 3.78x
+    the ship speed) stayed invisible for months.
+    """
+    with pytest.raises(SpecValidationError) as excinfo:
+        # a fast advance speed with a small-propeller window: every J in
+        # the window sits ABOVE the series domain
+        solve_optimal_propeller(
+            10_000.0, va_ms=20.0, n_rps=2.0, series=MOCK,
+            d_bounds_m=(0.5, 0.8))
+    message = str(excinfo.value)
+    assert "D 0.50-0.80 m" in message            # the window
+    assert "J 12.500..20.000" in message         # what it maps to
+    assert "series domain" in message            # what it missed
+    assert "advance speed" in message            # where to look
+
+
+def test_diameter_window_is_intersected_not_rejected():
+    """A window that only PARTLY overlaps the J domain is searched on
+    the overlap (intersection is not extrapolation); only an empty
+    intersection is refused."""
+    # the mock domain is (0.05, 1.35); a window spanning beyond it must
+    # still solve
+    prop = solve_optimal_propeller(
+        500.0, va_ms=4.0, n_rps=2.0, series=MOCK, d_bounds_m=(0.5, 60.0))
+    assert prop.diameter_m > 0
+    assert MOCK.j_domain[0] <= prop.j <= MOCK.j_domain[1]

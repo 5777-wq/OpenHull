@@ -73,3 +73,40 @@ def test_report_embeds_chart_and_arrangement(tmp_path):
     assert "Cargo Hold 1" in text        # compartment table present
     assert "default bulk-carrier scheme" in text
     json.dumps(summary["arrangement"])   # sanity: json-safe data
+
+
+def test_report_states_which_delta_is_which(tmp_path):
+    """R-2 (review 2026-09-24): §1 closes the weight balance, §2
+    integrates the hull - two different deltas.  The report must say so
+    with the size of the gap instead of leaving the reader to find it.
+    """
+    summary = _summary()
+    summary["hydrostatics"][0]["displacement_t"] = 6209.7  # +9.7 t gap
+    text = write_report_md(summary, tmp_path / "gap.md").read_text(
+        encoding="utf-8")
+    assert "口径注" in text
+    assert "6,209.7" in text and "6,200.0" in text
+    assert "相差 9.7 t" in text
+    assert "不是两个互相矛盾的数" in text
+    # an exact match needs no note
+    clean = write_report_md(_summary(), tmp_path / "clean.md").read_text(
+        encoding="utf-8")
+    assert "口径注" not in clean
+
+
+def test_report_reads_the_draft_mismatch_by_direction(tmp_path):
+    """R-3 (review 2026-09-24): "差 -0.425 m" made the reader decode a
+    sign while the sentence already holds both drafts."""
+    summary = _summary()
+    summary["draft_declared_m"] = 5.575
+    summary["draft_mismatch_m"] = -0.425
+    text = write_report_md(summary, tmp_path / "neg.md").read_text(
+        encoding="utf-8")
+    assert "声明值低于平衡值 0.425 m" in text
+    assert "差 -0.425" not in text
+
+    summary["draft_declared_m"] = 6.5
+    summary["draft_mismatch_m"] = 0.5
+    text = write_report_md(summary, tmp_path / "pos.md").read_text(
+        encoding="utf-8")
+    assert "声明值高于平衡值 0.500 m" in text

@@ -4,6 +4,57 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [1.0.4] - 2026-09-24
+
+### Fixed
+
+- **The design-space scan ran its propulsion stage at 3.78x the ship
+  speed.** `optimize.py` converted the service speed as
+  `service_kn / 0.514444` — dividing where knots->m/s multiplies — so
+  every scan since task 3.6 handed `Va = 25.7 m/s` to a 20 kn ship and
+  every downstream gate judged that phantom vessel: whole bands were
+  refused on `d_bounds_m` (empty J intersection) and `thrust_n`, and
+  where the search still bracketed, it reported propellers designed
+  for the phantom speed (TB-001S: D 10.09-11.25 m, eta_o 0.737-0.750,
+  22.5-27.3 MW; corrected: D 7.74-8.42 m, eta_o 0.406-0.467, 36.0-49.5
+  MW).  Corrected numbers and the before/after table are in VALIDATION
+  item 17; the reviewer's 100,000 t / 20 kn grid — the basis of the
+  "20 kn is not attainable for this ship" reading — goes from 0 to 100
+  feasible designs (median reference power 59,946.3 kW).  Pinned by a
+  check on every recorded design: the implied advance speed J*n*D must
+  lie in [0.55, 1.0] x V.
+- **Band guards no longer compare exactly** (`spec.within_band`, 1e-9
+  relative): the chain recomputes the guarded ratios through a
+  cube-root round trip, so the grid endpoint B/T = 3.5 — the guard
+  band's own ceiling — became 3.5000000000000004 for some L/B and the
+  point was refused as a floating-point artifact (review N3: the
+  producer had been snapped to the endpoint, the consumer kept
+  comparing exactly).  Real overshoots are unaffected.  Applied to the
+  L/B, B/T, L/D and Froude guards and to both Ayre band guards.
+- The propeller diameter window and the series J domain are
+  intersected through one shared guard that prints both bands, the
+  revolutions and the advance speed on refusal — a unit slip and a bad
+  window used to look identical from the outside (R-4).
+- Report: the two deltas (§1 weight-balance closure, §2 hull
+  integration) are distinguished by a 口径注 with their gap size (R-2),
+  and the draft mismatch reads by direction ("声明值低于平衡值
+  0.425 m") instead of a signed number (R-3).
+- Test collection: `tests/test_seakeeping_bem.py` used a module-level
+  `importorskip`, which reports one skip while collecting none of the
+  tests — without the optional extra a run printed "collected N"
+  smaller than "passed + skipped" and hid how many cases went unrun.
+  Marked instead, so the arithmetic is exact (R-5).
+
+### Changed
+
+- The scan summary declares `off_reference_axis`: feasible designs that
+  already absorb more than the reference power at the Ayre band floor
+  have no in-band balance, are refused rather than extrapolated, and
+  stay out of the Pareto test by design (26 of 61 in the acceptance
+  run).  The sparse attainable-speed axis is declared, not discovered.
+- Acceptance and test counts move to 381 (373 passed + 8 skipped
+  without the optional seakeeping extra).
+
 ## [1.0.3] - 2026-09-24
 
 ### Added
@@ -235,7 +286,11 @@ test), plus the reviewer's data-quality suggestion:
   Acceptance (TB-001S 16 kn scan scenario): 192 candidates ->
   64 feasible designs, all stability criteria passing, 14-design
   Pareto front; TB-001 at its 14.5 kn service speed returns an
-  empty set with every refusal declared.
+  empty set with every refusal declared.  *(Superseded in v1.0.4: the
+  scan's propulsion stage ran at 3.78x the ship speed, so these
+  numbers are hull-independent but power-wrong — the same grid now
+  gives 61 feasible / 8-design front at 41,336.0 kW, see VALIDATION
+  item 17.)*
 - Wageningen B-series open-water regression, optimum-propeller
   engine and terminal design (plan task 3.3): `b_series.py` carries
   the page-referenced coefficient transcription of Bernitsas/Ray/

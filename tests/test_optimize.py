@@ -7,6 +7,7 @@ the Pareto extraction.
 """
 
 import dataclasses
+import math
 
 import pytest
 
@@ -17,7 +18,11 @@ from openhull.optimize import (
     design_space_scan,
     pareto_front,
 )
+from openhull.propulsion import propulsion_factors
+from openhull.resistance import ayre_effective_power
 from openhull.spec import ShipSpec, knots_to_ms
+
+FT_PER_M = 1.0 / 0.3048
 
 # TB-001S scan scenario: the 14.5 kn [NMRI] service speed sits below
 # the whitelisted Ayre speed-length band for a 280 m ship, so the scan
@@ -65,10 +70,85 @@ def test_every_feasible_candidate_carries_a_full_record(scan):
         assert cand.lpp_m > 0 and cand.beam_m > 0 and cand.draft_m > 0
 
 
-def test_speed_at_reference_power_present(scan):
+def test_reference_speed_axis_is_populated_where_the_band_allows(scan):
+    """The attainable-speed axis is the median feasible shaft power.
+
+    A design can be placed on it only if its effective-power curve
+    crosses that power INSIDE the Ayre speed-length band.  Hulls that
+    already absorb more than the reference at the band floor (0.50) can
+    only reach it by going slower than the validated band, so the task
+    3.2 solver refuses and ``pareto_front`` drops them by design.  Both
+    populations are pinned against the model rather than assuming the
+    axis is always full (this is what the corrected propulsion stage
+    exposes: 0.3-1.3 % of nothing, see the speed-unit note in
+    optimize.py).
+    """
     assert scan.reference_power_kw is not None
+    band_lo, band_hi = 0.50, 1.20
+    placed = 0
     for cand in scan.feasible:
-        assert cand.speed_at_reference_power_kn is not None
+        speed = cand.speed_at_reference_power_kn
+        if speed is not None:
+            placed += 1
+            assert band_lo <= speed / math.sqrt(cand.lpp_m * FT_PER_M) <= band_hi
+            continue
+        # not placed: the band floor already absorbs more than the
+        # reference power, so no in-band balance exists
+        factors = propulsion_factors(
+            lpp_m=cand.lpp_m, lwl_m=cand.lpp_m, beam_m=cand.beam_m,
+            draft_m=cand.draft_m, cb=cand.cb, cp=cand.cp, cm=cand.cm,
+            cwp=cand.cwp, lcb_pct_fwd=cand.lcb_pct_fwd,
+            propeller_diameter_m=cand.propeller_diameter_m,
+            speed_ms=SPEC.service_speed, screw="single",
+            eta_r=CONFIG_KW["relative_rotative_eff"])
+        target = (scan.reference_power_kw * cand.eta_open_water
+                  * CONFIG_KW["relative_rotative_eff"] * factors.eta_h)
+        floor_kn = band_lo * math.sqrt(cand.lpp_m * FT_PER_M)
+        floor_pe = ayre_effective_power(
+            displacement_t=cand.displacement_t, speed_kn=floor_kn,
+            lpp_m=cand.lpp_m, beam_m=cand.beam_m, draft_m=cand.draft_m,
+            cb=cand.cb, xc_pct_fwd=cand.lcb_pct_fwd,
+            lwl_m=cand.lpp_m,  # the scan passes the waterline it has
+            screw="single").pe_bare_kw
+        assert floor_pe > target, (cand.l_over_b, cand.b_over_t, cand.cb)
+    assert placed >= 1, "the axis must be populated for some design"
+
+
+def test_propeller_advance_speed_is_the_ship_speed(scan):
+    """P0 pin (review 2026-09-24 follow-up): the scan's propulsion stage
+    must run at the ship's speed.
+
+    optimize.py divided by the knots->m/s factor instead of multiplying
+    it, so this stage designed propellers for a phantom vessel 3.78x
+    faster (Va 25.7 m/s for a 20 kn ship).  Every recorded design carries
+    J, n and D, so the implied advance speed can be checked against the
+    ship speed: with a wake fraction in its physical band (0..0.4, the
+    project's own guard) it must lie in [0.6, 1.0] x V.
+    """
+    v_ms = SPEC.service_speed
+    n_rps = ScanConfig(**CONFIG_KW).propeller_rpm / 60.0
+    assert scan.feasible, "the scenario must produce designs to check"
+    for cand in scan.feasible:
+        va = cand.advance_coefficient * n_rps * cand.propeller_diameter_m
+        assert 0.55 * v_ms <= va <= v_ms, (cand.l_over_b, cand.b_over_t,
+                                           cand.cb, va / v_ms)
+
+
+def test_band_endpoint_grid_leaves_no_propulsion_stage_refusal():
+    """N3 end-to-end (review 2026-09-24): the grid endpoint B/T = 3.5 is
+    the guard band's own ceiling, and the chain recomputes B/T from a
+    cube-root round trip - 3.5000000000000004 for some L/B.  A point
+    refused there is a floating-point artifact, not a design verdict, so
+    run the grid the reviewer ran and assert the weight-balance stage
+    refuses none of its endpoints.
+    """
+    grid = SweepGrid(l_over_b=(6.0, 7.0, 2), b_over_t=(2.5, 3.5, 2),
+                     cb=(0.81, 0.81, 1))
+    res = design_space_scan(SPEC, kg_m=13.29, grid=grid,
+                            config=ScanConfig(**CONFIG_KW))
+    for r in res.rejected:
+        assert r.stage != "weight_balance", r.reason
+    assert len(res.feasible) + len(res.rejected) == 4
 
 
 def test_seakeeping_columns_reported_not_gating(scan):

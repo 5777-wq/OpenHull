@@ -23,14 +23,24 @@ import pytest
 from openhull.hydrostatics import hydrostatics_table
 from openhull.linesplan import parent_to_taskbook
 from openhull.seakeeping import roll_period_regulation
-
-capytaine = pytest.importorskip(
-    "capytaine", reason="capytaine not installed (openhull[seakeeping])")
-
-from openhull.seakeeping_bem import (  # noqa: E402
+from openhull.seakeeping_bem import (  # capytaine itself imports lazily
     build_hull_body,
     compute_rigid_rao,
 )
+
+try:  # optional extra: this module stays importable without it
+    import capytaine  # noqa: F401
+    HAS_CAPYTAINE = True
+except ImportError:  # pragma: no cover - environment dependent
+    HAS_CAPYTAINE = False
+
+# marked, NOT a module-level importorskip: a module-level skip reports
+# one skip while collecting none of the tests, so a run without the
+# optional extra prints "collected N" smaller than "passed + skipped"
+# and hides how many cases went unrun (review 2026-09-24, R-5)
+pytestmark = pytest.mark.skipif(
+    not HAS_CAPYTAINE,
+    reason="capytaine not installed (openhull[seakeeping])")
 
 PERIODS = (4.0, 5.0, 6.0, 8.0, 10.0, 20.0)
 

@@ -950,6 +950,13 @@ def _run_optimize(args) -> None:
     refusal_fields = dict(sorted(_Counter(
         f"{r.stage}.{_violating_field(r.reason)}"
         for r in result.rejected).items()))
+    # the attainable-speed axis is the reference power; a feasible
+    # design whose hull already absorbs more than that at the Ayre band
+    # floor cannot be placed on it and is refused (not extrapolated).
+    # Count them, so the sparse axis is declared rather than discovered
+    # (review 2026-09-24, §3 lesson: composition must be visible)
+    off_axis = sum(1 for c in result.feasible
+                   if c.speed_at_reference_power_kn is None)
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
         "grid": {"l_over_b": args.grid_lob, "b_over_t": args.grid_bt,
@@ -959,6 +966,7 @@ def _run_optimize(args) -> None:
         "rejection_histogram": result.rejection_histogram(),
         "refusal_fields": refusal_fields,
         "reference_power_kw": result.reference_power_kw,
+        "off_reference_axis": off_axis,
         "pareto_count": len(front),
         "outputs": {"csv": str(csv_path), "rejected_csv":
                     str(rejected_path), "chart": str(chart_path)},
@@ -990,6 +998,11 @@ def _run_optimize(args) -> None:
         print(f"reference power    : "
               f"{result.reference_power_kw:,.1f} kW delivered")
     print(f"pareto front       : {len(front)} designs")
+    if result.reference_power_kw is not None:
+        print(f"off reference axis : {off_axis:>4d} of "
+              f"{len(result.feasible)} feasible designs (absorb more than "
+              f"the reference power at the Ayre band floor; excluded from "
+              f"the Pareto test, not extrapolated)")
     print(f"outputs            : {csv_path}")
     print(f"                     {rejected_path}")
     print(f"                     {chart_path}")

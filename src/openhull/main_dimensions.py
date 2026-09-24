@@ -32,7 +32,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from .spec import SEAWATER_DENSITY, ShipSpec, SpecValidationError
+from .spec import (SEAWATER_DENSITY, ShipSpec, SpecValidationError,
+                   within_band)
 
 #: Standard gravity, m/s² (AGENTS.md §1)
 GRAVITY = 9.81
@@ -204,7 +205,7 @@ def _chain_solve(
 
     # -- applicability guards on the RESULT (AGENTS.md §6) ---------------
     fn = spec.service_speed / math.sqrt(GRAVITY * l_est)
-    if not 0.10 <= fn <= 0.25:
+    if not within_band(fn, 0.10, 0.25):
         raise SpecValidationError(
             "service_speed", spec.service_speed,
             "resulting Froude number within 0.10-0.25",
@@ -236,7 +237,7 @@ def _chain_solve(
 def _check_band(
     value: float, lo: float, hi: float, label: str, l_est: float, prefix: str
 ) -> None:
-    if not lo <= value <= hi:
+    if not within_band(value, lo, hi):
         raise SpecValidationError(
             f"{prefix}{label}", value, f"{lo} <= {label} <= {hi}",
             f"the estimate (L = {l_est:.1f} m) landed outside the "

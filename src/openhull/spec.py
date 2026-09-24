@@ -34,6 +34,29 @@ KNOTS_TO_MS = 1852.0 / 3600.0
 #: Standard seawater density, t/m³ (AGENTS.md §1)
 SEAWATER_DENSITY = 1.025
 
+#: Relative tolerance for band-edge comparisons in refusal guards.
+#: Guarded quantities are often RECOMPUTED from the requested value — a
+#: cube-root round trip, a knots->m/s conversion, a grid endpoint — and
+#: can land one ulp outside a band the requested value sits exactly on:
+#: B/T 3.5 becomes 3.5000000000000004 for some L/B, and the point is
+#: refused by a guard whose own band says 3.5 is acceptable (review
+#: 2026-09-24, N3: the grid producer snapped to the endpoint, the
+#: consumer kept comparing exactly).  The band keeps its physical
+#: meaning; only the comparison stops being exact.
+BAND_REL_TOL = 1e-9
+
+
+def within_band(value: float, lo: float, hi: float) -> bool:
+    """True when ``value`` lies in [lo, hi] to within BAND_REL_TOL.
+
+    For refusal guards on values recomputed from the request (see
+    BAND_REL_TOL).  Genuine violations are unaffected: the tolerance is
+    1e-9 relative — 3.5e-9 on a B/T of 3.5 — while real overshoots in
+    these chains are orders of magnitude larger.
+    """
+    tol = BAND_REL_TOL * max(abs(lo), abs(hi), 1.0)
+    return lo - tol <= value <= hi + tol
+
 
 def knots_to_ms(knots: float) -> float:
     """Convert a speed in knots to metres per second."""

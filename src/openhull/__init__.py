@@ -73,6 +73,7 @@ from .main_dimensions import (
     required_b_over_t_at_draft,
 )
 from .spec import (
+    BAND_REL_TOL,
     SEAWATER_DENSITY,
     Hydrostatics,
     HydrostaticsTable,
@@ -80,6 +81,7 @@ from .spec import (
     SpecValidationError,
     knots_to_ms,
     ms_to_knots,
+    within_band,
 )
 from .stability import (
     BUOYANCY_TOLERANCE,
@@ -129,6 +131,8 @@ except PackageNotFoundError:  # running from a source tree without install
 __all__ = [
     "__version__",
     "SEAWATER_DENSITY",
+    "BAND_REL_TOL",
+    "within_band",
     "DEFAULT_ALGORITHM",
     "MAIN_DIMENSION_ALGORITHMS",
     "AlgorithmInfo",

@@ -343,6 +343,42 @@ def _kq_demand(series: OpenWaterSeries, j: float, kq_required: float) -> float:
     return 0.5 * (lo + hi)
 
 
+def _check_diameter_band(
+    d_bounds_m: Tuple[float, float] | None,
+    va_ms: float,
+    n_rps: float,
+    series: OpenWaterSeries,
+) -> None:
+    """Refuse a diameter window that misses the series J domain entirely.
+
+    The window and the J domain are intersected (not extrapolated): a
+    partial overlap is searched, only an empty one is refused.  Both
+    bands are printed, because the interesting failure is not "the
+    window is wrong" but "the operating point does not exist" - the
+    advance speed, the revolutions and the window together decide
+    whether any J is inside the domain, and a speed fed in the wrong
+    unit looks exactly like a badly chosen window from the outside
+    (review 2026-09-24: a scan ran this stage at 3.78x the ship speed
+    and reported 73 empty intersections as a propeller verdict).
+    """
+    if d_bounds_m is None:
+        return
+    d_lo, d_hi = sorted(d_bounds_m)
+    j_from_band = (va_ms / (n_rps * d_hi), va_ms / (n_rps * max(d_lo, 1e-9)))
+    j_lo = max(series.j_domain[0], j_from_band[0])
+    j_hi = min(series.j_domain[1], j_from_band[1])
+    if j_lo > j_hi:
+        raise SpecValidationError(
+            "d_bounds_m", d_bounds_m,
+            "a diameter band intersecting the series J domain",
+            f"the requested window D {d_lo:.2f}-{d_hi:.2f} m maps to "
+            f"J {j_from_band[0]:.3f}..{j_from_band[1]:.3f} at "
+            f"V_A {va_ms:.2f} m/s and n {n_rps:.3f} rps, which does not "
+            f"meet the series domain {series.j_domain} - check the "
+            "window, the revolutions and the advance speed (and its "
+            "unit) against each other.")
+
+
 def solve_optimal_propeller(
     delivered_power_kw: float,
     va_ms: float,
@@ -372,18 +408,12 @@ def solve_optimal_propeller(
         raise SpecValidationError(
             "va_ms/n_rps", (va_ms, n_rps), "> 0",
             "advance speed and revolutions must be positive.")
+    _check_diameter_band(d_bounds_m, va_ms, n_rps, series)
     j_lo, j_hi = series.j_domain
     if d_bounds_m is not None:
         d_lo, d_hi = sorted(d_bounds_m)
         j_lo = max(j_lo, va_ms / (n_rps * d_hi))
         j_hi = min(j_hi, va_ms / (n_rps * max(d_lo, 1e-9)))
-    if j_lo > j_hi:
-        raise SpecValidationError(
-            "d_bounds_m", d_bounds_m,
-            "a diameter band intersecting the series J domain",
-            "the requested diameter band maps to advance coefficients "
-            f"{va_ms / (n_rps * d_hi):.3f}..{va_ms / (n_rps * d_lo):.3f} "
-            f"which leave the series domain {series.j_domain}.")
 
     def evaluate(j: float) -> tuple | None:
         d = va_ms / (n_rps * j)
@@ -505,17 +535,12 @@ def solve_optimal_propeller_for_thrust(
         raise SpecValidationError(
             "va_ms/n_rps", (va_ms, n_rps), "> 0",
             "advance speed and revolutions must be positive.")
+    _check_diameter_band(d_bounds_m, va_ms, n_rps, series)
     j_lo, j_hi = series.j_domain
     if d_bounds_m is not None:
         d_lo, d_hi = sorted(d_bounds_m)
         j_lo = max(j_lo, va_ms / (n_rps * d_hi))
         j_hi = min(j_hi, va_ms / (n_rps * max(d_lo, 1e-9)))
-    if j_lo > j_hi:
-        raise SpecValidationError(
-            "d_bounds_m", d_bounds_m,
-            "a diameter band intersecting the series J domain",
-            "the requested diameter band maps to advance coefficients "
-            f"outside the series domain {series.j_domain}.")
 
     def evaluate(j: float) -> tuple | None:
         d = va_ms / (n_rps * j)

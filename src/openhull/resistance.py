@@ -33,7 +33,7 @@ import math
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
-from .spec import SpecValidationError, knots_to_ms
+from .spec import SpecValidationError, knots_to_ms, within_band
 
 __all__ = [
     "resistance_algorithms",
@@ -423,7 +423,7 @@ def ayre_effective_power(
     v_sqrt_l = speed_kn / math.sqrt(lpp_m * FT_PER_M)
     fr = knots_to_ms(speed_kn) / math.sqrt(G_ACCEL * lpp_m)
     length_ratio = lpp_m / displacement_t ** (1.0 / 3.0)
-    if not AYRE_V_SQRT_L_MIN <= v_sqrt_l <= AYRE_V_SQRT_L_MAX:
+    if not within_band(v_sqrt_l, AYRE_V_SQRT_L_MIN, AYRE_V_SQRT_L_MAX):
         raise SpecValidationError(
             "speed", speed_kn,
             f"V/sqrt(L) within {AYRE_V_SQRT_L_MIN}-"
@@ -433,7 +433,7 @@ def ayre_effective_power(
             "speed-length band only (tables 7-5 and 7-7a/b); outside "
             "it the method refuses rather than extrapolate.",
         )
-    if not 4.88 <= length_ratio <= 6.41:
+    if not within_band(length_ratio, 4.88, 6.41):
         raise SpecValidationError(
             "length_ratio", length_ratio,
             "L/Delta^(1/3) within 4.88-6.41 (digitised figure 7-3 "
