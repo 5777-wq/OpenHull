@@ -22,6 +22,41 @@ is semantic (MAJOR.MINOR.PATCH).
   source in hand); Wigley referee data and ShipD licence decision
   await verifiable sources; GZ paper anchor accepted as documented.
 
+## [1.0.1] - 2026-09-24
+
+### Fixed (external review batch — all nine findings)
+
+- **P0 propeller chain on the in-band path**: three stale attribute
+  names (wake_fraction/thrust_deduction) crashed every run whose
+  service point passed the resistance band; the helper is now
+  thrust-led (same route as the scan) with STAGED refusals
+  (stage: ayre / propeller) and the cavitation check degrades to a
+  declared note when sigma leaves the verified Burrill band.  Pinned
+  by a regression test on an in-band task book.
+- **P0 one design draft**: the whole chain (hull grid, hydrostatics
+  table, charts, RAO) now uses the weight-balance draft; the declared
+  task-book draft is checked and any mismatch beyond 5 cm is REPORTED
+  in the summary and the report instead of crashing or silently
+  mixing two values.  Fixed a rounding guard where draft rows could
+  overshoot the deepest tabulated waterline by fractions of a mm.
+- **P0/P1 deliverables answer the question**: the report renders a
+  staged refusal as a structured Chinese block (refusing stage,
+  effective L/Delta^(1/3) in the book's own tonnes convention,
+  verbatim reason for traceability, likely causes, actionable
+  directions, professional-judgement note) and distinguishes
+  NOT-REQUESTED from REFUSED; `reference power` prints as
+  "unavailable (no feasible design)" instead of a bare None.
+- **P1 optimize truthfulness**: every artefact in `outputs` is now
+  actually written (feasible CSV always, header-only when empty);
+  the full rejected-point list is exported (rejected_points.csv +
+  scan_summary.json); a zero-feasible scan renders a refusal scatter
+  coloured by refusing stage instead of silently producing nothing.
+- **P2 install path**: uv.lock regenerated against the official PyPI
+  index (no downstream mirror 403s); the skill pins installs to the
+  release tag.
+- Report header now records the tool version; the optimize progress
+  output is one line per candidate (readable redirected logs).
+
 ## [1.0.0] - 2026-09-23
 
 ### Added

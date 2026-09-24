@@ -26,11 +26,65 @@ def _fmt(value, digits: int = 3) -> str:
         return str(value)
 
 
-def _section_propeller(prop: dict | None) -> list[str]:
+def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
+    """Propeller block in three distinct states: not requested,
+    refused (with a structured Chinese explanation), or a result."""
     lines = []
-    if not prop or prop.get("skipped"):
-        reason = prop.get("reason") if prop else "未运行"
-        lines += [f"- 螺旋桨设计**声明式跳过**：{reason}", ""]
+    if prop is None:
+        lines += [
+            "- 本任务书未提供 `propeller:` 块（转速、叶数、盘面比），"
+            "**未请求**螺旋桨初步设计。",
+            "- 如需功率与桨参数，在任务书加 `propeller: {rpm: 转速, "
+            "blades_z: 叶数, expanded_area_ratio: 盘面比}` 后重跑。",
+            "",
+        ]
+        return lines
+    if prop.get("skipped"):
+        stage = prop.get("stage", "unknown")
+        reason = str(prop.get("reason", ""))
+        reason_first = " ".join(reason.split())[:400]
+        lines += ["- **本方案未能给出所需航速对应的功率。**", ""]
+        stage_cn = {
+            "ayre": "艾亚阻力估算（ayre）",
+            "propeller": "B 系列螺旋桨设计（propeller）",
+        }.get(stage, stage)
+        lines.append(f"- 拒绝阶段：{stage_cn}")
+        lpp = summary.get("lpp_m")
+        disp = summary.get("displacement_t")
+        if lpp and disp:
+            # the Ayre length ratio uses the displacement in TONNES
+            # directly (the book's own worked example: L 122 m,
+            # Delta 11,970 t -> L/Delta^(1/3) = 5.33)
+            ratio = lpp / disp ** (1.0 / 3.0)
+            lines.append(
+                f"- 生效主尺度：Lpp {lpp:.1f} m / Δ {disp:,.0f} t → "
+                f"L/Δ^(1/3) = {ratio:.2f}（艾亚法惯例，Δ 以吨计）")
+        lines.append(f"- 工具原文（保留可溯源）：")
+        lines.append("")
+        lines.append(f"  > {reason_first}")
+        lines.append("")
+        if stage == "ayre":
+            lines += [
+                "- 可能原因：服务航速落在艾亚法速度-长度带 "
+                "V/√L ∈ [0.50, 1.20] kn/√ft 之外，或 L/Δ^(1/3) 落在已"
+                "数字化谱系带 [4.88, 6.41] 之外（图 7-3 目前只录入了"
+                "中间谱系）。",
+                "- 可行方向：调整 Cb 或主尺度比（L/B、B/T）使本船进入"
+                "上述带内；或等待 C₀ 图谱全谱系补录（数据 backlog）。",
+            ]
+        elif stage == "propeller":
+            lines += [
+                "- 可能原因：B 系列包线（叶数/盘面比/进速系数域）、"
+                "梢隙约束（D ≤ 0.75 T）或 ηo 合理域未能同时满足。",
+                "- 可行方向：放宽盘面比/叶数、加大设计吃水以获得桨径"
+                "空间，或调整转速。",
+            ]
+        lines += [
+            "- 说明：白名单方法的适用域由项目章程锁定，工具拒绝在域外"
+            "给出数字（拒绝优于外推）。是否调整设计需求属于专业判断，"
+            "工具不替用户拍板。",
+            "",
+        ]
         return lines
     lines += [
         f"- 型号系列：B 系列（Bernitsas 报告 237 转录，三重裁判验证）",
@@ -42,12 +96,17 @@ def _section_propeller(prop: dict | None) -> list[str]:
         f"- 收到功率 = {_fmt(prop.get('delivered_power_kw'), 1)} kW，"
         f"推力 = {_fmt(prop.get('thrust_n'), 0)} N",
     ]
-    if prop.get("cavitation_ok") is not None:
-        verdict = "满足" if prop["cavitation_ok"] else "**不满足**"
-        lines.append(f"- Burrill 空泡校核：{verdict}"
-                     f"（所需盘面比 {_fmt(prop.get('cavitation_aeao_required'), 3)}）")
-    elif prop.get("cavitation_aeao_required") is None:
-        lines.append("- Burrill 空泡校核：σ 落在已验证带外，声明式跳过")
+    cav = prop.get("cavitation")
+    if cav is not None:
+        verdict = "满足" if cav.get("ok") else "**不满足（盘面比短缺）**"
+        lines.append(
+            f"- Burrill 空泡校核：σ0.7R {_fmt(cav.get('sigma_0_7r'), 3)}，"
+            f"{verdict}；安装盘面比 {_fmt(cav.get('aeao_available'), 3)} vs "
+            f"所需 {_fmt(cav.get('aeao_required'), 3)}")
+    elif prop.get("cavitation_note"):
+        note = " ".join(str(prop["cavitation_note"]).split())[:200]
+        lines.append(f"- Burrill 空泡校核：声明式跳过（σ 落在已验证带外）"
+                     f"—— {note}")
     lines.append("")
     return lines
 
@@ -83,10 +142,15 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
     """Render the summary dict into a Chinese Markdown report."""
     lines: list[str] = []
     now = datetime.now().strftime("%Y-%m-%d %H:%M")
+    try:
+        from importlib.metadata import version as _pkg_version
+        tool_version = f"openhull {_pkg_version('openhull')}"
+    except Exception:  # pragma: no cover - source checkout without install
+        tool_version = "openhull (source checkout)"
     lines += [
         f"# OpenHull 初步设计报告 — {summary['taskbook_id'] or '未命名任务书'}",
         "",
-        f"生成时间：{now} ｜ 工具链版本见 pyproject.toml",
+        f"生成时间：{now} ｜ 工具链：{tool_version}",
         "",
         "## 1. 主尺度与重量",
         "",
@@ -102,6 +166,13 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
         f"空船重量 LW = {_fmt(summary['lightship_t'], 1)} t",
         f"- 载重量比 = {_fmt(summary['deadweight_ratio_achieved'], 4)}",
     ]
+    if summary.get("draft_mismatch_m") is not None:
+        lines.append(
+            f"- ⚠ 任务书声明吃水 {_fmt(summary.get('draft_declared_m'), 2)} m "
+            f"与重量平衡吃水 {_fmt(summary['draft_m'], 3)} m 不一致"
+            f"（差 {_fmt(summary['draft_mismatch_m'], 3)} m）——本报告全部"
+            f"结果按**平衡吃水**完成；如需锁定吃水，请调整 B/T 比值或"
+            f"载重量后重跑。")
     if summary.get("norman_coefficient") is not None:
         lines.append(f"- 诺曼系数 N = {_fmt(summary['norman_coefficient'], 3)}"
                      f"（重量浮力平衡 {summary['iterations']} 次收敛）")
@@ -162,7 +233,8 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
         lines += ["- 任务书未声明受风面积，未运行。", ""]
 
     lines += ["## 5. 快速性与螺旋桨初步设计", ""]
-    lines += _section_propeller(summary.get("propeller_design"))
+    lines += _section_propeller(summary.get("propeller_design"),
+                               summary)
 
     lines += ["## 6. 耐波性初估（第一级，书内公式）", ""]
     lines += _section_seakeeping(summary.get("seakeeping"))

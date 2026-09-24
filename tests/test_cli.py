@@ -28,7 +28,10 @@ def test_run_returns_stage1_chain_results(summary):
     assert summary["norman_coefficient"] > 1.0
     assert len(summary["hydrostatics"]) == 4
     design = summary["hydrostatics"][-1]
-    assert design["draft_m"] == pytest.approx(16.5)
+    # ONE design draft for the whole chain (review-response 2026-09-24):
+    # the top hydrostatic row IS the balance draft, not the declared
+    # task-book draft
+    assert design["draft_m"] == pytest.approx(summary["draft_m"], abs=0.01)
     assert abs(design["km_m"] - 18.59) / 18.59 < 0.02
 
 
@@ -38,6 +41,7 @@ def test_propeller_design_declares_the_ayre_band_skip(summary):
     # extrapolate the resistance method
     prop = summary["propeller_design"]
     assert prop["skipped"] is True
+    assert prop["stage"] == "ayre"       # staged refusal (review batch)
     assert "0.486" in prop["reason"]
 
 
@@ -61,13 +65,15 @@ def test_cli_csv_flag_streams_parseable_table(capsys):
     assert len(lines) == 5  # header + four drafts
     header = lines[0].split(",")
     row = dict(zip(header, lines[-1].split(",")))
-    assert float(row["draft_m"]) == pytest.approx(16.5)
+    assert float(row["draft_m"]) == pytest.approx(16.7674, abs=0.01)
     # task 2.6 switched the CLI hull from the stage-1 fitted parent
     # (KM pinned to the anchor) to the real mother-ship chain: the
     # anchor band (±2 %, AGENTS.md section 4) still governs, and the
     # new exact value is pinned so drift shows up as a number
     assert abs(float(row["km_m"]) - 18.59) / 18.59 < 0.02
-    assert float(row["km_m"]) == pytest.approx(18.6978, abs=0.005)
+    # the top row now sits at the BALANCE draft (16.7674 m), so KM
+    # re-pinned at that draft (was 18.6978 at the old 16.5 m row)
+    assert float(row["km_m"]) == pytest.approx(18.6896, abs=0.005)
 
 
 def test_cli_json_flag_roundtrips(capsys):

@@ -40,7 +40,8 @@ def test_report_restates_key_numbers(tmp_path):
     assert "T-TEST" in text
     assert "100.00" in text and "6,200.0" in text
     assert "0.7999" in text
-    assert "声明式跳过" in text  # graceful degradation for the propeller
+    assert "未能给出所需航速对应的功率" in text  # staged refusal block
+    assert "工具原文" in text                    # verbatim reason kept
     assert "未运行" in text       # absent KG blocks
 
 

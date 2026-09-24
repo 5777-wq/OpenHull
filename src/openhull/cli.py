@@ -41,7 +41,11 @@ from .optimize import (
     write_tradeoff_chart,
 )
 from .linesplan import parent_to_taskbook
-from .propeller import b_series_open_water, check_cavitation, solve_optimal_propeller
+from .propeller import (
+    b_series_open_water,
+    check_cavitation,
+    solve_optimal_propeller_for_thrust,
+)
 from .propulsion import propulsion_factors
 from .seakeeping import estimate_seakeeping
 from .resistance import ayre_effective_power
@@ -60,86 +64,124 @@ def _design_propeller_at_service(data, balance, hydro_design):
     propeller_block = data.get("propeller") or {}
     if propeller_block.get("rpm") is None:
         return None
+    rpm = float(propeller_block["rpm"])
+    n_rps = rpm / 60.0
+    z = int(propeller_block.get("blades_z", 5))
+    aear = float(propeller_block.get("expanded_area_ratio", 0.50))
+    eta_r = float(propeller_block.get("relative_rotative_eff") or 1.0)
+    service_kn = float(
+        (data.get("requirements") or {}).get("service_speed_kn"))
+    v_ms = knots_to_ms(service_kn)
+    series = b_series_open_water(z, aear)
+    # stage 1: the whitelisted resistance method must reach this
+    # operating point at all (Ayre speed-length band, digitised C0
+    # band) — a refusal here is reported with stage "ayre"
     try:
-        rpm = float(propeller_block["rpm"])
-        n_rps = rpm / 60.0
-        z = int(propeller_block.get("blades_z", 5))
-        aear = float(propeller_block.get("expanded_area_ratio", 0.50))
-        eta_r = float(propeller_block.get("relative_rotative_eff") or 1.0)
-        service_kn = float(
-            (data.get("requirements") or {}).get("service_speed_kn"))
-        v_ms = knots_to_ms(service_kn)
-        series = b_series_open_water(z, aear)
-        d_guess = 0.7 * balance.draft
+        pe_kw = ayre_effective_power(
+            displacement_t=balance.displacement_t, speed_kn=service_kn,
+            lpp_m=balance.lpp, beam_m=balance.beam,
+            draft_m=balance.draft, cb=hydro_design.cb,
+            xc_pct_fwd=hydro_design.lcb, screw="single",
+        ).pe_bare_kw
+    except SpecValidationError as refuse:
+        return {"skipped": True, "stage": "ayre", "reason": str(refuse)}
+    # stage 2: thrust-led propeller design (efficiency-independent
+    # thrust, no eta_o fixed point — same route as the scan)
+    try:
+        d_bounds = (0.35 * balance.draft, 0.75 * balance.draft)
+        d_guess = 0.55 * balance.draft
         prop = None
         factors = None
-        for _ in range(3):
-            factors = propulsion_factors(
-                lpp_m=balance.lpp,
-                lwl_m=balance.lwl_m if hasattr(balance, "lwl_m")
-                else balance.lpp,
-                beam_m=balance.beam,
-                draft_m=balance.draft,
-                cb=hydro_design.cb, cp=hydro_design.cp,
-                cm=hydro_design.cm, cwp=hydro_design.cw,
-                lcb_pct_fwd=hydro_design.lcb,
-                propeller_diameter_m=d_guess, speed_ms=v_ms,
-                screw="single", eta_r=eta_r,
-            )
-            pe_kw = ayre_effective_power(
-                displacement_t=balance.displacement_t, speed_kn=service_kn,
-                lpp_m=balance.lpp, beam_m=balance.beam,
-                draft_m=balance.draft, cb=hydro_design.cb,
-                xc_pct_fwd=hydro_design.lcb, screw="single",
-            ).pe_bare_kw
-            va_ms = v_ms * (1.0 - factors.wake_fraction)
-            pd_ow = pe_kw / (factors.eta_h * 0.55)   # eta_o first guess
-            prop = solve_optimal_propeller(
-                pd_ow, va_ms, n_rps, series, n_scan=300)
-            d_guess = prop.diameter_m
-            for _ in range(3):
-                pd_ow = pe_kw / (prop.eta_o * factors.eta_h)
-                prop = solve_optimal_propeller(
-                    pd_ow, va_ms, n_rps, series, n_scan=300)
-        shaft_power_kw = prop.delivered_power_kw / (
-            float(propeller_block.get("shaft_efficiency") or 1.0) * eta_r)
-        cav = None
-        hs_m = propeller_block.get("shaft_immersion_m")
-        if hs_m is not None:
+        last_error = None
+        for _ in range(4):
+            try:
+                factors = propulsion_factors(
+                    lpp_m=balance.lpp,
+                    lwl_m=balance.lwl_m if hasattr(balance, "lwl_m")
+                    else balance.lpp,
+                    beam_m=balance.beam,
+                    draft_m=balance.draft,
+                    cb=hydro_design.cb, cp=hydro_design.cp,
+                    cm=hydro_design.cm, cwp=hydro_design.cw,
+                    lcb_pct_fwd=hydro_design.lcb,
+                    propeller_diameter_m=d_guess, speed_ms=v_ms,
+                    screw="single", eta_r=eta_r,
+                )
+                va_ms = v_ms * (1.0 - factors.w)
+                thrust_required = pe_kw * 1e3 / (v_ms * (1.0 - factors.t))
+                prop = solve_optimal_propeller_for_thrust(
+                    thrust_required, va_ms, n_rps, series,
+                    d_bounds_m=d_bounds, n_scan=300)
+                break
+            except SpecValidationError as retry:
+                last_error = retry
+                d_guess *= 0.85
+                if d_guess < d_bounds[0]:
+                    break
+        if prop is None or factors is None:
+            return {"skipped": True, "stage": "propeller",
+                    "reason": str(last_error) if last_error
+                    else "no admissible diameter inside the tip-clearance "
+                         "bounds"}
+        eta_sanity = (0.40, 0.85)
+        if not eta_sanity[0] <= prop.eta_o <= eta_sanity[1]:
+            return {"skipped": True, "stage": "propeller",
+                    "reason": (
+                        f"eta_o {prop.eta_o:.3f} outside the sanity band "
+                        f"{eta_sanity}")}
+        if prop.diameter_m > 0.75 * balance.draft:
+            return {"skipped": True, "stage": "propeller",
+                    "reason": (
+                        f"diameter {prop.diameter_m:.2f} m exceeds "
+                        f"0.75 x draft {balance.draft:.2f} m")}
+    except SpecValidationError as refuse:
+        return {"skipped": True, "stage": "propeller",
+                "reason": str(refuse)}
+    shaft_power_kw = prop.delivered_power_kw / (
+        float(propeller_block.get("shaft_efficiency") or 1.0) * eta_r)
+    cav = None
+    cav_note = None
+    hs_m = propeller_block.get("shaft_immersion_m")
+    if hs_m is not None:
+        try:
             cav = check_cavitation(
                 thrust_n=prop.thrust_n, va_ms=prop.va_ms, n_rps=n_rps,
                 diameter_m=prop.diameter_m,
                 pitch_ratio=prop.pitch_ratio, aeao_available=aear,
                 hs_m=float(hs_m))
-        result = {
-            "series": prop.series_name,
-            "provenance": prop.provenance,
-            "service_speed_kn": service_kn,
-            "rpm": rpm,
-            "diameter_m": round(prop.diameter_m, 3),
-            "pitch_ratio": round(prop.pitch_ratio, 4),
-            "advance_coefficient": round(prop.j, 4),
-            "eta_open_water": round(prop.eta_o, 4),
-            "eta_hull": round(factors.eta_h, 4),
-            "wake_fraction": round(factors.wake_fraction, 4),
-            "thrust_deduction": round(factors.thrust_deduction, 4),
-            "thrust_n": round(prop.thrust_n, 1),
-            "delivered_power_kw": round(prop.delivered_power_kw, 1),
-            "shaft_power_kw": round(shaft_power_kw, 1),
-            "cavitation": None,
+        except SpecValidationError as cav_refuse:
+            # sigma outside the verified Burrill band: the check is
+            # unavailable here (line carried at 4 book-read anchors)
+            cav = None
+            cav_note = str(cav_refuse)
+    result = {
+        "series": prop.series_name,
+        "provenance": prop.provenance,
+        "service_speed_kn": service_kn,
+        "rpm": rpm,
+        "diameter_m": round(prop.diameter_m, 3),
+        "pitch_ratio": round(prop.pitch_ratio, 4),
+        "advance_coefficient": round(prop.j, 4),
+        "eta_open_water": round(prop.eta_o, 4),
+        "eta_hull": round(factors.eta_h, 4),
+        "wake_fraction": round(factors.w, 4),
+        "thrust_deduction": round(factors.t, 4),
+        "thrust_n": round(prop.thrust_n, 1),
+        "delivered_power_kw": round(prop.delivered_power_kw, 1),
+        "shaft_power_kw": round(shaft_power_kw, 1),
+        "cavitation": None,
+        "cavitation_note": cav_note,
+    }
+    if cav is not None:
+        result["cavitation"] = {
+            "sigma_0_7r": round(cav.sigma_0_7r, 4),
+            "tau_c_limit": round(cav.tau_c_limit, 4),
+            "aeao_required": round(cav.aeao_required, 3),
+            "aeao_available": cav.aeao_available,
+            "ok": cav.ok,
+            "verdict": cav.verdict,
         }
-        if cav is not None:
-            result["cavitation"] = {
-                "sigma_0_7r": round(cav.sigma_0_7r, 4),
-                "tau_c_limit": round(cav.tau_c_limit, 4),
-                "aeao_required": round(cav.aeao_required, 3),
-                "aeao_available": cav.aeao_available,
-                "ok": cav.ok,
-                "verdict": cav.verdict,
-            }
-        return result
-    except SpecValidationError as refuse:
-        return {"skipped": True, "reason": str(refuse)}
+    return result
 
 __all__ = ["main", "run_taskbook"]
 
@@ -244,9 +286,18 @@ def run_taskbook(taskbook_path: str,
     layered DXF arrangement schematic.
     """
     data = _load_taskbook(Path(taskbook_path))
-    spec, design_draft = _ship_spec_from_taskbook(data)
+    spec, design_draft_declared = _ship_spec_from_taskbook(data)
 
     balance = solve_weight_balance(spec)
+
+    # ONE design draft for the whole chain: the weight-balance draft.
+    # The task-book design_draft_m is the declarative requirement; a
+    # mismatch beyond 5 cm is REPORTED, never silently mixed (owner
+    # decision recorded in the review-response batch, 2026-09-24:
+    # consuming the declared draft as a design variable would change
+    # the dimension methodology and needs its own approval).
+    design_draft = balance.draft
+    draft_mismatch_m = design_draft_declared - design_draft
 
     # stage-2 chain (task 2.6): REAL offsets — the packaged digitised
     # Series 60 parent, affine-scaled onto the balanced dimensions and
@@ -257,7 +308,14 @@ def run_taskbook(taskbook_path: str,
         draft=balance.draft,
         target_cb=spec.cb,
     )
-    drafts = [round(design_draft * f, 4) for f in (0.25, 0.5, 0.75, 1.0)]
+    # the design row IS the hull's deepest tabulated waterline: rounding
+    # design_draft to 4 decimals can exceed that waterline by fractions
+    # of a millimetre and trip the grid guard (found in the 2026-09-24
+    # review batch)
+    top_waterline = float(hull.waterlines[-1])
+    drafts = [min(round(design_draft * f, 4), top_waterline)
+              for f in (0.25, 0.5, 0.75)]
+    drafts.append(top_waterline)
     hydro_table = hydrostatics_table(hull, drafts)
     hydro_design = hydro_table.at(drafts[-1])
 
@@ -342,8 +400,10 @@ def run_taskbook(taskbook_path: str,
     if hydro_curve_chart:
         from .hydrostatics_chart import write_hydrostatic_curves_chart
         chart_fractions = [0.2 + 0.1 * i for i in range(9)]  # 0.2T..1.0T
-        chart_table = hydrostatics_table(
-            hull, [round(design_draft * f, 4) for f in chart_fractions])
+        chart_top = float(hull.waterlines[-1])
+        chart_drafts = [min(round(design_draft * f, 4), chart_top)
+                        for f in chart_fractions[:-1]] + [chart_top]
+        chart_table = hydrostatics_table(hull, chart_drafts)
         hydro_curve_chart_path = str(write_hydrostatic_curves_chart(
             chart_table, hydro_curve_chart,
             title=str(data.get("taskbook_id") or "")))
@@ -386,6 +446,10 @@ def run_taskbook(taskbook_path: str,
         "beam_m": round(balance.beam, 3),
         "depth_m": round(balance.depth, 3),
         "draft_m": round(balance.draft, 3),
+        "draft_declared_m": round(design_draft_declared, 3),
+        "draft_mismatch_m": (
+            round(draft_mismatch_m, 3)
+            if abs(draft_mismatch_m) > 0.05 else None),
         "deadweight_ratio_achieved": round(
             balance.deadweight_ratio_achieved, 4
         ),
@@ -676,7 +740,7 @@ def _run_rao(args) -> None:
     from .seakeeping_bem import CapytaineUnavailable, compute_rigid_rao
 
     data = _load_taskbook(Path(args.taskbook))
-    spec, design_draft = _ship_spec_from_taskbook(data)
+    spec, _declared = _ship_spec_from_taskbook(data)
     kg_value = (data.get("requirements") or {}).get("kg_m")
     if kg_value is None:
         raise SpecValidationError(
@@ -690,8 +754,11 @@ def _run_rao(args) -> None:
         draft=balance.draft,
         target_cb=spec.cb,
     )
-    hydro = hydrostatics_table(hull, [round(design_draft * f, 4)
-                                      for f in (0.9, 1.0)]).at(design_draft)
+    design_draft = balance.draft
+    rao_top = float(hull.waterlines[-1])
+    rao_drafts = [min(round(design_draft * f, 4), rao_top)
+                  for f in (0.9,)] + [rao_top]
+    hydro = hydrostatics_table(hull, rao_drafts).at(rao_top)
     periods = [float(p.strip()) for p in str(args.periods).split(",")
                if p.strip()]
     try:
@@ -778,8 +845,8 @@ def _run_optimize(args) -> None:
     )
 
     def progress(done: int, total: int, label: str) -> None:
-        print("[%d/%d] %s" % (done + 1, total, label),
-              end=" ", flush=True)
+        # one line per candidate keeps redirected logs readable
+        print("[%d/%d] %s" % (done + 1, total, label), flush=True)
 
     result = design_space_scan(
         spec, kg_m=float(kg_m), grid=grid, config=config,
@@ -789,12 +856,28 @@ def _run_optimize(args) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     csv_path = out_dir / "feasible_designs.csv"
     rows = result.to_dicts()
-    if rows:
-        keys = list(rows[0].keys())
-        with csv_path.open("w", encoding="utf-8-sig", newline="") as fh:
-            writer = __import__("csv").DictWriter(fh, fieldnames=keys)
-            writer.writeheader()
-            writer.writerows(rows)
+    # the feasible CSV is ALWAYS written (header only when empty): a
+    # missing file would misreport what the run produced
+    keys = list(rows[0].keys()) if rows else [
+        "l_over_b", "b_over_t", "cb", "lpp_m", "beam_m", "draft_m",
+        "depth_m", "displacement_t", "gm_m", "gz_max_m"]
+    with csv_path.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = __import__("csv").DictWriter(fh, fieldnames=keys)
+        writer.writeheader()
+        writer.writerows(rows)
+    # full rejected-point export: the scan's zero-extrapolation promise
+    # only reaches the user if the refusals themselves are in the file
+    rejected_path = out_dir / "rejected_points.csv"
+    with rejected_path.open("w", encoding="utf-8-sig", newline="") as fh:
+        writer = __import__("csv").DictWriter(
+            fh, fieldnames=["l_over_b", "b_over_t", "cb", "stage",
+                            "reason"])
+        writer.writeheader()
+        for r in result.rejected:
+            writer.writerow({
+                "l_over_b": r.l_over_b, "b_over_t": r.b_over_t,
+                "cb": r.cb, "stage": r.stage,
+                "reason": " ".join(str(r.reason).split())[:200]})
     chart_path = out_dir / "tradeoff_speed_displacement_gm.png"
     write_tradeoff_chart(result, chart_path)
     front = [c.to_dict() for c in __import__(
@@ -809,8 +892,14 @@ def _run_optimize(args) -> None:
         "rejection_histogram": result.rejection_histogram(),
         "reference_power_kw": result.reference_power_kw,
         "pareto_count": len(front),
-        "outputs": {"csv": str(csv_path), "chart": str(chart_path)},
+        "outputs": {"csv": str(csv_path), "rejected_csv":
+                    str(rejected_path), "chart": str(chart_path)},
         "designs": rows,
+        "rejected_points": [
+            {"l_over_b": r.l_over_b, "b_over_t": r.b_over_t, "cb": r.cb,
+             "stage": r.stage,
+             "reason": " ".join(str(r.reason).split())[:200]}
+            for r in result.rejected],
         "pareto": front,
     }
     json_path = out_dir / "scan_summary.json"
@@ -825,9 +914,14 @@ def _run_optimize(args) -> None:
           f"  (feasible {len(result.feasible)}, refused "
           f"{len(result.rejected)})")
     print(f"refusal histogram  : {result.rejection_histogram()}")
-    print(f"reference power    : {result.reference_power_kw} kW delivered")
+    if result.reference_power_kw is None:
+        print("reference power    : unavailable (no feasible design)")
+    else:
+        print(f"reference power    : "
+              f"{result.reference_power_kw:,.1f} kW delivered")
     print(f"pareto front       : {len(front)} designs")
     print(f"outputs            : {csv_path}")
+    print(f"                     {rejected_path}")
     print(f"                     {chart_path}")
     print(f"                     {json_path}")
 

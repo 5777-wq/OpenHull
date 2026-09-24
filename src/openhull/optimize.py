@@ -514,6 +514,30 @@ def write_tradeoff_chart(result: ScanResult, path) -> None:
     feas = [c for c in result.feasible
             if c.speed_at_reference_power_kn is not None]
     if not feas:
+        # zero feasible designs: plot the REFUSED points instead —
+        # coloured by the refusing stage, in the Cb-B/T plane, so the
+        # run still ends with an actionable picture
+        stages = sorted({r.stage for r in result.rejected})
+        palette = ["#c0392b", "#e67e22", "#8e44ad", "#16a085",
+                   "#2c3e50", "#7f8c8d"]
+        for i, stage in enumerate(stages):
+            pts = [r for r in result.rejected if r.stage == stage]
+            ax.scatter([p.b_over_t for p in pts], [p.cb for p in pts],
+                       s=64, alpha=0.75, edgecolors="black",
+                       linewidths=0.4,
+                       color=palette[i % len(palette)],
+                       label=f"{stage} ({len(pts)})", zorder=3)
+        ax.set_xlabel("B/T")
+        ax.set_ylabel("Cb")
+        ax.grid(True, alpha=0.3)
+        if stages:
+            ax.legend(loc="best", fontsize=9, title="refusing stage")
+        ax.set_title(
+            "OpenHull design scan - 0 feasible / %d refused "
+            "(points coloured by the refusing stage)" % len(
+                result.rejected))
+        fig.tight_layout()
+        fig.savefig(path)
         plt.close(fig)
         return
     xs = [c.displacement_t / 1000.0 for c in feas]

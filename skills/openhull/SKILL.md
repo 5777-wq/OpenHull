@@ -22,27 +22,32 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-uv tool install "git+https://github.com/5777-wq/OpenHull"
+uv tool install "git+https://github.com/5777-wq/OpenHull@v1.0.1"
 # 没有 uv 时：
-pip install "git+https://github.com/5777-wq/OpenHull"
+pip install "git+https://github.com/5777-wq/OpenHull@v1.0.1"
 ```
 
-安装后验证：
+**锁定版本安装**（`@v1.0.1`）：可复现、可审计；需要用最新修复时
+换成 `@main` 或具体 commit。安装后验证：
 
 ```bash
-openhull --version        # 应输出 openhull 1.0.0 或更高
+openhull --version        # 应输出 openhull 1.0.1
 ```
 
-若依赖下载报镜像站 403（国内镜像偶发），改用官方源：
-`UV_DEFAULT_INDEX=https://pypi.org/simple uv tool install "git+https://github.com/5777-wq/OpenHull"`（网络受限时配合代理）。
+若依赖下载在原镜像上报错（历史上清华镜像对部分 wheel 返回 403），
+显式指定官方源重装：
+`UV_DEFAULT_INDEX=https://pypi.org/simple uv tool install "git+https://github.com/5777-wq/OpenHull@v1.0.1"`
+（网络受限时配合代理）。
 
 耐波性 RAO 是可选扩展（capytaine），主流程不需要；需要时：
 `uv tool install "git+https://github.com/5777-wq/OpenHull[seakeeping]"`。
 
 ## 第二步：拿一份可用的任务书
 
-最快路径：用本技能的模板 `assets/minimal_taskbook.yaml`（5 万吨散货船），
-复制到工作目录后按用户需求改数字。任务书**仅四个字段必需**：
+最快路径：用本技能的模板 `assets/minimal_taskbook.yaml`（45,000 t
+散货船，16 kn——刻意选在全部适用带之内，首次运行即可跑通含螺旋桨的
+完整链条），复制到工作目录后按用户需求改数字。任务书**仅四个字段
+必需**：
 
 ```yaml
 schema_version: 1
@@ -62,9 +67,23 @@ constraints:
 （螺旋桨：叶数/盘面比/转速/轴浸深）、`stability.weather_criterion:`（受风
 面积等）、`arrangement:`（总布置分舱表）。
 
-**航速-长度带提醒**：艾亚阻力法仅在 V/√L ≈ 0.50–1.20 kn/√ft 有效。若用户
-给的航速对此船偏低（大船低速常见），`run` 的螺旋桨块会声明式跳过——如实
-转述跳过原因，不要换方法硬凑。
+**适用域关卡表**（任何一项不满足，对应模块声明式拒绝，报告会给出
+结构化中文说明；如实转述，不要换方法硬凑）：
+
+| 关卡 | 约束 | 触发时的表现 |
+|---|---|---|
+| 艾亚速度带 | V/√L ∈ [0.50, 1.20] kn/√ft | 螺旋桨块跳过（stage=ayre） |
+| C₀ 谱系带 | L/Δ^(1/3) ∈ [4.88, 6.41]（Δ 以吨计；图 7-3 目前只录入中间谱系） | 螺旋桨块跳过（stage=ayre） |
+| B 系列包线 | 叶数 2–7 / 盘面比 0.30–1.05 / P/D 0.50–1.40 | 螺旋桨块跳过（stage=propeller） |
+| 梢隙 | 桨径 D ≤ 0.75 T | 螺旋桨块跳过（stage=propeller） |
+| ηo 合理域 | 敞水效率 0.40–0.85 | 螺旋桨块跳过（stage=propeller） |
+| Burrill 空泡带 | σ0.7R ∈ [0.387, 0.483]（四锚点限界线） | 空泡校核降级为声明式说明（不阻断结果） |
+| 重量平衡 | 诺曼迭代收敛 | 整轮拒绝（weight_balance） |
+| IS Code 衡准 | 六项 + 恶劣风浪 | 稳定段拒绝或整体 FAIL 判定 |
+
+**任务书吃水说明**：全链只用一个设计吃水——重量平衡吃水；任务书里
+声明的 `design_draft_m` 若与平衡吃水相差超过 5 cm，报告会显式声明
+（"已按平衡吃水完成计算"），不是错误，如实转述即可。
 
 ## 第三步：常用命令
 
