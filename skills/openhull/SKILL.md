@@ -22,22 +22,22 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-uv tool install "git+https://github.com/5777-wq/OpenHull@v1.0.1"
+UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.0.1"
 # 没有 uv 时：
 pip install "git+https://github.com/5777-wq/OpenHull@v1.0.1"
 ```
 
-**锁定版本安装**（`@v1.0.1`）：可复现、可审计；需要用最新修复时
+**主命令自带官方源覆盖**：`uv tool install` 会按本机配置的镜像源解析
+依赖，而部分国内镜像对个别 wheel 返回 403（已在真机复现）；显式指定
+官方源可在任何环境一次装成。本机 uv 已默认官方源时可省略该前缀。
+网络受限时给 uv 配置代理（`HTTPS_PROXY=http://host:port`）。
+
+**锁定版本安装**（`@v1.0.1`）：可复现、可审计；需要跟踪最新修复时
 换成 `@main` 或具体 commit。安装后验证：
 
 ```bash
 openhull --version        # 应输出 openhull 1.0.1
 ```
-
-若依赖下载在原镜像上报错（历史上清华镜像对部分 wheel 返回 403），
-显式指定官方源重装：
-`UV_DEFAULT_INDEX=https://pypi.org/simple uv tool install "git+https://github.com/5777-wq/OpenHull@v1.0.1"`
-（网络受限时配合代理）。
 
 耐波性 RAO 是可选扩展（capytaine），主流程不需要；需要时：
 `uv tool install "git+https://github.com/5777-wq/OpenHull[seakeeping]"`。
