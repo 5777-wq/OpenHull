@@ -64,11 +64,13 @@ from .resistance import (
     resistance_algorithms,
 )
 from .main_dimensions import (
+    B_OVER_T_BAND,
     DEFAULT_ALGORITHM,
     MAIN_DIMENSION_ALGORITHMS,
     AlgorithmInfo,
     RatioParameters,
     estimate_main_dimensions,
+    required_b_over_t_at_draft,
 )
 from .spec import (
     SEAWATER_DENSITY,
@@ -130,6 +132,8 @@ __all__ = [
     "DEFAULT_ALGORITHM",
     "MAIN_DIMENSION_ALGORITHMS",
     "AlgorithmInfo",
+    "B_OVER_T_BAND",
+    "required_b_over_t_at_draft",
     "AYRE_V_SQRT_L_MAX",
     "AYRE_V_SQRT_L_MIN",
     "AyreCorrection",

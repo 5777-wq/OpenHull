@@ -100,6 +100,13 @@ no page numbers from memory).
 - Schneekluth, H. & Bertram, V., *Ship Design for Efficiency and Economy*
   (2nd ed., Butterworth-Heinemann) — statistical ranges of principal
   dimension ratios for merchant ships.
+- Draft-declaration back-solve hint (2026-09-24, owner-approved Plan 0
+  of the R2 decision): **no new source** — Archimedes' relation
+  ∇ = L·B·T·Cb (already listed through the chain-solve) rearranged at
+  another draft with ∇, Cb and L/B held fixed, i.e. B/T ∝ T^-1.5.  The
+  rule is printed with the number, the one-shot limit is declared, and
+  the R2 question (design draft as a hard constraint) stays open
+  pending a reverse-anchor decision.
 
 **Weight estimation (lightweight) and weight-buoyancy balance**
 - Xie Yunping, Chen Yue, Zhang Ruirui & Liu Kefeng, *Ship Design

@@ -22,9 +22,9 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.0.2"
+UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.0.3"
 # 没有 uv 时：
-pip install "git+https://github.com/5777-wq/OpenHull@v1.0.2"
+pip install "git+https://github.com/5777-wq/OpenHull@v1.0.3"
 ```
 
 **主命令自带官方源覆盖**：`uv tool install` 会按本机配置的镜像源解析
@@ -32,11 +32,11 @@ pip install "git+https://github.com/5777-wq/OpenHull@v1.0.2"
 官方源可在任何环境一次装成。本机 uv 已默认官方源时可省略该前缀。
 网络受限时给 uv 配置代理（`HTTPS_PROXY=http://host:port`）。
 
-**锁定版本安装**（`@v1.0.2`）：可复现、可审计；需要跟踪最新修复时
+**锁定版本安装**（`@v1.0.3`）：可复现、可审计；需要跟踪最新修复时
 换成 `@main` 或具体 commit。安装后验证：
 
 ```bash
-openhull --version        # 应输出 openhull 1.0.1
+openhull --version        # 应输出 openhull 1.0.3
 ```
 
 耐波性 RAO 是可选扩展（capytaine），主流程不需要；需要时：
@@ -126,8 +126,16 @@ openhull rao 任务书.yaml --periods 6,8,12,16,20
 ## 常见追问的答法
 
 - "这个数靠谱吗？" → 指路验证记录：公开基准船（JBC / DTMB 1712 /
-  NMRI MP687）+ 书内算例 + 全量测试（当前 359 项；未装 seakeeping
+  NMRI MP687）+ 书内算例 + 全量测试（当前 375 项；未装 seakeeping
   可选扩展时个别用例自动跳过），见仓库 VALIDATION.md；
+- "任务书里写的设计吃水算不出来怎么办？" → 报告会给出反算提示：按声明
+  吃水设计所需的 B/T、当前 B/T、是否落在守卫带 [2.00, 3.50] 之内。
+  转述时必须带上提示里的两条限制：①是一次估算，未计入重量再平衡（按
+  该值实算的吃水与声明值还差 1% 量级）；② **B/T 是算法的统计参数，
+  任务书没有这个字段**——可执行的动作是调整声明吃水/载重量/Cb 后重跑，
+  或用 Python API 的 `RatioParameters(b_over_t=...)` 做 what-if（已验证
+  可行）。提示值出带时说明该吃水下统计链路不自洽，如实转述，不要自行
+  外推；
 - "能不能算 XX 船型/XX 衡准？" → 先查仓库 AGENTS.md §5 白名单与 §7 红线：
   白名单外的方法不能实现，如实说明并建议走 Issue 提案流程；
 - 用户想调参数重跑 → 改任务书 YAML 再跑，不要手改 Python。

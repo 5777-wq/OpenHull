@@ -1,6 +1,6 @@
 [project]
 name = "openhull"
-version = "1.0.2"
+version = "1.0.3"
 description = "Agent-orchestrated parametric ship preliminary design toolchain"
 readme = "README.md"
 license = "MIT"

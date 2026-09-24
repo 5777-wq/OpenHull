@@ -41,6 +41,7 @@ from .optimize import (
     write_tradeoff_chart,
 )
 from .linesplan import parent_to_taskbook
+from .main_dimensions import B_OVER_T_BAND, required_b_over_t_at_draft
 from .propeller import (
     b_series_open_water,
     check_cavitation,
@@ -300,6 +301,51 @@ def run_taskbook(taskbook_path: str,
     design_draft = balance.draft
     draft_mismatch_m = design_draft_declared - design_draft
 
+    # Plan-0 hint (owner-approved 2026-09-24): a declared draft the
+    # balance cannot honour is reported WITH the back-solved B/T the
+    # declaration would need, so the reader gets an actionable number
+    # instead of "adjust something".  The statistics and the guards are
+    # untouched - this only states one explicit rule's consequence.
+    draft_hint = None
+    if abs(draft_mismatch_m) > 0.05:
+        current_b_over_t = balance.beam / balance.draft
+        lo, hi = B_OVER_T_BAND
+        # judge the value the reader would type into a task book, so a
+        # boundary value shown as in-band is one the guard accepts
+        required_b_over_t = round(required_b_over_t_at_draft(
+            b_over_t=current_b_over_t,
+            draft_m=balance.draft,
+            target_draft_m=design_draft_declared,
+        ), 3)
+        draft_hint = {
+            "rule": (
+                "hold displacement volume, Cb and L/B (L and B both "
+                "scale): B/T = B/T_now * (T_now / T_declared)^1.5"
+            ),
+            "current_b_over_t": round(current_b_over_t, 3),
+            "required_b_over_t": required_b_over_t,
+            "b_over_t_band": [lo, hi],
+            "within_band": lo <= required_b_over_t <= hi,
+            # the ratio is an algorithm statistic, not a task-book
+            # field - say so, or an agent will invent a YAML key
+            "action_note": (
+                "B/T is a statistic of the dimension algorithm; the "
+                "task book has no field for it.  To act on this: adjust "
+                "the declared draft, deadweight or Cb and re-run, or "
+                "run the Python API with RatioParameters(b_over_t=...)."
+            ),
+            # and say how good the number is: the back-solve holds the
+            # CURRENT displacement volume, the weight balance does not
+            "one_shot_note": (
+                "one-shot estimate: the weight balance re-iterates on "
+                "the new dimensions, so re-solving with this ratio lands "
+                "short of the declared draft in the direction of the "
+                "current balance draft - residual of the same order as "
+                "the declaration offset (0.3-1.3 % measured on the "
+                "45,000 t probe, e.g. declared 12.5 m -> 12.409 m)."
+            ),
+        }
+
     # stage-2 chain (task 2.6): REAL offsets — the packaged digitised
     # Series 60 parent, affine-scaled onto the balanced dimensions and
     # Lackenby-transformed onto the task-book block coefficient
@@ -444,6 +490,7 @@ def run_taskbook(taskbook_path: str,
         "draft_mismatch_m": (
             round(draft_mismatch_m, 3)
             if abs(draft_mismatch_m) > 0.05 else None),
+        "draft_mismatch_hint": draft_hint,
         "deadweight_ratio_achieved": round(
             balance.deadweight_ratio_achieved, 4
         ),
@@ -491,6 +538,18 @@ def _print_summary(summary: dict) -> None:
         f"{summary['depth_m']:.2f} / {summary['draft_m']:.2f} m"
     )
     print(f"deadweight ratio    : {summary['deadweight_ratio_achieved']:>12.4f}")
+    if summary.get("draft_mismatch_m") is not None:
+        print(f"draft declared      : {summary['draft_declared_m']:>12.3f} m "
+              f"vs balance {summary['draft_m']:.3f} m "
+              f"(mismatch {summary['draft_mismatch_m']:+.3f} m; results use "
+              f"the balance draft)")
+        hint = summary.get("draft_mismatch_hint")
+        if hint:
+            lo, hi = hint["b_over_t_band"]
+            print(f"  B/T at declared   : {hint['required_b_over_t']:>12.3f} "
+                  f"(current {hint['current_b_over_t']:.3f}; "
+                  f"{'inside' if hint['within_band'] else 'OUTSIDE'} "
+                  f"guard band {lo:.2f}-{hi:.2f})")
     print("-" * 64)
     print(f"hydrostatics at {design['draft_m']:.2f} m "
           f"({summary['hull_source']}, {summary['transform_passes']} passes):")

@@ -4,23 +4,49 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
-## [Unreleased]
+## [1.0.3] - 2026-09-24
 
 ### Added
 
-- Roll damping quantification from the whitelisted source itself
-  (pp.392-394, page-verified): table 3-6 extinction law, table 3-7
-  class values (large cargo ships print B15 = 0.0190 -> B20 ~
-  0.0173; general preliminary estimate B20 = 0.0200), the mu ranges
-  (0.035-0.05 / 0.055-0.07), Eq.(3-26) general magnification, and
-  the Eq.(3-59) energy-equivalent quadratic-damping chain — the
-  resonant roll amplitude now solves from a declared sea state
-  (A = alpha_m0/(2 mu(A))).  The BEM RAO layer injects a
-  book-mu-calibrated equivalent viscous damping on the roll DOF
-  (capytaine radiation adds on top, conservative).  Backlog
-  dispositions: speed loss stays unimplemented (no page-verifiable
-  source in hand); Wigley referee data and ShipD licence decision
-  await verifiable sources; GZ paper anchor accepted as documented.
+- **Draft-declaration back-solve hint** (owner-approved Plan 0 of the
+  R2 decision, 2026-09-24): a task book whose declared design draft
+  differs from the weight-balance draft by more than 5 cm now gets the
+  B/T the declaration would need, under one explicitly stated rule —
+  hold the displacement volume, Cb and L/B, i.e. L and B both scale,
+  so B/T ~ T^-1.5 — reported in the console summary, in the Markdown
+  report text, and as `draft_mismatch_hint` in the JSON summary.  The
+  verdict is taken against the chain's own B/T guard band [2.00, 3.50]
+  and on the value a reader would type (3 decimals); a required ratio
+  outside the band is declared un-extrapolable instead of being quoted
+  as a design point.  Two limits travel with the number instead of
+  hiding in a docstring: it is a ONE-SHOT back-solve (the weight
+  balance re-iterates on the new dimensions, so acting on it lands
+  short of the declared draft by 0.3-1.3 % — measured, pinned by a
+  test), and B/T is a statistic of the dimension algorithm rather than
+  a task-book field, so the actionable path is stated.  HINT ONLY: the
+  statistics, the guards and the weight balance are untouched — no
+  automatic re-design, and the R2 question (design draft as a hard
+  constraint) stays open pending a reverse-anchor decision.
+- `required_b_over_t_at_draft` and the band constants
+  `L_OVER_B_BAND` / `B_OVER_T_BAND` / `L_OVER_DEPTH_BAND` are public
+  (package `__all__`), so a frontend can ask the same question.
+
+### Changed
+
+- The chain-solve guard bands now come from those constants instead of
+  being written twice, so a ratio the hint calls acceptable is one the
+  guard accepts.  Regression: 16 new tests (-> 375 total),
+  including the T^-1.5 law against an independent volume-based solve,
+  the identity at the current draft, and a boundary test pinning the
+  rounding semantics (a raw 3.5002 shown as 3.500 counts as IN band,
+  because 3.500 is what the guard accepts).
+
+### Fixed
+
+- CHANGELOG bookkeeping: the roll-damping block that sat under
+  `[Unreleased]` has shipped since v1.0.0 and is folded into that
+  section; the "speed loss stays unimplemented" clause it carried had
+  been overtaken by the Kwon implementation listed in the same release.
 
 ## [1.0.2] - 2026-09-24
 
@@ -103,6 +129,17 @@ test), plus the reviewer's data-quality suggestion:
   Pages), bilingual CONTRIBUTING guide, bug/formula-proposal issue
   templates, PR provenance checklist, repository description and
   topics.
+- Roll damping quantification from the whitelisted source itself
+  (pp.392-394, page-verified): table 3-6 extinction law, table 3-7
+  class values (large cargo ships print B15 = 0.0190 -> B20 ~
+  0.0173; general preliminary estimate B20 = 0.0200), the mu ranges
+  (0.035-0.05 / 0.055-0.07), Eq.(3-26) general magnification, and
+  the Eq.(3-59) energy-equivalent quadratic-damping chain — the
+  resonant roll amplitude now solves from a declared sea state
+  (A = alpha_m0/(2 mu(A))).  The BEM RAO layer injects a
+  book-mu-calibrated equivalent viscous damping on the roll DOF
+  (capytaine radiation adds on top, conservative).  The GZ paper
+  anchor is accepted as documented; the Wigley referee remains open.
 - Kwon speed-loss estimation (owner-approved open-source retrieval):
   whitelisted from the open-access transcription (Cheng et al.,
   JMSE 2025, 13(1), 42, section 2.2, page-verified against the

@@ -37,6 +37,14 @@ from .spec import SEAWATER_DENSITY, ShipSpec, SpecValidationError
 #: Standard gravity, m/s² (AGENTS.md §1)
 GRAVITY = 9.81
 
+#: Applicability bands the chain-solve result must land inside
+#: (AGENTS.md §6).  Single source of truth: the refusal guard in
+#: ``_chain_solve`` and the draft back-solve hint both read these, so
+#: a ratio the hint calls acceptable is one the guard will accept.
+L_OVER_B_BAND = (4.5, 8.0)
+B_OVER_T_BAND = (2.0, 3.5)
+L_OVER_DEPTH_BAND = (8.0, 14.0)
+
 # ---------------------------------------------------------------------------
 # Registry metadata
 # ---------------------------------------------------------------------------
@@ -207,9 +215,9 @@ def _chain_solve(
             "statistics - refusing instead of extrapolating.",
         )
     result_l_over_b = l_est / beam  # == ratios.l_over_b by construction
-    _check_band(result_l_over_b, 4.5, 8.0, "L/B", l_est, field_prefix)
-    _check_band(beam / draft, 2.0, 3.5, "B/T", beam, field_prefix)
-    _check_band(l_est / depth, 8.0, 14.0, "L/D", l_est, field_prefix)
+    _check_band(result_l_over_b, *L_OVER_B_BAND, "L/B", l_est, field_prefix)
+    _check_band(beam / draft, *B_OVER_T_BAND, "B/T", beam, field_prefix)
+    _check_band(l_est / depth, *L_OVER_DEPTH_BAND, "L/D", l_est, field_prefix)
 
     return ShipSpec(
         ship_type=spec.ship_type,
@@ -237,6 +245,40 @@ def _check_band(
             "statistics of this algorithm - refusing instead of "
             "extrapolating.",
         )
+
+
+def required_b_over_t_at_draft(
+    *, b_over_t: float, draft_m: float, target_draft_m: float
+) -> float:
+    """Back-solve the B/T a different design draft would require.
+
+    This is the Plan-0 hint the owner approved on 2026-09-24: when a
+    task book declares a draft the weight balance cannot honour, the
+    report says what the declaration would cost instead of only saying
+    it was ignored.
+
+    Rule (stated once, here): hold the displacement volume, the block
+    coefficient and L/B — i.e. re-solve the same ship family at the
+    other draft.  Then grad = L*B*T*Cb = (L/B)*B^2*T*Cb is constant,
+    so B ~ T^(-1/2) and
+
+        (B/T)_target = (B/T)_now * (T_now / T_target)^1.5
+
+    The volume and Cb cancel, which is why only the drafts and the
+    current ratio are arguments.
+
+    This is a HINT about ONE declared rule, never an automatic
+    re-design: a different rule (e.g. holding L fixed) yields a
+    different ratio, the statistics are untouched, and the choice
+    stays with the designer.
+    """
+    if draft_m <= 0.0 or target_draft_m <= 0.0:
+        raise SpecValidationError(
+            "draft", target_draft_m, "positive draft, m",
+            "the draft back-solve divides by the draft; a non-positive "
+            "value cannot be interpreted as a waterline.",
+        )
+    return b_over_t * (draft_m / target_draft_m) ** 1.5
 
 
 # ---------------------------------------------------------------------------

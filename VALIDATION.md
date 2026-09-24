@@ -553,10 +553,31 @@ These are features of the current stage, not hidden weaknesses:
     no test data; published Wigley RAOs are figures only — needs a
     page-verifiable table source).
 
+23. **Draft-declaration back-solve hint (owner-approved Plan 0 of the
+    R2 decision, 2026-09-24).** When a task book declares a design
+    draft the weight balance cannot honour (beyond 5 cm), the run
+    reports the B/T a re-solve at that draft would need, under one
+    explicitly stated rule: hold the displacement volume, Cb and L/B,
+    i.e. L and B both scale and B/T ∝ T^-1.5.  No statistic, guard
+    threshold or balance value was touched — the R2 question (design
+    draft as a hard constraint) remains open pending a reverse-anchor
+    decision.
+
+| Check | Result | Criterion |
+|---|---|---|
+| Identity at the current draft | required B/T = current B/T (exact) | derived: (B/T)₀·(T₀/T)^1.5 |
+| T^-1.5 law vs an independent volume solve | agrees at ∇ = (L/B)·B²·T·Cb = 118,787 m³, L/B 6.0, Cb 0.86, 14.672 → 16.5 m = 2.264 | independent path |
+| Verdict band = the chain's own guard band | 2.00 and 3.50 solve, 3.60 is refused by the B/T guard | endpoints inclusive, one constant source (`*_BAND`) |
+| Rounding semantics (N2/N3 lesson) | raw 3.5002 → shown 3.500 → counts IN band; raw 3.5008 → 3.501 → out | verdict on the value a reader would type |
+| One-shot residual (declared approximation) | re-solving with the hint ratio lands 0.3–1.3 % short of the declared draft, toward the balance draft (45,000 t probe: declared 12.5 m → 12.409 m) | measured at 10.5/11.0/12.0/12.5 m, pinned by test |
+| Advised API path works | `solve_weight_balance(spec, ratios=RatioParameters(b_over_t=hint))` reproduces the ratio | the advice must not rot |
+| 45,000 t / 16 kn in-band case | declared 11.6 m → no hint (0.041 m ≤ 5 cm); 12.5 m → hint 2.426 vs current 2.700, in band; 9.0 m → 3.972, above the band, declared un-extrapolable | behaviour, three states |
+| Honesty of the number | report and JSON carry the rule, the one-shot limit and the "B/T is not a task-book field" action note | declared approximations |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 348 tests
+uv run pytest                        # 375 tests
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

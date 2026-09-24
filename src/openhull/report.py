@@ -171,8 +171,35 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
             f"- ⚠ 任务书声明吃水 {_fmt(summary.get('draft_declared_m'), 2)} m "
             f"与重量平衡吃水 {_fmt(summary['draft_m'], 3)} m 不一致"
             f"（差 {_fmt(summary['draft_mismatch_m'], 3)} m）——本报告全部"
-            f"结果按**平衡吃水**完成；如需锁定吃水，请调整 B/T 比值或"
-            f"载重量后重跑。")
+            f"结果按**平衡吃水**完成。")
+        hint = summary.get("draft_mismatch_hint")
+        if hint:
+            lo, hi = hint["b_over_t_band"]
+            required = hint["required_b_over_t"]
+            if hint["within_band"]:
+                verdict = (
+                    f"在本工具的量纲比守卫带 "
+                    f"[{_fmt(lo, 2)}, {_fmt(hi, 2)}] 之内。")
+            else:
+                below = required < lo
+                verdict = (
+                    f"**{'低于下限' if below else '高于上限'} "
+                    f"{_fmt(lo if below else hi, 2)}** —— 该吃水下本工具的"
+                    f"统计比值链无法给出自洽的常规商船船型，不做外推；"
+                    f"建议复核声明吃水或载重量。")
+            # number first: it is the actionable part; the two limits
+            # (one-shot estimate, B/T is not a task-book field) follow,
+            # because a number without them invites over-trust
+            lines.append(
+                f"- 反算提示：按声明吃水 "
+                f"{_fmt(summary.get('draft_declared_m'), 2)} m 设计，所需 "
+                f"B/T ≈ {_fmt(required, 3)}"
+                f"（当前 {_fmt(hint['current_b_over_t'], 3)}），{verdict}")
+            lines.append(
+                f"  - 口径与限制：保持排水量、Cb 与 L/B 不变（L、B 同步"
+                f"缩放）；一次性估算、未计入重量再平衡（按该值实算的吃水"
+                f"与声明值仍有同量级残差，实测 0.3–1.3%）；B/T 属算法统计"
+                f"参数、任务书无此字段，本工具不自动改动。")
     if summary.get("norman_coefficient") is not None:
         lines.append(f"- 诺曼系数 N = {_fmt(summary['norman_coefficient'], 3)}"
                      f"（重量浮力平衡 {summary['iterations']} 次收敛）")
