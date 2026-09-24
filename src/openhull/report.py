@@ -91,7 +91,7 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
         f"- 桨径 D = {_fmt(prop.get('diameter_m'), 3)} m，"
         f"螺距比 P/D = {_fmt(prop.get('pitch_ratio'), 4)}，"
         f"叶数 Z = {_fmt(prop.get('blades_z'), 0)}",
-        f"- 敞水效率 ηo = {_fmt(prop.get('eta_o'), 4)}，"
+        f"- 敞水效率 ηo = {_fmt(prop.get('eta_open_water'), 4)}，"
         f"进速系数 J = {_fmt(prop.get('advance_coefficient'), 4)}",
         f"- 收到功率 = {_fmt(prop.get('delivered_power_kw'), 1)} kW，"
         f"推力 = {_fmt(prop.get('thrust_n'), 0)} N",

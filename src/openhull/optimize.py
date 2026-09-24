@@ -44,7 +44,7 @@ import math
 from dataclasses import dataclass, field, replace
 from typing import Callable, Iterator, Sequence
 
-from .hydrostatics import hydrostatics_table
+from .hydrostatics import hydrostatic_draft_rows, hydrostatics_table
 from .linesplan import parent_to_taskbook
 from .main_dimensions import RatioParameters
 from .propeller import (
@@ -100,7 +100,13 @@ def _axis(spec: Tuple3) -> list[float]:
             "a sweep axis needs at least one sample.")
     if steps == 1:
         return [float(lo)]
-    return [lo + (hi - lo) * i / (steps - 1) for i in range(steps)]
+    values = [lo + (hi - lo) * i / (steps - 1) for i in range(steps)]
+    # snap the ENDPOINTS to the declared bounds: floating-point drift
+    # made the top grid line 3.5000000000000004 and the B/T <= 3.5
+    # guard then refused the whole line silently (review 2026-09-24)
+    values[0] = float(lo)
+    values[-1] = float(hi)
+    return values
 
 
 @dataclass(frozen=True)
@@ -322,7 +328,8 @@ def _evaluate_point(
 
     try:
         hydro = hydrostatics_table(
-            hull, [0.9 * balance.draft, balance.draft]).entries[-1]
+            hull, hydrostatic_draft_rows(
+                hull, balance.draft, (0.9, 1.0))).entries[-1]
     except SpecValidationError as error:
         return RejectedPoint(lob, bot, cb, "hydro", str(error)[:200])
     try:

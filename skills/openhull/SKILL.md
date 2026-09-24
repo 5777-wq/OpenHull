@@ -22,9 +22,9 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.0.1"
+UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.0.2"
 # 没有 uv 时：
-pip install "git+https://github.com/5777-wq/OpenHull@v1.0.1"
+pip install "git+https://github.com/5777-wq/OpenHull@v1.0.2"
 ```
 
 **主命令自带官方源覆盖**：`uv tool install` 会按本机配置的镜像源解析
@@ -32,7 +32,7 @@ pip install "git+https://github.com/5777-wq/OpenHull@v1.0.1"
 官方源可在任何环境一次装成。本机 uv 已默认官方源时可省略该前缀。
 网络受限时给 uv 配置代理（`HTTPS_PROXY=http://host:port`）。
 
-**锁定版本安装**（`@v1.0.1`）：可复现、可审计；需要跟踪最新修复时
+**锁定版本安装**（`@v1.0.2`）：可复现、可审计；需要跟踪最新修复时
 换成 `@main` 或具体 commit。安装后验证：
 
 ```bash
@@ -51,21 +51,28 @@ openhull --version        # 应输出 openhull 1.0.1
 
 ```yaml
 schema_version: 1
-taskbook_id: MIN-50000
+taskbook_id: MIN-45000
 ship_type: bulk_carrier          # bulk_carrier / tanker / container …
 requirements:
-  deadweight_t: 50000            # 载重量
-  service_speed_kn: 14.5         # 服务航速
-  kg_m: 9.0                      # 可选：装载重心高，填了才有稳性/耐波性
+  deadweight_t: 45000            # 载重量
+  service_speed_kn: 16.0         # 服务航速
+  kg_m: 9.5                      # 可选：装载重心高，填了才有稳性/耐波性
   drafts:
-    design_draft_m: 11.8         # 设计吃水
+    design_draft_m: 11.6         # 设计吃水（声明值；全链按平衡吃水计算）
 constraints:
-  block_coefficient_design: 0.82 # 方形系数（方案阶段按母型/统计取值）
+  block_coefficient_design: 0.80 # 方形系数（方案阶段按母型/统计取值）
+propeller:                       # 可选：填了才有螺旋桨设计与功率
+  blades_z: 4
+  expanded_area_ratio: 0.55
+  rpm: 100
+  shaft_immersion_m: 6.0
 ```
 
-可选块（详见仓库 `examples/taskbook_bulk_carrier.yaml`）：`propeller:`
-（螺旋桨：叶数/盘面比/转速/轴浸深）、`stability.weather_criterion:`（受风
-面积等）、`arrangement:`（总布置分舱表）。
+（上面这段与随技能提供的 `assets/minimal_taskbook.yaml` 一致——刻意选
+在全部适用带之内，首次运行即可跑通含螺旋桨的完整链条。）
+
+可选块（详见仓库 `examples/taskbook_bulk_carrier.yaml`）：
+`stability.weather_criterion:`（受风面积等）、`arrangement:`（总布置分舱表）。
 
 **适用域关卡表**（任何一项不满足，对应模块声明式拒绝，报告会给出
 结构化中文说明；如实转述，不要换方法硬凑）：
@@ -109,8 +116,9 @@ openhull rao 任务书.yaml --periods 6,8,12,16,20
 
 - `run` 输出按节解读：主尺度与重量 → 静水力 → GZ 与 IS Code 逐条判定
   （PASS/FAIL）→ 恶劣海况 → 螺旋桨 → 耐波性（谐摇判定）；
-- 出现"声明式跳过/拒绝"时，原样转述原因（例如"航速低于艾亚法速度带"），
-  并说明这是白名单纪律——工具宁可拒绝也不给不可信的数；
+- 出现"声明式跳过/拒绝"时，按上方关卡表核对 `stage`（例如
+  stage=ayre 常见原因是 L/Δ^(1/3) 落在已数字化谱系带之外），原样转述
+  工具给出的原因，并说明这是白名单纪律——工具宁可拒绝也不给不可信的数；
 - 生成的 `design_report.md` 是中文报告，可直接交付给用户；
 - 方案扫描的结论应连同"逐级拒绝直方图"一起讲：被拒的每一点都有阶段和
   原因记录（零外推）。
@@ -118,7 +126,8 @@ openhull rao 任务书.yaml --periods 6,8,12,16,20
 ## 常见追问的答法
 
 - "这个数靠谱吗？" → 指路验证记录：公开基准船（JBC / DTMB 1712 /
-  NMRI MP687）+ 书内算例 + 348 项测试，见仓库 VALIDATION.md；
+  NMRI MP687）+ 书内算例 + 全量测试（当前 359 项；未装 seakeeping
+  可选扩展时个别用例自动跳过），见仓库 VALIDATION.md；
 - "能不能算 XX 船型/XX 衡准？" → 先查仓库 AGENTS.md §5 白名单与 §7 红线：
   白名单外的方法不能实现，如实说明并建议走 Issue 提案流程；
 - 用户想调参数重跑 → 改任务书 YAML 再跑，不要手改 Python。

@@ -22,6 +22,43 @@ is semantic (MAJOR.MINOR.PATCH).
   source in hand); Wigley referee data and ShipD licence decision
   await verifiable sources; GZ paper anchor accepted as documented.
 
+## [1.0.2] - 2026-09-24
+
+### Fixed (v1.0.1 re-verification batch)
+
+The external reviewer re-tested v1.0.1 on a cold install: 8 of the 9
+earlier findings confirmed fixed; four NEW residual defects were
+found on the success path and are fixed here (each with a regression
+test), plus the reviewer's data-quality suggestion:
+
+- **N1 report rendered the propeller fields as em-dashes**: the
+  report asked for `blades_z` / `eta_o`, neither of which the summary
+  carried (actual key `eta_open_water`; `blades_z` never written).
+  The in-band success report now shows 叶数 Z and ηo with real
+  numbers; regression asserts no "= —" in the propeller section.
+- **N2 floating-point draft guard missed the scan path**: the scan
+  built [0.9T, T] raw and six grid points were refused by a
+  sub-nanometre overshoot.  The clamp is now a shared helper
+  (`hydrostatic_draft_rows` in hydrostatics.py) used by the CLI
+  (three call sites) and the scan - one implementation, one guard.
+- **N3 a grid line deleted itself**: the B/T = 3.5 endpoint
+  generated as 3.5000000000000004 and was refused by the
+  `2.0 <= B/T <= 3.5` band, silently dropping an entire grid line.
+  Grid axes now snap their endpoints to the declared bounds.
+- **N4 `--json` was not composable**: the artefact confirmation
+  lines printed to stdout after the JSON body, breaking the
+  machine-readable contract for `--json` (and polluting `--csv`
+  redirections).  Confirmations now go to stderr; a regression test
+  parses `--json --report` output with json.loads.
+- **Refusal breakdown by violating field** (reviewer section 3): the
+  scan summary now exports `refusal_fields` (stage + the violating
+  field parsed from the refusal text) alongside the stage
+  histogram, so data gaps are not reported as design verdicts.
+- Documentation alignment: the skill's inline task-book example now
+  matches the shipped asset, the mis-attributed skip example is
+  corrected, and the documented test count matches reality
+  (359; seakeeping cases skip without the optional extra).
+
 ## [1.0.1] - 2026-09-24
 
 ### Fixed (external review batch — all nine findings)

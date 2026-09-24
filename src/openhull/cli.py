@@ -32,7 +32,7 @@ import yaml
 
 from .geometry import jbc_parent_offsets  # noqa: F401  (1.x fitted parent,
 #   kept for the validation tests; the run chain uses real offsets - 2.6)
-from .hydrostatics import hydrostatics_table
+from .hydrostatics import hydrostatic_draft_rows, hydrostatics_table
 from .optimize import (
     ScanConfig,
     ScanResult,
@@ -159,6 +159,7 @@ def _design_propeller_at_service(data, balance, hydro_design):
         "provenance": prop.provenance,
         "service_speed_kn": service_kn,
         "rpm": rpm,
+        "blades_z": z,
         "diameter_m": round(prop.diameter_m, 3),
         "pitch_ratio": round(prop.pitch_ratio, 4),
         "advance_coefficient": round(prop.j, 4),
@@ -308,14 +309,8 @@ def run_taskbook(taskbook_path: str,
         draft=balance.draft,
         target_cb=spec.cb,
     )
-    # the design row IS the hull's deepest tabulated waterline: rounding
-    # design_draft to 4 decimals can exceed that waterline by fractions
-    # of a millimetre and trip the grid guard (found in the 2026-09-24
-    # review batch)
-    top_waterline = float(hull.waterlines[-1])
-    drafts = [min(round(design_draft * f, 4), top_waterline)
-              for f in (0.25, 0.5, 0.75)]
-    drafts.append(top_waterline)
+    drafts = hydrostatic_draft_rows(
+        hull, design_draft, (0.25, 0.5, 0.75, 1.0))
     hydro_table = hydrostatics_table(hull, drafts)
     hydro_design = hydro_table.at(drafts[-1])
 
@@ -400,9 +395,8 @@ def run_taskbook(taskbook_path: str,
     if hydro_curve_chart:
         from .hydrostatics_chart import write_hydrostatic_curves_chart
         chart_fractions = [0.2 + 0.1 * i for i in range(9)]  # 0.2T..1.0T
-        chart_top = float(hull.waterlines[-1])
-        chart_drafts = [min(round(design_draft * f, 4), chart_top)
-                        for f in chart_fractions[:-1]] + [chart_top]
+        chart_drafts = hydrostatic_draft_rows(
+            hull, design_draft, chart_fractions)
         chart_table = hydrostatics_table(hull, chart_drafts)
         hydro_curve_chart_path = str(write_hydrostatic_curves_chart(
             chart_table, hydro_curve_chart,
@@ -713,15 +707,16 @@ def main(argv: list[str] | None = None) -> int:
                 _print_json(summary)
             else:
                 _print_summary(summary)
-            if summary.get("hydrostatic_curve_chart"):
-                print(f"hydrostatic curves chart -> "
-                      f"{summary['hydrostatic_curve_chart']}")
-            if summary.get("report_path"):
-                print(f"design report -> {summary['report_path']}")
-            if summary.get("arrangement_dxf"):
-                print(f"arrangement DXF -> {summary['arrangement_dxf']}")
-            if summary.get("arrangement_chart"):
-                print(f"arrangement chart -> {summary['arrangement_chart']}")
+            # artefact confirmations go to stderr: stdout must stay a
+            # pure JSON document (--json) or a pure CSV stream (--csv)
+            # so both remain pipeable (review 2026-09-24, N4)
+            for label, key in (
+                    ("hydrostatic curves chart", "hydrostatic_curve_chart"),
+                    ("design report", "report_path"),
+                    ("arrangement DXF", "arrangement_dxf"),
+                    ("arrangement chart", "arrangement_chart")):
+                if summary.get(key):
+                    print(f"{label} -> {summary[key]}", file=sys.stderr)
         elif args.command == "optimize":
             _run_optimize(args)
         elif args.command == "rao":
@@ -755,10 +750,8 @@ def _run_rao(args) -> None:
         target_cb=spec.cb,
     )
     design_draft = balance.draft
-    rao_top = float(hull.waterlines[-1])
-    rao_drafts = [min(round(design_draft * f, 4), rao_top)
-                  for f in (0.9,)] + [rao_top]
-    hydro = hydrostatics_table(hull, rao_drafts).at(rao_top)
+    rao_drafts = hydrostatic_draft_rows(hull, design_draft, (0.9, 1.0))
+    hydro = hydrostatics_table(hull, rao_drafts).at(rao_drafts[-1])
     periods = [float(p.strip()) for p in str(args.periods).split(",")
                if p.strip()]
     try:
@@ -883,6 +876,21 @@ def _run_optimize(args) -> None:
     front = [c.to_dict() for c in __import__(
         "openhull.optimize", fromlist=["pareto_front"]).pareto_front(
         result.feasible)]
+    # the stage-only histogram hides WHY points were refused: 192
+    # refusals can be "3 systematic gaps + 1 physical conclusion".
+    # Export a second breakdown by violating field (parsed from the
+    # refusal text) so agents do not report data gaps as design
+    # verdicts (review 2026-09-24, section 3)
+    import re as _re
+    from collections import Counter as _Counter
+
+    def _violating_field(reason) -> str:
+        match = _re.search(r"Invalid value for '([^']+)'", str(reason))
+        return match.group(1) if match else "other"
+
+    refusal_fields = dict(sorted(_Counter(
+        f"{r.stage}.{_violating_field(r.reason)}"
+        for r in result.rejected).items()))
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
         "grid": {"l_over_b": args.grid_lob, "b_over_t": args.grid_bt,
@@ -890,6 +898,7 @@ def _run_optimize(args) -> None:
         "feasible": len(result.feasible),
         "rejected": len(result.rejected),
         "rejection_histogram": result.rejection_histogram(),
+        "refusal_fields": refusal_fields,
         "reference_power_kw": result.reference_power_kw,
         "pareto_count": len(front),
         "outputs": {"csv": str(csv_path), "rejected_csv":
@@ -914,6 +923,8 @@ def _run_optimize(args) -> None:
           f"  (feasible {len(result.feasible)}, refused "
           f"{len(result.rejected)})")
     print(f"refusal histogram  : {result.rejection_histogram()}")
+    if refusal_fields:
+        print(f"refusal by field   : {refusal_fields}")
     if result.reference_power_kw is None:
         print("reference power    : unavailable (no feasible design)")
     else:

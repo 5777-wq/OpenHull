@@ -49,6 +49,7 @@ __all__ = [
     "hydrostatics_at",
     "hydrostatics_table",
     "bonjean_areas",
+    "hydrostatic_draft_rows",
 ]
 
 
@@ -257,6 +258,29 @@ def hydrostatics_at(
         mtc=displacement * bml / (100.0 * lpp),
         lcb=(lcb_m - lpp / 2.0) / lpp * 100.0,  # % Lpp, forward positive
     )
+
+
+def hydrostatic_draft_rows(table, design_draft: float,
+                           fractions) -> list[float]:
+    """Draft rows for a hydrostatic table, clamped into the grid.
+
+    The LAST fraction must be 1.0: its row IS the deepest tabulated
+    waterline.  Rounding design_draft can overshoot that waterline by
+    fractions of a millimetre and trip the grid guard, silently
+    refusing legitimate points (found twice in the 2026-09-24 review
+    batches: CLI and scan paths) - the clamp lives here so both call
+    sites share one implementation.
+    """
+    values = [float(f) for f in fractions]
+    if not values or values[-1] != 1.0:
+        raise SpecValidationError(
+            "fractions", fractions, "last fraction = 1.0",
+            "the design row of a hydrostatic table is the deepest "
+            "tabulated waterline; the last fraction must be 1.0.")
+    top = float(np.max(table.waterlines))
+    rows = [min(round(design_draft * f, 4), top) for f in values[:-1]]
+    rows.append(top)
+    return rows
 
 
 def hydrostatics_table(

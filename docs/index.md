@@ -40,7 +40,8 @@ uv run openhull run examples/taskbook_bulk_carrier.yaml \
 
 ## 当前状态
 
-**v1.0.0**（2026-09-23）——路线图五个阶段全部完成，348 个测试全绿。
+**v1.0.2**（2026-09-24）——路线图五个阶段全部完成，359 个测试全绿
+（外部审查两批共 13 条问题全部修复）。
 完整验证记录（22 条验收，逐条含数字）见英文
 [Validation](validation.md) 页或仓库
 [VALIDATION.md](https://github.com/5777-wq/OpenHull/blob/main/VALIDATION.md)。

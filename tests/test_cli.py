@@ -123,7 +123,7 @@ def test_hydro_curve_chart_flag_writes_png(tmp_path, capsys):
     assert rc == 0
     assert out.exists()
     assert out.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
-    captured = capsys.readouterr().out
+    captured = capsys.readouterr().err
     assert f"hydrostatic curves chart -> {out}" in captured
 
 
@@ -166,7 +166,7 @@ def test_report_and_arrangement_flags(tmp_path, capsys):
     assert "OpenHull 初步设计报告" in text
     assert "总布置简图" in text
     assert dxf.exists() and ga.exists()
-    captured = capsys.readouterr().out
+    captured = capsys.readouterr().err   # confirmations live on stderr
     assert "design report ->" in captured
     assert "arrangement DXF ->" in captured
     assert "arrangement chart ->" in captured

@@ -166,3 +166,78 @@ def test_draft_row_never_exceeds_the_waterline_grid():
               for f in (0.25, 0.5, 0.75)] + [top]
     assert drafts[-1] <= top
     assert drafts == sorted(drafts)
+
+
+# ---- v1.0.1 re-verification batch (2026-09-24, second round) ---------
+
+
+def test_report_in_band_propeller_fields_render(tmp_path, in_band_summary):
+    # N1: the in-band report rendered "叶数 Z = —" and "ηo = —" because
+    # the report asked for keys the summary never carried
+    out = write_report_md(in_band_summary, tmp_path / "r.md")
+    text = out.read_text(encoding="utf-8")
+    assert "叶数 Z = 4" in text
+    assert "= —" not in text.split("## 6")[0]  # section 5 has no dashes
+    assert "敞水效率 ηo = 0.5" in text
+
+
+def test_optimize_grid_endpoints_pass_their_own_guards():
+    # N3: B/T = 3.5 generated as 3.5000000000000004 and refused by the
+    # 2.0..3.5 sanity band, silently deleting a whole grid line
+    from openhull.optimize import SweepGrid
+
+    grid = SweepGrid(l_over_b=(5.2, 7.0, 8), b_over_t=(2.5, 3.5, 6),
+                     cb=(0.81, 0.87, 4))
+    for lob, bot, cb in grid.values():
+        assert 2.0 <= bot <= 3.5
+        assert 4.0 <= lob <= 8.0
+        assert 0.5 <= cb <= 0.9
+    assert 3.5 in {bot for _, bot, _ in grid.values()}
+
+
+def test_optimize_draft_rows_never_overshoot(tmp_path):
+    # N2: the scan built [0.9*T, T] raw and fp overshoot refused six
+    # grid points on the re-verification probe
+    from openhull.hydrostatics import hydrostatic_draft_rows
+    from openhull.linesplan import parent_to_taskbook
+
+    hull, _ = parent_to_taskbook(lpp=205.0, beam=34.0, draft=13.11938,
+                                 target_cb=0.85)
+    rows = hydrostatic_draft_rows(hull, 13.119377780407651, (0.9, 1.0))
+    assert rows == sorted(rows)
+    assert rows[-1] <= float(hull.waterlines[-1])
+
+
+def test_json_stdout_stays_pure_with_artifact_flags(tmp_path, capsys,
+                                                    in_band_taskbook):
+    # N4: confirmation lines after the JSON body made stdout unparseable
+    report = tmp_path / "r.md"
+    chart = tmp_path / "c.png"
+    rc = main(["run", in_band_taskbook, "--json",
+               "--report", str(report), "--hydro-curve-chart", str(chart)])
+    assert rc == 0
+    captured = capsys.readouterr()
+    payload = json.loads(captured.out)      # raises if polluted
+    assert payload["taskbook_id"] == "REVIEW-INBAND"
+    assert "design report ->" in captured.err
+    assert report.exists() and chart.exists()
+
+
+def test_scan_summary_exports_refusal_field_breakdown(tmp_path, capsys):
+    # section-3: the stage histogram hides WHY; the field breakdown
+    # keeps data gaps from being read as design verdicts
+    taskbook = tmp_path / "refuse.yaml"
+    taskbook.write_text(MISMATCH_TASKBOOK.replace(
+        "REVIEW-DRAFT", "REVIEW-FIELDS").replace(
+        "design_draft_m: 12.5", "design_draft_m: 11.6").replace(
+        "service_speed_kn: 16.0", "service_speed_kn: 20.0"), encoding="utf-8")
+    out_dir = tmp_path / "scan2"
+    rc = main(["optimize", str(taskbook),
+               "--grid-lob", "5.2:5.6:2", "--grid-bt", "3.0:3.2:2",
+               "--grid-cb", "0.80:0.82:2", "--out", str(out_dir)])
+    assert rc == 0
+    capsys.readouterr()
+    summary = json.loads(
+        (out_dir / "scan_summary.json").read_text(encoding="utf-8"))
+    assert "refusal_fields" in summary
+    assert sum(summary["refusal_fields"].values()) == summary["rejected"]
