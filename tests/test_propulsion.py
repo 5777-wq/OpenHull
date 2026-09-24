@@ -133,13 +133,19 @@ def test_speed_reproduction_at_the_chart_knee(factors):
 
 
 def test_unreachable_power_is_refused(factors):
-    with pytest.raises(SpecValidationError):
+    with pytest.raises(SpecValidationError) as excinfo:
         solve_service_speed(
             dhp_kw=1.0,  # a watt: no speed in the band absorbs it
             eta_open_water=0.65,
             displacement_t=DISPLACEMENT_T,
             **SHIP,
         )
+    # the message must name BOTH powers: the delivered power that was
+    # asked for and the effective power it translates to.  Quoting only
+    # "target 21000 kW" next to "dhp_kw 41336" reads like a contradiction
+    # (review 2026-09-24, §3)
+    message = str(excinfo.value)
+    assert "DHP" in message and "required P_E" in message and "eta_D" in message
 
 
 def test_bad_eta_o_and_screw_refused():

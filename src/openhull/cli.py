@@ -50,7 +50,8 @@ from .propeller import (
 from .propulsion import propulsion_factors
 from .seakeeping import estimate_seakeeping
 from .resistance import ayre_effective_power
-from .spec import knots_to_ms, ShipSpec, SpecValidationError
+from .spec import (knots_to_ms, within_band, ShipSpec,
+                   SpecValidationError)
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
 from .weight_balance import solve_weight_balance
 
@@ -77,12 +78,22 @@ def _design_propeller_at_service(data, balance, hydro_design):
     # stage 1: the whitelisted resistance method must reach this
     # operating point at all (Ayre speed-length band, digitised C0
     # band) — a refusal here is reported with stage "ayre"
+    # ONE waterline length for the run: the task book's declared value
+    # (constraints.stability.weather_criterion.length_waterline_m) when
+    # present, otherwise Ayre's own standard 1.025*Lpp.  Both the
+    # effective-power call and the propeller factors below use it, so
+    # the PE and the propeller describe the same ship.
+    declared_lwl = (
+        (((data.get("constraints") or {}).get("stability") or {})
+         .get("weather_criterion") or {}).get("length_waterline_m"))
+    run_lwl = (float(declared_lwl) if declared_lwl is not None
+               else 1.025 * balance.lpp)
     try:
         pe_kw = ayre_effective_power(
             displacement_t=balance.displacement_t, speed_kn=service_kn,
             lpp_m=balance.lpp, beam_m=balance.beam,
             draft_m=balance.draft, cb=hydro_design.cb,
-            xc_pct_fwd=hydro_design.lcb, screw="single",
+            xc_pct_fwd=hydro_design.lcb, lwl_m=run_lwl, screw="single",
         ).pe_bare_kw
     except SpecValidationError as refuse:
         return {"skipped": True, "stage": "ayre", "reason": str(refuse)}
@@ -98,8 +109,13 @@ def _design_propeller_at_service(data, balance, hydro_design):
             try:
                 factors = propulsion_factors(
                     lpp_m=balance.lpp,
-                    lwl_m=balance.lwl_m if hasattr(balance, "lwl_m")
-                    else balance.lpp,
+                    # ONE waterline for the run: the declared value when
+                    # the task book carries one, else Ayre's standard
+                    # 1.025*Lpp - the same value the effective-power
+                    # call above used (Ayre's own default).  Before
+                    # v1.0.5 this stage took Lpp while the PE took the
+                    # standard, i.e. two slightly different ships.
+                    lwl_m=run_lwl,
                     beam_m=balance.beam,
                     draft_m=balance.draft,
                     cb=hydro_design.cb, cp=hydro_design.cp,
@@ -125,7 +141,7 @@ def _design_propeller_at_service(data, balance, hydro_design):
                     else "no admissible diameter inside the tip-clearance "
                          "bounds"}
         eta_sanity = (0.40, 0.85)
-        if not eta_sanity[0] <= prop.eta_o <= eta_sanity[1]:
+        if not within_band(prop.eta_o, *eta_sanity):
             return {"skipped": True, "stage": "propeller",
                     "reason": (
                         f"eta_o {prop.eta_o:.3f} outside the sanity band "
@@ -957,6 +973,7 @@ def _run_optimize(args) -> None:
     # (review 2026-09-24, §3 lesson: composition must be visible)
     off_axis = sum(1 for c in result.feasible
                    if c.speed_at_reference_power_kn is None)
+    off_causes = result.off_axis_causes()
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
         "grid": {"l_over_b": args.grid_lob, "b_over_t": args.grid_bt,
@@ -967,6 +984,7 @@ def _run_optimize(args) -> None:
         "refusal_fields": refusal_fields,
         "reference_power_kw": result.reference_power_kw,
         "off_reference_axis": off_axis,
+        "off_reference_causes": off_causes,
         "pareto_count": len(front),
         "outputs": {"csv": str(csv_path), "rejected_csv":
                     str(rejected_path), "chart": str(chart_path)},
@@ -999,10 +1017,13 @@ def _run_optimize(args) -> None:
               f"{result.reference_power_kw:,.1f} kW delivered")
     print(f"pareto front       : {len(front)} designs")
     if result.reference_power_kw is not None:
+        # per-candidate causes, counted: the population is not
+        # single-cause (review 2026-09-24, §3)
         print(f"off reference axis : {off_axis:>4d} of "
-              f"{len(result.feasible)} feasible designs (absorb more than "
-              f"the reference power at the Ayre band floor; excluded from "
-              f"the Pareto test, not extrapolated)")
+              f"{len(result.feasible)} feasible designs "
+              f"(excluded from the Pareto test, not extrapolated)")
+        if off_causes:
+            print(f"  why off-axis     : {off_causes}")
     print(f"outputs            : {csv_path}")
     print(f"                     {rejected_path}")
     print(f"                     {chart_path}")

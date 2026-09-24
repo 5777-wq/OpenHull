@@ -4,6 +4,54 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [1.0.5] - 2026-09-24
+
+### Fixed
+
+- **The scan evaluated two different ships per candidate.** The
+  reference-speed solve took the task book's ABSOLUTE
+  `length_waterline_m` (285 m — the JBC's own waterline) while the
+  design point's effective-power call took Ayre's default
+  (1.025*Lpp).  Candidates span Lpp 231-301 m, so for a 301 m
+  candidate the two calls disagreed by 8.4 % in effective power, and
+  a hull could appear to absorb more than the reference power at the
+  Ayre band floor yet less at its own design speed — impossible for
+  one hull — and was refused as unbalanceable.  One waterline rule now
+  applies to the whole scan (`_candidate_lwl`, Ayre's standard); the
+  task book's LWL keeps its declared role in the weather criterion.
+  The identity "PE at the design speed / eta_D = recorded shaft power"
+  now holds to 1.1 % over every candidate and is pinned by a test; it
+  was 8.4 %.
+- The CLI run had the same split (effective power with Ayre's
+  standard, the propeller factors with Lpp): one value is now used for
+  both — the declared LWL when the task book carries one, else
+  1.025*Lpp.  Move on the 45,000 t in-band case: D 7.425 -> 7.417 m,
+  eta_o 0.5632 -> 0.5647, delivered 13,473.8 -> 13,440.6 kW.
+- Off-axis disclosure is per candidate and classified
+  (`reference_speed_note` on every design, `off_reference_causes` in
+  the scan summary): **balance below band** / **balance above band** /
+  **validity gap**.  v1.0.4's single sentence ("absorbs more than the
+  reference at the Ayre band floor") was wrong for part of the
+  population; the acceptance run now shows 17 off-axis designs, all
+  `below band`, and 26 of 61 designs on the Pareto front (was 8 — the
+  spurious refusals had been shrinking the pool).
+- The reference-power refusal names both powers
+  (`DHP 41,336 kW x eta_D 0.512 x eta_S 1.00 -> required P_E 21,000 kW`)
+  instead of quoting "target 21000 kW" next to "dhp_kw 41336", which
+  read like a contradiction.
+- Tolerated two more constructed boundaries (same class as N3): the
+  tip-clearance gate (D <= 0.75 T, the search window's own edge) and
+  the eta_o sanity band, both via `spec.within_band`.
+
+### Changed
+
+- Acceptance (TB-001S, 192 points, 16 kn): 61 feasible, Pareto 26,
+  median reference power 41,336.0 kW, refusals Ayre C_0 69 / Ayre band
+  35 / propeller wake 18 / weather 9.  Reviewer's 100,000 t / 20 kn
+  grid unchanged at 101 feasible / 41 Pareto / 59,919.5 kW.
+- Test counts move to 384 (376 passed + 8 skipped without the optional
+  seakeeping extra).
+
 ## [1.0.4] - 2026-09-24
 
 ### Fixed

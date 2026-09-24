@@ -435,9 +435,11 @@ def solve_service_speed(
             "dhp_kw", dhp_kw,
             "balanceable within the Ayre band (V/sqrt(L) 0.50-1.20)",
             "no speed in the validated band balances the delivered "
-            f"power against this hull's effective-power curve "
-            f"(target {target:.0f} kW); the power lies outside what "
-            "the ship can usefully absorb there.",
+            "power against this hull's effective-power curve "
+            f"(DHP {dhp_kw:,.0f} kW x eta_D {eta_d:.3f} x eta_S "
+            f"{shaft_efficiency:.2f} -> required P_E {target:,.0f} kW); "
+            "the power lies outside what the ship can usefully absorb "
+            "in that band.",
         )
     for _ in range(50):
         mid = 0.5 * (lo_v + hi_v)

@@ -15,6 +15,7 @@ from openhull.optimize import (
     ScanCandidate,
     ScanConfig,
     SweepGrid,
+    _tip_clearance_ok,
     design_space_scan,
     pareto_front,
 )
@@ -229,3 +230,70 @@ def test_grid_values_cover_the_requested_axes():
     assert len(values) == 12
     assert values[0] == (5.0, 2.0, 0.8)
     assert values[-1] == (6.0, 3.0, 0.86)
+
+
+# ---------------------------------------------------------------------------
+# one waterline convention across the scan (review 2026-09-24 r4, §3)
+# ---------------------------------------------------------------------------
+
+
+def test_design_point_and_speed_axis_describe_one_ship(scan):
+    """The design point and the reference-speed solve must evaluate the
+    SAME waterline length.
+
+    The scan used to take the task book's absolute ``length_waterline_m``
+    for the speed solve while the design point's effective-power call
+    took Ayre's default (1.025*Lpp) - two different ships.  For a
+    candidate 20 m longer than the task book's ship that was an 8.4 %
+    mismatch, and it produced the impossible combination "absorbs more
+    than the reference at the band floor but less at its own design
+    speed", refused as unbalanceable.
+
+    Both routes describe one hull, so the effective power at the design
+    speed divided by the efficiency chain must reproduce the recorded
+    shaft power.  The 2 % band is the declared eta_S / eta_R bookkeeping
+    difference between the thrust-led propeller route and the classical
+    chain; the defect was 8.4 %.
+    """
+    for cand in scan.feasible:
+        factors = propulsion_factors(
+            lpp_m=cand.lpp_m, lwl_m=1.025 * cand.lpp_m, beam_m=cand.beam_m,
+            draft_m=cand.draft_m, cb=cand.cb, cp=cand.cp, cm=cand.cm,
+            cwp=cand.cwp, lcb_pct_fwd=cand.lcb_pct_fwd,
+            propeller_diameter_m=cand.propeller_diameter_m,
+            speed_ms=SPEC.service_speed, screw="single",
+            eta_r=CONFIG_KW["relative_rotative_eff"])
+        eta_d = (cand.eta_open_water * CONFIG_KW["relative_rotative_eff"]
+                 * factors.eta_h)
+        pe_kw = ayre_effective_power(
+            displacement_t=cand.displacement_t, speed_kn=SPEC.service_speed /
+            0.514444, lpp_m=cand.lpp_m, beam_m=cand.beam_m,
+            draft_m=cand.draft_m, cb=cand.cb, xc_pct_fwd=cand.lcb_pct_fwd,
+            lwl_m=1.025 * cand.lpp_m, screw="single").pe_bare_kw
+        assert pe_kw / eta_d == pytest.approx(cand.shaft_power_kw, rel=0.02)
+
+
+def test_off_axis_causes_are_classified_not_summarised(scan):
+    """The off-axis population is not single-cause: every candidate
+    carries a note, the counts add up, and a candidate whose own design
+    point already absorbs MORE than the reference power can only be off
+    the axis because the balance lies below the band (review §3: the old
+    one-sentence disclosure was wrong for part of the population)."""
+    causes = scan.off_axis_causes()
+    off = [c for c in scan.feasible if c.speed_at_reference_power_kn is None]
+    assert sum(causes.values()) == len(off)
+    assert set(causes) <= {"below band", "above band", "validity gap",
+                           "unclassified"}
+    for cand in off:
+        assert cand.reference_speed_note
+        if cand.shaft_power_kw >= scan.reference_power_kw:
+            assert not cand.reference_speed_note.startswith("balance above")
+
+
+def test_tip_clearance_gate_accepts_its_own_boundary():
+    """The gate bound is constructed by the search window (D = 0.75 T),
+    so a diameter landing exactly on it is a design, not an overshoot -
+    and one ulp past it must not be refused either (N3's class)."""
+    assert _tip_clearance_ok(0.75 * 16.5, 16.5, 0.75)
+    assert _tip_clearance_ok(0.75 * 16.5 * (1 + 1e-15), 16.5, 0.75)
+    assert not _tip_clearance_ok(0.76 * 16.5, 16.5, 0.75)

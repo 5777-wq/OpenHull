@@ -435,12 +435,36 @@ These are features of the current stage, not hidden weaknesses:
     ship_speed`).  A window that only partly overlaps the series J
     domain is intersected and searched, never extrapolated; an empty
     intersection is refused with both bands printed.
-    The attainable-speed axis is populated where the band allows: a
-    design that already absorbs more than the reference power at the
-    Ayre band floor (V/sqrt(L) = 0.50) has no in-band balance and is
-    refused rather than extrapolated - 26 of 61 in the acceptance
-    run, the rest counted as `off_reference_axis` in the scan
-    summary instead of being silently dropped from the Pareto test.
+    The attainable-speed axis is populated where the band allows
+    (44 of 61 in the acceptance run after v1.0.5, Pareto front 26).
+    Every design left off it carries a per-candidate note and a
+    counted cause (`off_reference_axis` + `off_reference_causes` in
+    the scan summary): **balance below band** (the hull already
+    absorbs more than the reference power at the Ayre floor),
+    **balance above band** (less even at the top), or **validity gap**
+    (the crossing exists inside the band but the Ayre coverage bars
+    it there).  v1.0.5: all 17 off-axis designs in the acceptance run
+    are `below band`.
+    **Correction (v1.0.5).**  v1.0.4 disclosed the off-axis designs
+    with one sentence - "absorbs more than the reference power at the
+    Ayre band floor" - which was wrong for part of the population
+    and, more importantly, hid a real defect: the speed solve took
+    the task book's ABSOLUTE `length_waterline_m` (285 m, the JBC's)
+    while the design point's effective-power call took Ayre's own
+    default (1.025*Lpp).  Candidates span Lpp 231-301 m, so the two
+    calls evaluated different ships: on a 301 m candidate the PE and
+    the shaft power disagreed by 8.4 %, and a hull could appear to
+    absorb more than the reference at the band floor yet less at its
+    own design speed - impossible for one hull - and was refused as
+    unbalanceable.  One waterline rule now applies to the whole scan
+    (`_candidate_lwl`: Ayre's standard, 1.025*Lpp; the task book's LWL
+    keeps its declared role in the weather criterion and in the CLI
+    run, where it is the ship's own value), and the identity "PE at
+    the design speed / eta_D = the recorded shaft power" holds to
+    1.1 % over every candidate (pinned test; it was 8.4 %).  The CLI
+    run had the same class of split (PE with the standard, propeller
+    factors with Lpp) and now uses one value for both: the declared
+    LWL when the task book carries one, else 1.025*Lpp.
     TB-001 at its [NMRI] 14.5 kn correctly returns an empty
     feasible set with every refusal declared - no design of this
     deadweight satisfies the whitelisted method domains at that
@@ -604,7 +628,7 @@ These are features of the current stage, not hidden weaknesses:
 ## Reproducing
 
 ```bash
-uv run pytest                        # 381 tests (373 passed + 8 skipped without the optional extra)
+uv run pytest                        # 384 tests (376 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

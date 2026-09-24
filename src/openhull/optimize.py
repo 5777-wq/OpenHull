@@ -55,7 +55,8 @@ from .propeller import (
 from .propulsion import propulsion_factors, solve_service_speed
 from .resistance import ayre_effective_power
 from .seakeeping import estimate_seakeeping
-from .spec import ShipSpec, SpecValidationError, knots_to_ms
+from .spec import (ShipSpec, SpecValidationError, knots_to_ms,
+                   within_band)
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
 from .weight_balance import solve_weight_balance
 
@@ -165,6 +166,7 @@ class ScanCandidate:
     cavitation_ok: bool | None
     cavitation_aeao_required: float | None
     speed_at_reference_power_kn: float | None = None
+    reference_speed_note: str | None = None
     roll_period_s: float | None = None
     pitch_period_s: float | None = None
     heave_period_s: float | None = None
@@ -180,6 +182,25 @@ class ScanResult:
     feasible: list[ScanCandidate] = field(default_factory=list)
     rejected: list[RejectedPoint] = field(default_factory=list)
     reference_power_kw: float | None = None
+
+    def off_axis_causes(self) -> dict[str, int]:
+        """Why feasible designs are not on the attainable-speed axis.
+
+        Classes: ``below band`` / ``above band`` / ``validity gap`` (see
+        ``_speed_at_reference_power``).  Counted rather than summarised
+        in one sentence, because the population is not single-cause.
+        """
+        causes: dict[str, int] = {}
+        for cand in self.feasible:
+            if cand.speed_at_reference_power_kn is not None:
+                continue
+            note = cand.reference_speed_note or "unclassified"
+            key = ("validity gap" if note.startswith("validity gap")
+                   else "below band" if note.startswith("balance below")
+                   else "above band" if note.startswith("balance above")
+                   else "unclassified")
+            causes[key] = causes.get(key, 0) + 1
+        return causes
 
     def rejection_histogram(self) -> dict[str, int]:
         hist: dict[str, int] = {}
@@ -257,12 +278,46 @@ def design_space_scan(
         result.reference_power_kw = round(reference, 1)
         enriched: list[ScanCandidate] = []
         for cand in result.feasible:
-            speed = _speed_at_reference_power(
+            speed, note = _speed_at_reference_power(
                 base_spec, cand, reference, config)
             enriched.append(replace(
-                cand, speed_at_reference_power_kn=speed))
+                cand, speed_at_reference_power_kn=speed,
+                reference_speed_note=note))
         result.feasible = enriched
     return result
+
+
+def _tip_clearance_ok(
+    diameter_m: float, draft_m: float, ratio: float
+) -> bool:
+    """D <= ratio * T (the declared tip-clearance gate), boundary inclusive.
+
+    The bound is CONSTRUCTED, not met by chance - the search window ends
+    at ratio*T - so a diameter that lands exactly on it is a legitimate
+    design, not an overshoot (same class as the B/T grid endpoint, see
+    spec.within_band).
+    """
+    return within_band(diameter_m, 0.0, ratio * draft_m)
+
+
+def _candidate_lwl(cand: ScanCandidate) -> float:
+    """The candidate's waterline length: Ayre's own standard, 1.025*Lpp.
+
+    ONE rule for the whole scan.  The design-point PE already took Ayre's
+    default (``lwl_m=None`` -> 1.025*Lpp); this solve used to take the
+    task book's ``length_waterline_m`` instead - an ABSOLUTE length
+    belonging to the task book's own ship, applied unchanged to
+    candidates whose Lpp spans a 25 % range (285 m on a 231 m hull is a
+    +20 % Ayre LCB correction, on a 301 m hull -7.7 %).  The two calls
+    then evaluated different ships: a candidate could absorb MORE than
+    the reference power at the Ayre band floor yet LESS at its own
+    design speed, which is geometrically impossible for one hull, and
+    the solve refused it as unbalanceable (review 2026-09-24, open
+    question in the v1.0.4 re-verification: the "below reference" group).
+    The task book's LWL keeps its declared role in the weather
+    criterion, which is a task-book-level input by design.
+    """
+    return 1.025 * cand.lpp_m
 
 
 def _speed_at_reference_power(
@@ -270,13 +325,27 @@ def _speed_at_reference_power(
     cand: ScanCandidate,
     reference_kw: float,
     config: ScanConfig,
-) -> float | None:
+) -> tuple[float | None, str | None]:
+    """Attainable speed at the reference power, or the reason it has none.
+
+    Returns ``(speed_kn, None)`` or ``(None, note)`` where the note
+    classifies the refusal against the Ayre band, so the sparse axis is
+    explained per candidate instead of in one sentence for the whole
+    population (review 2026-09-24, §3):
+
+    ``balance below band``  the hull absorbs more than the reference
+        power already at the band floor;
+    ``balance above band``  it absorbs less even at the band top;
+    ``validity gap``        the crossing exists inside the band but the
+        Ayre table coverage bars it there - a declared limitation, not a
+        design verdict.
+    """
     try:
         solution = solve_service_speed(
             dhp_kw=reference_kw,
             eta_open_water=cand.eta_open_water,
             lpp_m=cand.lpp_m,
-            lwl_m=config.length_waterline_m or cand.lpp_m,
+            lwl_m=_candidate_lwl(cand),
             beam_m=cand.beam_m,
             draft_m=cand.draft_m,
             cb=cand.cb,
@@ -289,9 +358,50 @@ def _speed_at_reference_power(
             speed_ms=base_spec.service_speed,
             eta_r=config.relative_rotative_eff,
         )
-        return round(solution.speed_kn, 3)
+        return round(solution.speed_kn, 3), None
+    except (SpecValidationError, RuntimeError) as refused:
+        return None, _classify_reference_refusal(
+            cand, reference_kw, config, base_spec.service_speed, str(refused))
+
+
+def _classify_reference_refusal(
+    cand: ScanCandidate, reference_kw: float, config: ScanConfig,
+    design_speed_ms: float, reason: str,
+) -> str:
+    """Name the cause: below the band, above it, or a barred crossing."""
+    lwl = _candidate_lwl(cand)
+    try:
+        factors = propulsion_factors(
+            lpp_m=cand.lpp_m, lwl_m=lwl, beam_m=cand.beam_m,
+            draft_m=cand.draft_m, cb=cand.cb, cp=cand.cp, cm=cand.cm,
+            cwp=cand.cwp, lcb_pct_fwd=cand.lcb_pct_fwd,
+            propeller_diameter_m=cand.propeller_diameter_m,
+            speed_ms=design_speed_ms, screw="single",
+            eta_r=config.relative_rotative_eff)
     except (SpecValidationError, RuntimeError):
-        return None
+        return f"unclassified: {' '.join(reason.split())[:160]}"
+    target = (reference_kw * cand.eta_open_water * config.relative_rotative_eff
+              * factors.eta_h)
+    lo = _AYRE_BAND[0] * math.sqrt(cand.lpp_m * _FT_PER_M)
+    hi = _AYRE_BAND[1] * math.sqrt(cand.lpp_m * _FT_PER_M)
+
+    def pe(speed_kn: float) -> float | None:
+        try:
+            return ayre_effective_power(
+                displacement_t=cand.displacement_t, speed_kn=speed_kn,
+                lpp_m=cand.lpp_m, beam_m=cand.beam_m, draft_m=cand.draft_m,
+                cb=cand.cb, xc_pct_fwd=cand.lcb_pct_fwd, lwl_m=lwl,
+                screw="single").pe_bare_kw
+        except SpecValidationError:
+            return None
+
+    at_floor, at_top = pe(lo), pe(hi)
+    if at_floor is not None and at_floor > target:
+        return "balance below band (absorbs more than the reference at the floor)"
+    if at_top is not None and at_top < target:
+        return "balance above band (absorbs less than the reference at the top)"
+    return ("validity gap (the crossing sits inside a barred stretch of the "
+            "Ayre coverage)")
 
 
 def _evaluate_point(
@@ -390,12 +500,13 @@ def _evaluate_point(
         return RejectedPoint(lob, bot, cb, "propeller",
                              str(last_error)[:200] if last_error
                              else "no admissible diameter")
-    if not _ETA_SANITY[0] <= prop.eta_o <= _ETA_SANITY[1]:
+    if not within_band(prop.eta_o, *_ETA_SANITY):
         return RejectedPoint(
             lob, bot, cb, "propeller",
             f"eta_o {prop.eta_o:.3f} outside the sanity band "
             f"{_ETA_SANITY}")
-    if prop.diameter_m > config.max_tip_diameter_draft_ratio * balance.draft:
+    if not _tip_clearance_ok(prop.diameter_m, balance.draft,
+                             config.max_tip_diameter_draft_ratio):
         return RejectedPoint(
             lob, bot, cb, "propeller",
             f"diameter {prop.diameter_m:.2f} m exceeds "
