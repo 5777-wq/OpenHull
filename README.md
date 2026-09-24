@@ -75,6 +75,21 @@ uv sync --extra seakeeping                                     # optional capyta
 uv run openhull rao examples/taskbook_bulk_carrier.yaml        # zero-speed RAOs
 ```
 
+## Use it from an AI agent
+
+OpenHull is designed to be orchestrated by AI agents. Send your
+agent this one sentence and it installs the tool, writes the task
+book and runs the whole chain itself:
+
+> Please install and use the OpenHull skill
+> (https://github.com/5777-wq/OpenHull/tree/main/skills/openhull),
+> then design a 50,000 t bulk carrier at 14.5 kn service speed with
+> a design report and a general-arrangement schematic.
+
+The skill ships in [`skills/openhull/`](skills/openhull/SKILL.md)
+with a minimal task-book template; any agent that can read a
+SKILL.md can install it from the URL alone.
+
 ## The discipline
 
 1. **Whitelist first.** An empirical formula is implemented only if

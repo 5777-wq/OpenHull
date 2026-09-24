@@ -1,0 +1,16 @@
+# Minimal working task book for OpenHull (agent skill quick check).
+# 50,000 t deadweight bulk carrier, 14.5 kn service speed.
+# Only four fields are REQUIRED; everything else is optional and
+# documented in examples/taskbook_bulk_carrier.yaml (full form).
+schema_version: 1
+taskbook_id: MIN-50000
+title: "50,000 t bulk carrier, minimal task book"
+ship_type: bulk_carrier
+requirements:
+  deadweight_t: 50000
+  service_speed_kn: 14.5
+  kg_m: 9.0                     # optional: enables stability + seakeeping
+  drafts:
+    design_draft_m: 11.8
+constraints:
+  block_coefficient_design: 0.82

@@ -87,6 +87,19 @@ pct, ratio = kwon_speed_loss_percent(
 里有一整套现成输出：中文设计报告、静水力曲线图、总布置简图（PNG+DXF）、
 静水力表 CSV，附复现命令。
 
+## 交给 AI 智能体（推荐路径）
+
+不想自己敲命令？把这句话发给任何支持技能的 AI 智能体即可：
+
+> 请安装并使用 OpenHull 技能
+> （https://github.com/5777-wq/OpenHull/tree/main/skills/openhull），
+> 然后帮我设计一条 5 万吨散货船，服务航速 14.5 节。
+
+智能体会自动完成：安装 CLI（`uv tool install
+"git+https://github.com/5777-wq/OpenHull"`）→ 用技能内置模板写任务书
+→ 运行设计链 → 把结果（含声明式跳过项）解释给你。技能源码见仓库
+`skills/openhull/SKILL.md`。
+
 ## 常见问题
 
 **Q：某些衡准显示"声明式跳过"是怎么回事？**

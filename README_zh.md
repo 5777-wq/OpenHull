@@ -71,6 +71,19 @@ uv sync --extra seakeeping                                     # 可选 capytain
 uv run openhull rao examples/taskbook_bulk_carrier.yaml        # 零航速 RAO
 ```
 
+## 交给 AI 智能体
+
+OpenHull 就是为智能体编排设计的。把下面这句话发给任何支持技能的
+AI 智能体，它会自己安装工具、写好任务书、跑完整条设计链：
+
+> 请安装并使用 OpenHull 技能
+> （https://github.com/5777-wq/OpenHull/tree/main/skills/openhull），
+> 然后帮我设计一条 5 万吨散货船，服务航速 14.5 节，出设计报告和
+> 总布置简图。
+
+技能包位于 [`skills/openhull/`](skills/openhull/SKILL.md)，内含最小
+任务书模板；能读取 SKILL.md 的智能体只用这一个网址就能自助安装。
+
 ## 工程纪律
 
 1. **白名单先行。** 经验公式只有在 [AGENTS.md §5](AGENTS.md) 列明来源
