@@ -51,6 +51,7 @@ from .spec import SpecValidationError
 
 __all__ = [
     "BURRILL_COMMERCIAL_LINE",
+    "SIGMA_VERIFIED_BAND",
     "burrill_tau_c_limit",
     "sigma_0_7r",
     "required_expanded_area",
@@ -92,7 +93,9 @@ BURRILL_COMMERCIAL_LINE: Tuple[Tuple[float, float], ...] = (
 # worked chains carry ~0.3% rounding drift (e.g. sigma 0.481 computes
 # to 0.4811-0.4823 from the rounded V_A/V_tip inputs), so the guard
 # carries a +/- 0.002 band
-_SIGMA_MIN = BURRILL_COMMERCIAL_LINE[0][0] - 2e-3
+SIGMA_VERIFIED_BAND = (BURRILL_COMMERCIAL_LINE[0][0] - 2e-3,
+                       BURRILL_COMMERCIAL_LINE[-1][0] + 2e-3)
+_SIGMA_MIN, _SIGMA_MAX = SIGMA_VERIFIED_BAND
 _SIGMA_MAX = BURRILL_COMMERCIAL_LINE[-1][0] + 2e-3
 
 

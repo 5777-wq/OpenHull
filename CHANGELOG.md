@@ -4,6 +4,48 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [1.2.0] - 2026-09-25
+
+### Added
+
+- **C0-peak sensitivity diagnostics** (product review round 6, P0-1):
+  the digitised C0 family peaks at V/√L = 0.70 on all six curves, and
+  near that peak the C4 correction cancels or inflates the V³ power
+  growth — the reviewer's ship grew +9.9 %/kn at 15→17 kn where pure
+  V³ gives +21 %, so a single-point power figure there is
+  trend-unreliable for machinery selection.  The tool now computes,
+  from the whitelisted digitised table itself, whether the operating
+  point sits in the family's own peak zone, the local slope (%/0.05),
+  and an Admiralty-coefficient corridor Ac = Δ^(2/3)·V³/PE at
+  V−1/V/V+1 — DISPLAY ONLY (§5 amended before coding, commit 6a78084:
+  diagnostics add text, never numbers).  Surfaces: a ⚠ declaration in
+  report §5, a console line, and `resistance_sensitivity` in the JSON.
+- **Cavitation unchecked contract** (P0-2): an out-of-band sigma now
+  renders as ⚠ **未校核（非通过）** — not "declaratively skipped" —
+  with the side (low side = the higher-risk direction), qualitative
+  direction hints (lower rpm / larger AE/A0 / deeper shaft), and
+  `cavitation_unchecked` (sigma, band, side) in the JSON.
+- **stdout quickness section** (P0-3): `run` now ends with a
+  speed-&-propeller section in ALL states — result (series, D, P/D,
+  ηo, PD/PS, cavitation status, sensitivity), refused (stage + one
+  line + see --report), not requested.  stdout is the agent-facing
+  contract; `--json` purity is unchanged.
+- Refusal blocks point to `openhull optimize --grid-cb …` for the
+  feasibility sweep instead of leaving the user to blind retries
+  (P1-2); the seakeeping section states Kwon speed loss is implemented
+  and tested in the library but not yet wired into `run`, and that all
+  powers are calm-water (P1-1a); the provenance note is no longer
+  truncated mid-sentence (P2-5); SKILL.md's guard table gains the C0
+  peak-zone row and the cavitation wording.
+
+### Deferred (recorded as backlog)
+
+- `openhull check` preflight subcommand (P1-3), PyPI wheel publication
+  (P1-4, interacts with the parked licensing decision), weather-
+  criterion default mode (P1-5), Kwon wiring into `run` (P1-1b),
+  refusal-block feasible-Cb bound (P1-2 first half), P2-1/2/3/4/6,
+  and the mid-term two-method resistance cross-check.
+
 ## [1.1.0] - 2026-09-25
 
 ### Added

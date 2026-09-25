@@ -288,6 +288,52 @@ def _interp_2d(rows: dict, columns, x: float, y: float) -> float:
     return lo + (hi - lo) * (x - r0) / (r1 - r0)
 
 
+def _c0_family_peak(length_ratio: float) -> float:
+    """The digitised C0 family's own peak station for this hull.
+
+    Read off the whitelisted figure 7-3 transcription itself (argmax
+    over the digitised stations) — the review's P0-1: near the family
+    peak the C4 correction cancels or inflates the V^3 growth, so a
+    single-point power figure there is trend-unreliable.
+    """
+    values = (_interp_c0(length_ratio, s) for s in _C0_STATIONS)
+    return max(zip(_C0_STATIONS, values), key=lambda pair: pair[1])[0]
+
+
+def _c0_local_slope_pct(length_ratio: float, speed_ratio: float) -> float:
+    """C0 change in % across a +-0.05 V/sqrt(L) corridor at the point."""
+    lo = max(speed_ratio - 0.05, _C0_STATIONS[0])
+    hi = min(speed_ratio + 0.05, _C0_STATIONS[-1])
+    c_lo = _interp_c0(length_ratio, lo)
+    c_hi = _interp_c0(length_ratio, hi)
+    return (c_hi / c_lo - 1.0) * 100.0
+
+
+def admiralty_corridor(
+    *, displacement_t: float, speed_kn: float, lpp_m: float, beam_m: float,
+    draft_m: float, cb: float, xc_pct_fwd: float, screw: str = "single",
+    lwl_m: float | None = None, step_kn: float = 1.0,
+) -> dict[float, float]:
+    """Admiralty coefficient Ac = Delta^(2/3)*V^3/PE at V-step/V/+step.
+
+    DISPLAY diagnostic only (review 2026-09-25, P0-1): same whitelisted
+    quantities rearranged, never used in any numeric chain.  Points
+    outside the Ayre speed band are simply absent from the corridor.
+    """
+    corridor: dict[float, float] = {}
+    for v in (speed_kn - step_kn, speed_kn, speed_kn + step_kn):
+        try:
+            pe = ayre_effective_power(
+                displacement_t=displacement_t, speed_kn=v, lpp_m=lpp_m,
+                beam_m=beam_m, draft_m=draft_m, cb=cb, xc_pct_fwd=xc_pct_fwd,
+                lwl_m=lwl_m, screw=screw).pe_bare_kw
+        except SpecValidationError:
+            continue
+        corridor[round(v, 2)] = round(
+            displacement_t ** (2.0 / 3.0) * v ** 3 / pe, 1)
+    return corridor
+
+
 def _interp_c0(length_ratio: float, speed_ratio: float) -> float:
     """C0 of the standard form from the digitised figure 7-3 family."""
     ratios = sorted(_C0_CURVES)
@@ -355,6 +401,13 @@ class AyreResult:
     pe_kw: float
     pe_bare_kw: float
     corrections: tuple[AyreCorrection, ...] = field(default_factory=tuple)
+    # sensitivity diagnostics (display only, never used in the numeric
+    # chain): the digitised C0 family's own peak station for this hull,
+    # whether the operating point sits in the peak zone, and the family's
+    # local change per 0.05 of V/sqrt(L) around the point
+    c0_family_peak_v_sqrt_l: float | None = None
+    in_c0_peak_zone: bool = False
+    c0_local_slope_pct_per_0p05: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         data = asdict(self)
@@ -449,6 +502,10 @@ def ayre_effective_power(
         [(row[0], row[3]) for row in _TABLE_7_5], v_sqrt_l
     )
     c0 = _interp_c0(length_ratio, v_sqrt_l)
+    # sensitivity diagnostics (display only): where the operating point
+    # sits relative to the digitised family's own peak
+    _c0_peak = _c0_family_peak(length_ratio)
+    _in_peak = (_c0_peak - 0.05) <= v_sqrt_l <= (_c0_peak + 0.10)
 
     c_after = c0
     corrections: list[AyreCorrection] = []
@@ -526,4 +583,8 @@ def ayre_effective_power(
         pe_kw=pe,
         pe_bare_kw=pe / 1.08,
         corrections=tuple(corrections),
+        c0_family_peak_v_sqrt_l=_c0_peak,
+        in_c0_peak_zone=_in_peak,
+        c0_local_slope_pct_per_0p05=round(
+            _c0_local_slope_pct(length_ratio, v_sqrt_l), 2),
     )

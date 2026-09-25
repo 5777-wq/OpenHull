@@ -646,10 +646,30 @@ These are features of the current stage, not hidden weaknesses:
 | Staged interplay | hard 12.5 m on the 45,000 t case: the chain completes, the propeller stage refuses at L/Δ^(1/3) 4.72 < 4.88 (declared C0 gap) | structured refusal, not a crash |
 | Full-chain real-machine run | JBC taskbook with the flag: hard-draft line in §1 and the console, hydrostatics at 16.50 m, no mismatch warning | behaviour |
 
+25. **C0-peak sensitivity diagnostics + honest cavitation/stdout
+    contracts (product review round 6, owner-directed 2026-09-25).**
+    A product review walked the full chain as a real user (100,000 t /
+    20 kn / Cb 0.76) and found three P0s; all three are addressed with
+    display-only diagnostics and contract fixes — no numeric result
+    changed (the whitelisted formulas, guards and acceptance numbers
+    are untouched; the diagnostics derive from the digitised C0 family
+    itself, §5 amended before coding, commit 6a78084).
+
+| Check | Result | Criterion |
+|---|---|---|
+| P0-1 phenomenon reproduced | the reviewer's ship at 15→17 kn: PE grows +9.9 %/kn vs +21 % for pure V³ (C0 rising +28 %/0.05 below the family peak); the digitised family peaks at V/√L = 0.70 on ALL six curves | reproduced from the whitelisted table |
+| Peak-zone flag | the reviewer's 20 kn point (V/√L 0.699) flags in_peak_zone=True, family peak 0.70, local slope −4.8 %/0.05; a 16 kn 45,000 t run stays unflagged | data-derived zone, not hand-picked |
+| Ac corridor (display only) | at 20 kn: 19 kn 799.3 / 20 kn 754.0 / 21 kn 681.9 — displayed as evidence, never used in any numeric chain | §5 declaration |
+| P0-2 cavitation wording | out-of-band sigma renders as ⚠ **未校核（非通过）** with the side (low = higher risk), direction hints (lower rpm / larger AE/A0 / deeper shaft), and the full provenance note untruncated (P2-5) | no "declaratively skipped" wording left |
+| P0-3 stdout contract | the quickness section appears in ALL three states: result (D/P/D/ηo/power/cavitation/sensitivity), refused (stage + one line + see --report), not requested; `--json` purity regression untouched | agent contract |
+| P1-1a Kwon wording | the report no longer claims "no speed-loss formula exists"; it states Kwon is implemented/tested in the library, not yet wired into `run` (needs sea-state inputs), and all powers are calm-water | library facts |
+| P1-2 refusal guidance | the refusal block points to `openhull optimize --grid-cb …` for the feasibility sweep | no more blind retries |
+| Regression | 404 tests green (11 new); the 393 prior numbers unchanged | no numeric drift |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 393 tests (385 passed + 8 skipped without the optional extra)
+uv run pytest                        # 404 tests (396 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

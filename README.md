@@ -97,7 +97,7 @@ SKILL.md can install it from the URL alone.
    the code, transcriptions verified against page images of the
    source.
 2. **Acceptance by numbers.** Book worked examples, independent-path
-   cross-checks and public benchmarks pin every feature — 393 tests
+   cross-checks and public benchmarks pin every feature — 404 tests
    (8 marked skips without the optional extra),
    full record in [VALIDATION.md](VALIDATION.md).
 3. **Declared approximations.** Wall-sided decks, damping ranges,

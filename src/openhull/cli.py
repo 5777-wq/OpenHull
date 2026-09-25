@@ -43,13 +43,14 @@ from .optimize import (
 from .linesplan import parent_to_taskbook
 from .main_dimensions import B_OVER_T_BAND, required_b_over_t_at_draft
 from .propeller import (
+    SIGMA_VERIFIED_BAND,
     b_series_open_water,
     check_cavitation,
     solve_optimal_propeller_for_thrust,
 )
 from .propulsion import propulsion_factors
 from .seakeeping import estimate_seakeeping
-from .resistance import ayre_effective_power
+from .resistance import admiralty_corridor, ayre_effective_power
 from .spec import (knots_to_ms, within_band, ShipSpec,
                    SpecValidationError)
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
@@ -90,14 +91,30 @@ def _design_propeller_at_service(data, balance, hydro_design):
     run_lwl = (float(declared_lwl) if declared_lwl is not None
                else 1.025 * balance.lpp)
     try:
-        pe_kw = ayre_effective_power(
+        ayre_result = ayre_effective_power(
             displacement_t=balance.displacement_t, speed_kn=service_kn,
             lpp_m=balance.lpp, beam_m=balance.beam,
             draft_m=balance.draft, cb=hydro_design.cb,
             xc_pct_fwd=hydro_design.lcb, lwl_m=run_lwl, screw="single",
-        ).pe_bare_kw
+        )
+        pe_kw = ayre_result.pe_bare_kw
     except SpecValidationError as refuse:
         return {"skipped": True, "stage": "ayre", "reason": str(refuse)}
+    # P0-1 diagnostic (display only): where the operating point sits in
+    # the digitised C0 family, and the Admiralty-coefficient corridor
+    # around the design speed
+    resistance_sensitivity = {
+        "in_c0_peak_zone": ayre_result.in_c0_peak_zone,
+        "c0_family_peak_v_sqrt_l": ayre_result.c0_family_peak_v_sqrt_l,
+        "c0_local_slope_pct_per_0p05":
+            ayre_result.c0_local_slope_pct_per_0p05,
+        "v_sqrt_l": round(ayre_result.v_sqrt_l, 4),
+        "admiralty_corridor": admiralty_corridor(
+            displacement_t=balance.displacement_t, speed_kn=service_kn,
+            lpp_m=balance.lpp, beam_m=balance.beam, draft_m=balance.draft,
+            cb=hydro_design.cb, xc_pct_fwd=hydro_design.lcb,
+            lwl_m=run_lwl),
+    }
     # stage 2: thrust-led propeller design (efficiency-independent
     # thrust, no eta_o fixed point — same route as the scan)
     try:
@@ -159,6 +176,7 @@ def _design_propeller_at_service(data, balance, hydro_design):
         float(propeller_block.get("shaft_efficiency") or 1.0) * eta_r)
     cav = None
     cav_note = None
+    cav_unchecked = None
     hs_m = propeller_block.get("shaft_immersion_m")
     if hs_m is not None:
         try:
@@ -169,9 +187,18 @@ def _design_propeller_at_service(data, balance, hydro_design):
                 hs_m=float(hs_m))
         except SpecValidationError as cav_refuse:
             # sigma outside the verified Burrill band: the check is
-            # unavailable here (line carried at 4 book-read anchors)
+            # UNAVAILABLE here, not passed (review 2026-09-25, P0-2).
+            # Carry the side: below the band is the HIGHER cavitation
+            # risk direction and the one that most needs human review.
             cav = None
             cav_note = str(cav_refuse)
+            sigma = float(cav_refuse.value)
+            lo, hi = SIGMA_VERIFIED_BAND
+            cav_unchecked = {
+                "sigma_0_7r": round(sigma, 4),
+                "band": [round(lo, 4), round(hi, 4)],
+                "side": "low" if sigma < lo else "high",
+            }
     result = {
         "series": prop.series_name,
         "provenance": prop.provenance,
@@ -190,6 +217,8 @@ def _design_propeller_at_service(data, balance, hydro_design):
         "shaft_power_kw": round(shaft_power_kw, 1),
         "cavitation": None,
         "cavitation_note": cav_note,
+        "cavitation_unchecked": cav_unchecked,
+        "resistance_sensitivity": resistance_sensitivity,
     }
     if cav is not None:
         result["cavitation"] = {
@@ -685,7 +714,53 @@ def _print_summary(summary: dict) -> None:
                 f"{check['tuning_factor']:.2f} -> {verdict}"
             )
         print("-" * 64)
-        print("JSON summary and CSV available via --json / --csv redirection.")
+        # P0-3 (review 2026-09-25): stdout is the agent-facing contract —
+    # the chain's terminal product (power, diameter, efficiency) must
+    # appear here in ALL its states, not only in the report/JSON.
+    prop = summary.get("propeller_design")
+    print("-" * 64)
+    print("speed & propeller (task 3.3):")
+    if prop is None:
+        print("  propeller         : not requested (no propeller block "
+              "in the task book)")
+    elif prop.get("skipped"):
+        first = " ".join(str(prop.get("reason", "")).split())[:110]
+        print(f"  propeller         : REFUSED at {prop.get('stage')} - "
+              f"{first}")
+        print("  details           : see --report (structured refusal) "
+              "or --json")
+    else:
+        print(f"  propeller         : {prop.get('series')}, "
+              f"D {prop.get('diameter_m')} m, P/D {prop.get('pitch_ratio')}, "
+              f"eta_o {prop.get('eta_open_water')}")
+        print(f"  power             : PD {prop.get('delivered_power_kw'):,.1f} kW"
+              f" / PS {prop.get('shaft_power_kw'):,.1f} kW at "
+              f"{prop.get('service_speed_kn')} kn")
+        cav = prop.get("cavitation")
+        unchecked = prop.get("cavitation_unchecked")
+        if cav is not None:
+            state = "ok" if cav.get("ok") else "NOT ok (area short)"
+            print(f"  cavitation        : sigma {cav.get('sigma_0_7r')} "
+              f"CHECKED {state}")
+        elif unchecked is not None:
+            side = ("low side = higher cavitation risk"
+                    if unchecked.get("side") == "low"
+                    else "high side = conservative direction")
+            print(f"  cavitation        : UNCHECKED - sigma "
+                  f"{unchecked.get('sigma_0_7r')} outside the verified band "
+                  f"{unchecked.get('band')[0]}-{unchecked.get('band')[1]} "
+                  f"({side})")
+        else:
+            print("  cavitation        : not run (no shaft immersion "
+                  "declared)")
+        sens = prop.get("resistance_sensitivity")
+        if sens and sens.get("in_c0_peak_zone"):
+            print(f"  sensitivity       : C0 PEAK ZONE (family peak "
+                  f"{sens.get('c0_family_peak_v_sqrt_l')}, local slope "
+                  f"{sens.get('c0_local_slope_pct_per_0p05'):+.1f}%/0.05, "
+                  f"Ac corridor {sens.get('admiralty_corridor')}) - "
+                  f"single-point power is trend-unreliable here")
+print("JSON summary and CSV available via --json / --csv redirection.")
 
 
 def _print_json(summary: dict) -> None:

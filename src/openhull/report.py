@@ -83,6 +83,10 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
             "- 说明：白名单方法的适用域由项目章程锁定，工具拒绝在域外"
             "给出数字（拒绝优于外推）。是否调整设计需求属于专业判断，"
             "工具不替用户拍板。",
+            "- 可行域扫描：`openhull optimize <任务书> --grid-cb "
+            "下限:上限:档数` 可自动扫出哪些组合能进入各适用带（例如 "
+            "`--grid-cb 0.70:0.84:8`），不必逐点手试（review 2026-09-25 "
+            "P1-2）。",
             "",
         ]
         return lines
@@ -96,6 +100,21 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
         f"- 收到功率 = {_fmt(prop.get('delivered_power_kw'), 1)} kW，"
         f"推力 = {_fmt(prop.get('thrust_n'), 0)} N",
     ]
+    sens = prop.get("resistance_sensitivity")
+    if sens and sens.get("in_c0_peak_zone"):
+        corridor = " / ".join(
+            f"{v} kn: {ac}" for v, ac in (sens.get("admiralty_corridor") or {})
+            .items())
+        lines.append(
+            f"- ⚠ 方法敏感性（P0-1）：本运行点位于已数字化 C₀ 族的**峰区**"
+            f"（族峰值 V/√L ≈ {_fmt(sens.get('c0_family_peak_v_sqrt_l'), 2)}，"
+            f"本点 {_fmt(sens.get('v_sqrt_l'), 3)}，局部斜率 "
+            f"{_fmt(sens.get('c0_local_slope_pct_per_0p05'), 1)}%/0.05）——"
+            f"峰区内 C₀ 对航速的局部变化会抵消或放大 V³ 增长，**单点功率"
+            f"不宜直接用于主机选型**；参考海军部系数 Ac = Δ^(2/3)·V³/PE "
+            f"走廊：{corridor}。建议以航速扫描查看趋势并对绝对水平留出"
+            f"裕度（本工具尚未接入第二种阻力法交叉复核；诊断只加文字、"
+            f"不改任何数值）。")
     cav = prop.get("cavitation")
     if cav is not None:
         verdict = "满足" if cav.get("ok") else "**不满足（盘面比短缺）**"
@@ -104,9 +123,26 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
             f"{verdict}；安装盘面比 {_fmt(cav.get('aeao_available'), 3)} vs "
             f"所需 {_fmt(cav.get('aeao_required'), 3)}")
     elif prop.get("cavitation_note"):
-        note = " ".join(str(prop["cavitation_note"]).split())[:200]
-        lines.append(f"- Burrill 空泡校核：声明式跳过（σ 落在已验证带外）"
-                     f"—— {note}")
+        # P0-2 (review 2026-09-25): "declaratively skipped" reads like
+        # a pass — the truth is UNCHECKED, and the low side of the band
+        # is the higher-risk direction that most needs human review
+        unchecked = prop.get("cavitation_unchecked") or {}
+        sigma = unchecked.get("sigma_0_7r")
+        band = unchecked.get("band") or [None, None]
+        side = ("**低侧**——空泡风险更高的一侧，最需要人工复核"
+                if unchecked.get("side") == "low"
+                else "高侧——偏保守方向")
+        lines.append(
+            f"- ⚠ **Burrill 空泡校核：未校核（非通过）**：σ0.7R = "
+            f"{_fmt(sigma, 3)} 落在已验证带 [{_fmt(band[0], 3)}, "
+            f"{_fmt(band[1], 3)}] 外（本方案位于{side}），空泡状态"
+            f"**未知**。")
+        lines.append(
+            f"  - 方向性提示（定性）：把 σ0.7R 拉回带内的常见方向是"
+            f"降低转速 n、加大盘面比 AE/A0、增大轴系浸深 h（三者都使 "
+            f"σ 上升）；请结合总布置与主机选型复核。")
+        full_note = " ".join(str(prop["cavitation_note"]).split())
+        lines.append(f"  - 工具原文（保留可溯源，不截断）：{full_note}")
     lines.append("")
     return lines
 
@@ -133,7 +169,13 @@ def _section_seakeeping(sk: dict | None) -> list[str]:
             f"| {check['motion']} | {check['label']} "
             f"| {check['wave_period_s']:.0f} s "
             f"| {check['tuning_factor']:.2f} | {verdict} |")
-    lines += ["", "> 波浪失速不在本层范围：白名单书内无失速估算公式。", ""]
+    lines += [
+        "",
+        "> 波浪失速：Kwon 失速法**已在库层实现并通过测试**"
+        "（2026-09-23 白名单化），尚未接入 `run` 链——接入需要任务书"
+        "提供海况输入（浪向、Beaufort 级等），当前版本**不输出**失速"
+        "修正，本报告所有功率均为**静水**值（review 2026-09-25 P1-1）。",
+        ""]
     return lines
 
 

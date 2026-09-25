@@ -22,9 +22,9 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.1.0"
+UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.2.0"
 # 没有 uv 时：
-pip install "git+https://github.com/5777-wq/OpenHull@v1.1.0"
+pip install "git+https://github.com/5777-wq/OpenHull@v1.2.0"
 ```
 
 **主命令自带官方源覆盖**：`uv tool install` 会按本机配置的镜像源解析
@@ -32,11 +32,11 @@ pip install "git+https://github.com/5777-wq/OpenHull@v1.1.0"
 官方源可在任何环境一次装成。本机 uv 已默认官方源时可省略该前缀。
 网络受限时给 uv 配置代理（`HTTPS_PROXY=http://host:port`）。
 
-**锁定版本安装**（`@v1.1.0`）：可复现、可审计；需要跟踪最新修复时
+**锁定版本安装**（`@v1.2.0`）：可复现、可审计；需要跟踪最新修复时
 换成 `@main` 或具体 commit。安装后验证：
 
 ```bash
-openhull --version        # 应输出 openhull 1.1.0
+openhull --version        # 应输出 openhull 1.2.0
 ```
 
 耐波性 RAO 是可选扩展（capytaine），主流程不需要；需要时：
@@ -84,7 +84,8 @@ propeller:                       # 可选：填了才有螺旋桨设计与功率
 | B 系列包线 | 叶数 2–7 / 盘面比 0.30–1.05 / P/D 0.50–1.40 | 螺旋桨块跳过（stage=propeller） |
 | 梢隙 | 桨径 D ≤ 0.75 T | 螺旋桨块跳过（stage=propeller） |
 | ηo 合理域 | 敞水效率 0.40–0.85 | 螺旋桨块跳过（stage=propeller） |
-| Burrill 空泡带 | σ0.7R ∈ [0.387, 0.483]（四锚点限界线） | 空泡校核降级为声明式说明（不阻断结果） |
+| Burrill 空泡带 | σ0.7R ∈ [0.387, 0.483]（四锚点限界线） | 空泡校核**未校核（非通过）**——不是通过；低侧（σ 偏小）是空泡风险更高方向，报告会给方向提示 |
+| C₀ 峰区（方法敏感性，不拒绝） | V/√L 落在数字化 C₀ 族自身峰值 ±0.05~+0.10（族峰值 ≈0.70） | 不拒绝；报告/控制台出敏感性声明：单点功率不宜直接用于主机选型，建议扫描查看趋势（诊断只加文字不改数字） |
 | 重量平衡 | 诺曼迭代收敛 | 整轮拒绝（weight_balance） |
 | IS Code 衡准 | 六项 + 恶劣风浪 | 稳定段拒绝或整体 FAIL 判定 |
 
@@ -115,7 +116,10 @@ openhull rao 任务书.yaml --periods 6,8,12,16,20
 ## 第四步：把结果讲给用户
 
 - `run` 输出按节解读：主尺度与重量 → 静水力 → GZ 与 IS Code 逐条判定
-  （PASS/FAIL）→ 恶劣海况 → 螺旋桨 → 耐波性（谐摇判定）；
+  （PASS/FAIL）→ 恶劣海况 → 耐波性（谐摇判定）→ **快速性与螺旋桨段**
+  （v1.2.0 起 stdout 末尾固定输出：成功给 D/P/D/ηo/功率/空泡状态，
+  拒绝给 stage 与一行原因，未请求给"not requested"；空泡出带时显示
+  UNCHECKED 而非通过，C₀ 峰区时附敏感性一行）；
 - 出现"声明式跳过/拒绝"时，按上方关卡表核对 `stage`（例如
   stage=ayre 常见原因是 L/Δ^(1/3) 落在已数字化谱系带之外），原样转述
   工具给出的原因，并说明这是白名单纪律——工具宁可拒绝也不给不可信的数；
@@ -125,8 +129,9 @@ openhull rao 任务书.yaml --periods 6,8,12,16,20
 
 ## 常见追问的答法
 
+- "能算波浪失速吗？" → Kwon 失速法已在库层实现并通过测试，但**尚未接入 run 链**（需要海况入参：浪向、Beaufort 级）；当前报告所有功率均为**静水**值，如实转述，不要声称已含失速修正；
 - "这个数靠谱吗？" → 指路验证记录：公开基准船（JBC / DTMB 1712 /
-  NMRI MP687）+ 书内算例 + 全量测试（当前 393 项；未装 seakeeping
+  NMRI MP687）+ 书内算例 + 全量测试（当前 404 项；未装 seakeeping
   可选扩展时个别用例自动跳过），见仓库 VALIDATION.md；
 - "任务书里的 length_waterline_m 影响功率吗？" → 分两处说清：单船
   `run` 一次运行一个水线值（任务书声明了就用声明的，否则 Ayre 标准
