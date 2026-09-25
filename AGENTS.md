@@ -104,9 +104,16 @@ no page numbers from memory).
   of the R2 decision): **no new source** — Archimedes' relation
   ∇ = L·B·T·Cb (already listed through the chain-solve) rearranged at
   another draft with ∇, Cb and L/B held fixed, i.e. B/T ∝ T^-1.5.  The
-  rule is printed with the number, the one-shot limit is declared, and
-  the R2 question (design draft as a hard constraint) stays open
-  pending a reverse-anchor decision.
+  rule is printed with the number and the one-shot limit is declared.
+- Converged variant, `draft_is_hard` (2026-09-25, owner-approved R2-A
+  of the same decision): the declared design draft becomes the
+  CONSTRAINT and B/T is the solved variable — bisection on B/T over the
+  guard band, each trial a full Norman weight balance, converged when
+  the balance draft meets the declared draft within 1 cm.  Same rule as
+  the hint (L/B and Cb held), no new source; acceptance gated by the
+  JBC reverse anchor (solved L/B within ±5 % of the NMRI
+  280 m / 45 m particulars).  A draft the band cannot reach is refused
+  with the endpoint numbers, never extrapolated.
 
 **Weight estimation (lightweight) and weight-buoyancy balance**
 - Xie Yunping, Chen Yue, Zhang Ruirui & Liu Kefeng, *Ship Design
