@@ -35,3 +35,8 @@ docs/validation.md
 docs/changelog.md
 docs/contributing.md
 site/
+
+# 会话临时文件（提交信息/发布说明/探针脚本）——"只暂存明确路径"的第二道锁
+_commit_*.txt
+_release_*.md
+_probe_*.py

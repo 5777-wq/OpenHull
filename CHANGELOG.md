@@ -4,6 +4,22 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [Unreleased]
+
+### Added
+
+- The waterline convention is stated where it bites (AGENTS.md §5,
+  SKILL.md): one waterline per `run` — the declared task-book value
+  when present, else Ayre's standard 1.025*Lpp — and, in the scan, each
+  candidate uses its own 1.025*Lpp while the declared task-book L_WL
+  feeds only the weather criterion.  Scaling a declared L_WL/Lpp ratio
+  with the candidates is recorded as an open direction, deliberately
+  not implemented (review round 5: all v1.0.5 claims independently
+  reproduced, no new defects; both suggestions adopted).
+- `.gitignore` covers the session temp files (`_commit_*.txt`,
+  `_release_*.md`, `_probe_*.py`) — a second lock behind the
+  stage-explicit-paths rule after the v1.0.5 slip.
+
 ## [1.0.5] - 2026-09-24
 
 ### Fixed

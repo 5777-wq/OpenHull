@@ -290,6 +290,20 @@ no page numbers from memory).
   divergences declared.  Owner approval: task 3.2 implementation
   plan (2026-09-21).
 
+**Waterline convention (one value per run; declared 2026-09-24, review round 5)**
+- Every effective-power and propulsion-factor call of one `run` uses the
+  SAME waterline length: the task book's declared `length_waterline_m`
+  when it carries one, else Ayre's standard 1.025*Lpp.
+- In the design-space scan the candidates are RESCALED, so the task
+  book's absolute waterline does not travel with them: every candidate
+  uses its own 1.025*Lpp.  The declared task-book L_WL feeds only the
+  weather criterion (a task-book-level input by design).
+- Do not expect the task-book L_WL to move a scan's propulsion numbers.
+  If a future task book's L_WL genuinely belongs to its own dimensions
+  (L_WL/Lpp well above 1.02), the faithful option is to scale the
+  declared RATIO with the candidates — recorded as an open direction,
+  deliberately not implemented.
+
 **Propeller (preliminary design: open-water series, chart design, cavitation check)**
 - Wageningen B-series open-water regression — the implemented
   open-water model (owner delegated the route choice to a documented
