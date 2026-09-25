@@ -100,6 +100,17 @@ no page numbers from memory).
 - Schneekluth, H. & Bertram, V., *Ship Design for Efficiency and Economy*
   (2nd ed., Butterworth-Heinemann) — statistical ranges of principal
   dimension ratios for merchant ships.
+- C0-peak sensitivity diagnostics (2026-09-25, product review round 6,
+  owner-directed): **no new empirical source** — the peak-zone flag and
+  the local-slope figure are computed from the ALREADY-WHITELISTED
+  digitised C0 family (figure 7-3 above) itself: the family's own peak
+  station (argmax over the digitised stations) and its local change per
+  0.05 of V/sqrt(L).  The Admiralty coefficient
+  Ac = Delta^(2/3)*V^3/PE is the same whitelisted quantities
+  rearranged and is DISPLAYED as a diagnostic corridor only — it never
+  enters any numeric result, correction or gate.  Diagnostics add text,
+  never numbers.
+
 - Draft-declaration back-solve hint (2026-09-24, owner-approved Plan 0
   of the R2 decision): **no new source** — Archimedes' relation
   ∇ = L·B·T·Cb (already listed through the chain-solve) rearranged at
