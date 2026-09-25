@@ -53,7 +53,8 @@ from .resistance import ayre_effective_power
 from .spec import (knots_to_ms, within_band, ShipSpec,
                    SpecValidationError)
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
-from .weight_balance import solve_weight_balance
+from .weight_balance import (solve_weight_balance,
+                             solve_weight_balance_for_draft)
 
 
 def _design_propeller_at_service(data, balance, hydro_design):
@@ -305,15 +306,22 @@ def run_taskbook(taskbook_path: str,
     """
     data = _load_taskbook(Path(taskbook_path))
     spec, design_draft_declared = _ship_spec_from_taskbook(data)
+    draft_is_hard = bool(
+        ((data.get("requirements") or {}).get("drafts") or {})
+        .get("draft_is_hard", False))
 
-    balance = solve_weight_balance(spec)
+    # TWO contract modes for the declared draft (R2-A, owner-approved
+    # 2026-09-25).  Default: the weight-balance draft is authoritative
+    # and a mismatch beyond 5 cm is REPORTED, never silently mixed.
+    # `draft_is_hard: true`: the declared draft is the constraint —
+    # B/T is bisected on the converged balance (L/B and Cb held) so the
+    # ship IS designed to the declared waterline; an unreachable draft
+    # is refused with the band endpoints.
+    if draft_is_hard:
+        balance = solve_weight_balance_for_draft(spec, design_draft_declared)
+    else:
+        balance = solve_weight_balance(spec)
 
-    # ONE design draft for the whole chain: the weight-balance draft.
-    # The task-book design_draft_m is the declarative requirement; a
-    # mismatch beyond 5 cm is REPORTED, never silently mixed (owner
-    # decision recorded in the review-response batch, 2026-09-24:
-    # consuming the declared draft as a design variable would change
-    # the dimension methodology and needs its own approval).
     design_draft = balance.draft
     draft_mismatch_m = design_draft_declared - design_draft
 
@@ -503,6 +511,9 @@ def run_taskbook(taskbook_path: str,
         "depth_m": round(balance.depth, 3),
         "draft_m": round(balance.draft, 3),
         "draft_declared_m": round(design_draft_declared, 3),
+        "draft_is_hard": draft_is_hard,
+        "hard_draft_b_over_t": balance.solved_b_over_t,
+        "hard_draft_iterations": balance.hard_draft_iterations,
         "draft_mismatch_m": (
             round(draft_mismatch_m, 3)
             if abs(draft_mismatch_m) > 0.05 else None),
@@ -554,6 +565,11 @@ def _print_summary(summary: dict) -> None:
         f"{summary['depth_m']:.2f} / {summary['draft_m']:.2f} m"
     )
     print(f"deadweight ratio    : {summary['deadweight_ratio_achieved']:>12.4f}")
+    if summary.get("draft_is_hard"):
+        print(f"draft hard          : designed to the declared "
+              f"{summary['draft_declared_m']:.3f} m "
+              f"(B/T solved to {summary['hard_draft_b_over_t']:.4f} in "
+              f"{summary['hard_draft_iterations']} balance probes)")
     if summary.get("draft_mismatch_m") is not None:
         print(f"draft declared      : {summary['draft_declared_m']:>12.3f} m "
               f"vs balance {summary['draft_m']:.3f} m "

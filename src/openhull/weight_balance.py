@@ -82,10 +82,11 @@ parent data as soon as the owner supplies them.
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Any
 
-from .main_dimensions import RatioParameters, _chain_solve
+from .main_dimensions import (B_OVER_T_BAND, RatioParameters,
+                              _chain_solve)
 from .spec import ShipSpec, SpecValidationError
 
 # ---------------------------------------------------------------------------
@@ -453,6 +454,13 @@ class WeightBalanceResult:
     norman_coefficient: float | None
     imbalance_ratio: float
     steps: tuple[BalanceStep, ...] = field(default_factory=tuple)
+    # hard-draft mode (draft_is_hard): the declared draft was the
+    # constraint and B/T the solved variable; None on the default path
+    hard_draft: bool = False
+    declared_draft_m: float | None = None
+    solved_b_over_t: float | None = None
+    hard_draft_iterations: int | None = None
+    hard_draft_tolerance_m: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """JSON-safe dict (nested, no object identity references)."""
@@ -711,4 +719,119 @@ def solve_weight_balance(
         deadweight_ratio_achieved=dw / delta,
         norman_coefficient=_norman_coefficient(delta, final_breakdown),
         imbalance_ratio=steps[-1].imbalance_ratio, steps=tuple(steps),
+    )
+
+
+def solve_weight_balance_for_draft(
+    spec: ShipSpec,
+    draft_m: float,
+    algorithm_id: str = DEFAULT_WEIGHT_ALGORITHM,
+    *,
+    ratios: RatioParameters | None = None,
+    parameters: ComponentWeightParameters | None = None,
+    draft_tolerance_m: float = 0.01,
+) -> WeightBalanceResult:
+    """Design the ship TO the declared draft: bisect B/T on the balance.
+
+    The default chain treats the draft as an OUTPUT (B/T is a
+    statistic).  With ``draft_is_hard`` (owner-approved R2-A,
+    2026-09-25) the declared draft is the CONSTRAINT and B/T the solved
+    variable, under the same rule the Plan-0 hint declares: L/B and Cb
+    held, nothing else moves.
+
+    For a fixed L/B and Cb the balance draft DECREASES with B/T (a
+    slimmer beam at the same length floats deeper), so the band
+    endpoints bracket the answer or it does not exist:
+
+    - balance draft at B/T = 3.5 still deeper than declared  ->  the
+      declared draft is too SHALLOW for this deadweight: refused with
+      the endpoint numbers;
+    - balance draft at B/T = 2.0 still shallower than declared  ->  the
+      declared draft is too DEEP: refused the same way.
+
+    Inside the bracket a bisection converges the balance draft to the
+    declared draft within ``draft_tolerance_m`` (1 cm, an order below
+    the 5 cm mismatch-reporting threshold, so a converged hard draft
+    never raises the mismatch warning).
+
+    Raises:
+        SpecValidationError: non-positive draft, or a draft the guard
+            band cannot reach (message carries the endpoint numbers).
+        RuntimeError: an inner weight balance failed to converge.
+    """
+    if not math.isfinite(draft_m) or draft_m <= 0:
+        raise SpecValidationError(
+            "draft", draft_m, "positive draft, m",
+            "a hard design draft must be a positive waterline.",
+        )
+    ratios = ratios if ratios is not None else RatioParameters()
+    lo, hi = B_OVER_T_BAND
+
+    def balance_at(b_over_t: float) -> WeightBalanceResult:
+        return solve_weight_balance(
+            spec, algorithm_id,
+            ratios=replace(ratios, b_over_t=b_over_t),
+            parameters=parameters,
+        )
+
+    shallow = balance_at(hi)   # slimmest allowed beam -> deepest draft
+    deep = balance_at(lo)      # widest allowed beam -> shallowest draft
+    f_shallow = shallow.draft - draft_m   # < 0 : even 3.5 too shallow
+    f_deep = deep.draft - draft_m         # > 0 : even 2.0 too deep
+    if f_shallow > 0:
+        raise SpecValidationError(
+            "drafts.draft_is_hard", draft_m,
+            f"reachable within B/T {lo:.2f}-{hi:.2f}",
+            f"even at the band top B/T {hi:.2f} the balance draft is "
+            f"{shallow.draft:.3f} m, deeper than the declared "
+            f"{draft_m:.3f} m: this deadweight/Cb cannot float as "
+            f"shallow as declared under the held-(L/B, Cb) rule - "
+            f"refusing instead of extrapolating (a shallower draft "
+            f"needs less deadweight, a finer Cb, or a B/T above the "
+            f"band).",
+        )
+    if f_deep < 0:
+        raise SpecValidationError(
+            "drafts.draft_is_hard", draft_m,
+            f"reachable within B/T {lo:.2f}-{hi:.2f}",
+            f"even at the band floor B/T {lo:.2f} the balance draft is "
+            f"{deep.draft:.3f} m, shallower than the declared "
+            f"{draft_m:.3f} m: this deadweight/Cb cannot float as deep "
+            f"as declared under the held-(L/B, Cb) rule - refusing "
+            f"instead of extrapolating (a deeper draft needs more "
+            f"deadweight, a fuller Cb, or a B/T below the band).",
+        )
+
+    # fast path: the default ratio already meets the declared draft
+    default = balance_at(ratios.b_over_t)
+    if abs(default.draft - draft_m) <= draft_tolerance_m:
+        return replace(
+            default, hard_draft=True, declared_draft_m=draft_m,
+            solved_b_over_t=round(ratios.b_over_t, 6),
+            hard_draft_iterations=1,
+            hard_draft_tolerance_m=draft_tolerance_m,
+        )
+
+    trials = 2  # the two endpoint probes
+    best = shallow if abs(f_shallow) <= abs(f_deep) else deep
+    best_c = ratios.b_over_t if best is default else (
+        hi if best is shallow else lo)
+    while hi - lo > 1e-6 and trials < 60:
+        mid = 0.5 * (lo + hi)
+        res = balance_at(mid)
+        trials += 1
+        f_mid = res.draft - draft_m
+        if abs(f_mid) < abs(best.draft - draft_m):
+            best, best_c = res, mid
+        if abs(f_mid) <= draft_tolerance_m:
+            break
+        if f_mid > 0:
+            lo = mid      # floats too deep -> go slimmer
+        else:
+            hi = mid      # floats too shallow -> go wider
+    return replace(
+        best, hard_draft=True, declared_draft_m=draft_m,
+        solved_b_over_t=round(best_c, 6),
+        hard_draft_iterations=trials,
+        hard_draft_tolerance_m=draft_tolerance_m,
     )

@@ -625,10 +625,31 @@ These are features of the current stage, not hidden weaknesses:
 | 45,000 t / 16 kn in-band case | declared 11.6 m → no hint (0.041 m ≤ 5 cm); 12.5 m → hint 2.426 vs current 2.700, in band; 9.0 m → 3.972, above the band, declared un-extrapolable | behaviour, three states |
 | Honesty of the number | report and JSON carry the rule, the one-shot limit and the "B/T is not a task-book field" action note | declared approximations |
 
+24. **Hard design draft (`draft_is_hard`, R2-A, owner-approved
+    2026-09-25).**  With the flag on, the declared draft is the
+    CONSTRAINT and B/T the solved variable: bisection over the guard
+    band [2.00, 3.50], one full Norman balance per trial, converged
+    when the balance draft meets the declaration within 1 cm.  Rule:
+    L/B and Cb held — the same rule the v1.0.3 hint declares.  The §5
+    whitelist entry was amended BEFORE coding (converged variant, no
+    new source); the external review's precondition (a reverse-anchor
+    test) gates the merge.
+
+| Check | Result | Criterion |
+|---|---|---|
+| JBC reverse anchor | DW 149,920 t / Cb 0.858 / hard 16.5 m → L 274.57 m (−1.94 %), B 45.76 m (+1.69 %), D 24.52 m (−1.9 %), T 16.5002 m, B/T 2.7734, 8 probes | ±5 % on the NMRI 280/45/25 particulars |
+| Hint ↔ hard consistency | hint B/T 2.7659 vs solved 2.7734 → 0.27 % | within the declared one-shot residual |
+| Convergence from both sides | 45,000 t case: declared 12.5 m → B/T 2.3984 (slimmer), declared 11.0 m → wider than 2.7; both to ±1 cm | bisection on a monotone draft(B/T) |
+| Refusal, too deep | declared 20.0 m → exit 2: "even at the band floor B/T 2.00 the balance draft is 13.955 m, shallower than the declared 20.000 m" | endpoint numbers in the message |
+| Refusal, too shallow | declared 7.0 m → mirrored band-top message | same |
+| Default path untouched | flag absent → `draft_is_hard: false`, the new fields stay None | the 384 prior tests unchanged |
+| Staged interplay | hard 12.5 m on the 45,000 t case: the chain completes, the propeller stage refuses at L/Δ^(1/3) 4.72 < 4.88 (declared C0 gap) | structured refusal, not a crash |
+| Full-chain real-machine run | JBC taskbook with the flag: hard-draft line in §1 and the console, hydrostatics at 16.50 m, no mismatch warning | behaviour |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 384 tests (376 passed + 8 skipped without the optional extra)
+uv run pytest                        # 393 tests (385 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

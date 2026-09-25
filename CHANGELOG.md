@@ -4,9 +4,30 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
-## [Unreleased]
+## [1.1.0] - 2026-09-25
 
 ### Added
+
+- **Hard design draft** (`requirements.drafts.draft_is_hard: true`,
+  owner-approved R2-A of the draft decision): the declared draft
+  becomes the CONSTRAINT and B/T the solved variable — bisection over
+  the guard band [2.00, 3.50] with one full Norman balance per trial,
+  converged to ±1 cm, under the same held-(L/B, Cb) rule the v1.0.3
+  hint declares; the one-shot residual is gone (hint and hard solve
+  agree to 0.27 %).  A draft the band cannot reach is refused with the
+  band-edge numbers (exit 2).  Acceptance = the review's own
+  precondition: the JBC reverse anchor lands the solved dimensions
+  within ±5 % of the NMRI particulars (L −1.94 %, B +1.69 %).  The
+  whitelist §5 entry was amended before coding; the second (Panamax-
+  class) reverse anchor stays open as R2-B pending a page-verifiable
+  source.  Default behaviour is untouched: the flag is absent from
+  every existing task book.
+- Surfaces: `draft_is_hard` / `hard_draft_b_over_t` /
+  `hard_draft_iterations` in the JSON summary, a §1 report line, a
+  console line.  Tests 384 → 393; VALIDATION item 24.
+
+### Added (from the unreleased docs batch)
+
 
 - The waterline convention is stated where it bites (AGENTS.md §5,
   SKILL.md): one waterline per `run` — the declared task-book value

@@ -206,6 +206,13 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
                 f"缩放）；一次性估算、未计入重量再平衡（按该值实算的吃水"
                 f"与声明值仍有同量级残差，实测 0.3–1.3%）；B/T 属算法统计"
                 f"参数、任务书无此字段，本工具不自动改动。")
+    if summary.get("draft_is_hard"):
+        lines.append(
+            f"- 任务书以 `draft_is_hard` 把设计吃水锁定为声明值 "
+            f"{_fmt(summary.get('draft_declared_m'), 3)} m：保持 L/B 与 "
+            f"Cb 不变，B/T 反解为 {_fmt(summary.get('hard_draft_b_over_t'), 4)}"
+            f"（{summary.get('hard_draft_iterations')} 次平衡试探收敛到 "
+            f"±1 cm）。硬约束模式下不出现吃水不符提示。")
     if summary.get("norman_coefficient") is not None:
         lines.append(f"- 诺曼系数 N = {_fmt(summary['norman_coefficient'], 3)}"
                      f"（重量浮力平衡 {summary['iterations']} 次收敛）")
