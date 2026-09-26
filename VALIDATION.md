@@ -667,10 +667,30 @@ These are features of the current stage, not hidden weaknesses:
 | Self-caught regression at the process boundary | the first v1.2.0 build printed a stray module-level line into `--json` (an edit dedent moved the trailing hint out of `_print_summary`); in-process tests stayed green because capsys starts after import — caught by the cold-install check, fixed, and pinned by a SUBPROCESS-level purity test (in-process capsys cannot see import-time prints) | the contract needs a process-boundary test |
 | Regression | 405 tests green (12 new); the 393 prior numbers unchanged | no numeric drift |
 
+26. **Backlog batch v1.3.0 — the review's P1 list cleared
+    (owner-directed 2026-09-26).**  "Do what can be done now": the
+    five P1 items that had no external blocker, plus the cheap P2s.
+    No whitelisted formula changed (the check subcommand only
+    orchestrates existing guards; the feasibility hint is the same
+    declared-rule algebra class as the draft hint; the weather default
+    is the JBC task book's own [ASSUMED] derivation, productised).
+
+| Item | Check | Result | Criterion |
+|---|---|---|---|
+| P1-3 | `openhull check` | 8 gates in ~1 s; the reviewer's Cb 0.84 case predicts the C0 refusal at 4.8324 (their sweep measured 4.832), exit 0/1; soft-draft mismatch WARNs (reported, not fatal); --json machine-readable | predict, not guess |
+| P1-5 | `weather_criterion: default` | run and optimize both resolve it: area = Lpp x freeboard, lever = D/2, bilge keels 0, LWL 1.025 x Lpp — all [ASSUMED], the non-conservative direction declared in report section 4 | JBC task book's own derivation, productised |
+| P1-1b | Kwon wired into `run` | `seakeeping.speed_loss: {beaufort 6, head}` on Cb 0.76 @ 18 kn: dV/V1 1.71 %, V2/V1 0.9829, 0.31 kn — matches the library values; the domain is honest (Cb 0.80 @ Fr 0.19 refuses: page-verified applicability, not a defect); absent block declares calm-water powers | library cross-check |
+| P1-2 | feasibility hint | the ayre refusal carries the nearest feasible Cb under the declared held-(Delta, ratios) rule (0.78 < bound <= 0.82, the reviewer measured the boundary between 0.80 and 0.82) + the optimize pointer | declared-rule hint, like the draft hint |
+| P2-1 | `--json PATH` / `--csv PATH` | files written, combinable; bare flags keep stdout; two bare flags refuse with guidance; --json purity re-pinned at the process boundary | agent contract |
+| P2-2 | `--csv-step` | default 0.1 T = 10 rows aligned with the curves chart; 0.25 restores the historical 4 | export granularity |
+| P2-3 | roll-period calibre footnote | report section 6 states both periods' formulas (IS Code 2.3 simple form vs the book's Eqs 3-27/3-49) | the two numbers are a calibre difference, not a bug |
+| P2-4 | `seakeeping.wave_periods` | custom seas replace the reference seas, labels say "task-book sea" | configurability |
+| Regression | 419 tests green (14 new); prior acceptance numbers unchanged | no numeric drift |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 405 tests (397 passed + 8 skipped without the optional extra)
+uv run pytest                        # 419 tests (411 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

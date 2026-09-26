@@ -55,6 +55,11 @@ G_ACCEL = 9.81
 AYRE_V_SQRT_L_MIN = 0.50
 AYRE_V_SQRT_L_MAX = 1.20
 
+#: digitised figure 7-3 family band for L/Delta^(1/3) (Delta in tonnes):
+#: single source for the guard below, the preflight check and the
+#: feasibility hints (review 2026-09-25, P1-2/P1-3)
+C0_FAMILY_BAND = (4.88, 6.41)
+
 
 @dataclass(frozen=True)
 class ResistanceAlgorithmInfo:
@@ -486,7 +491,7 @@ def ayre_effective_power(
             "speed-length band only (tables 7-5 and 7-7a/b); outside "
             "it the method refuses rather than extrapolate.",
         )
-    if not within_band(length_ratio, 4.88, 6.41):
+    if not within_band(length_ratio, *C0_FAMILY_BAND):
         raise SpecValidationError(
             "length_ratio", length_ratio,
             "L/Delta^(1/3) within 4.88-6.41 (digitised figure 7-3 "

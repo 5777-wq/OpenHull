@@ -24,6 +24,7 @@ import argparse
 import csv
 import io
 import json
+import math
 import sys
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -41,7 +42,9 @@ from .optimize import (
     write_tradeoff_chart,
 )
 from .linesplan import parent_to_taskbook
-from .main_dimensions import B_OVER_T_BAND, required_b_over_t_at_draft
+from .main_dimensions import (B_OVER_T_BAND, FN_BAND, GRAVITY,
+                              L_OVER_B_BAND, L_OVER_DEPTH_BAND,
+                              required_b_over_t_at_draft)
 from .propeller import (
     SIGMA_VERIFIED_BAND,
     b_series_open_water,
@@ -49,8 +52,11 @@ from .propeller import (
     solve_optimal_propeller_for_thrust,
 )
 from .propulsion import propulsion_factors
-from .seakeeping import estimate_seakeeping
-from .resistance import admiralty_corridor, ayre_effective_power
+from .seakeeping import estimate_seakeeping, kwon_speed_loss_percent
+from .resistance import (AYRE_V_SQRT_L_MAX, AYRE_V_SQRT_L_MIN,
+                         C0_FAMILY_BAND, admiralty_corridor,
+                         ayre_effective_power)
+from .spec import SEAWATER_DENSITY
 from .spec import (knots_to_ms, within_band, ShipSpec,
                    SpecValidationError)
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
@@ -85,9 +91,12 @@ def _design_propeller_at_service(data, balance, hydro_design):
     # present, otherwise Ayre's own standard 1.025*Lpp.  Both the
     # effective-power call and the propeller factors below use it, so
     # the PE and the propeller describe the same ship.
+    _weather_block = (
+        ((data.get("constraints") or {}).get("stability") or {})
+        .get("weather_criterion"))
     declared_lwl = (
-        (((data.get("constraints") or {}).get("stability") or {})
-         .get("weather_criterion") or {}).get("length_waterline_m"))
+        _weather_block.get("length_waterline_m")
+        if isinstance(_weather_block, dict) else None)
     run_lwl = (float(declared_lwl) if declared_lwl is not None
                else 1.025 * balance.lpp)
     try:
@@ -99,7 +108,48 @@ def _design_propeller_at_service(data, balance, hydro_design):
         )
         pe_kw = ayre_result.pe_bare_kw
     except SpecValidationError as refuse:
-        return {"skipped": True, "stage": "ayre", "reason": str(refuse)}
+        skipped = {"skipped": True, "stage": "ayre", "reason": str(refuse)}
+        # P1-2 first half (review 2026-09-25): the refusal names the
+        # violated band; a one-shot back-solve under a DECLARED rule
+        # gives the nearest feasible value, so the reader does not start
+        # from a blind guess.  Same discipline as the draft hint: the
+        # rule travels with the number, the weight re-balance moves the
+        # exact boundary, `optimize` locates it precisely.
+        ratio_now = balance.lpp / balance.displacement_t ** (1.0 / 3.0)
+        declared_cb = float(
+            (data.get("constraints") or {}).get("block_coefficient_design")
+            or hydro_design.cb)
+        if refuse.field == "length_ratio":
+            lo, hi = C0_FAMILY_BAND
+            if ratio_now < lo:
+                skipped["feasibility_hint"] = {
+                    "field": "block_coefficient_design",
+                    "direction": "lower",
+                    "bound": round(declared_cb * (ratio_now / lo) ** 3, 3),
+                    "band": list(C0_FAMILY_BAND),
+                    "rule": ("hold displacement and the L/B, B/T ratios "
+                             "(one-shot, before the weight re-balance)"),
+                }
+            elif ratio_now > hi:
+                skipped["feasibility_hint"] = {
+                    "field": "block_coefficient_design",
+                    "direction": "higher",
+                    "bound": round(declared_cb * (ratio_now / hi) ** 3, 3),
+                    "band": list(C0_FAMILY_BAND),
+                    "rule": ("hold displacement and the L/B, B/T ratios "
+                             "(one-shot, before the weight re-balance)"),
+                }
+        elif refuse.field == "speed":
+            lo, hi = AYRE_V_SQRT_L_MIN, AYRE_V_SQRT_L_MAX
+            l_ft = balance.lpp / 0.3048
+            skipped["feasibility_hint"] = {
+                "field": "service_speed_kn",
+                "reachable_kn": [round(lo * math.sqrt(l_ft), 2),
+                                 round(hi * math.sqrt(l_ft), 2)],
+                "declared_kn": round(service_kn, 2),
+                "rule": "the Ayre speed-length band on the solved Lpp",
+            }
+        return skipped
     # P0-1 diagnostic (display only): where the operating point sits in
     # the digitised C0 family, and the Admiralty-coefficient corridor
     # around the design speed
@@ -307,6 +357,23 @@ def _ship_spec_from_taskbook(data: dict) -> tuple[ShipSpec, float]:
     return spec, float(values["requirements.drafts.design_draft_m"])
 
 
+def _table_fractions(step: float) -> tuple[float, ...]:
+    """Draft fractions of the hydrostatics table for a requested step.
+
+    P2-2 (review 2026-09-25): the exported table matches the chart's
+    granularity - the default step is 0.1 (10 rows); 0.25 restores the
+    historical 4.  The last fraction is always exactly 1.0 (the design
+    waterline), and the step is clamped into [0.02, 1.0].
+    """
+    if not (0.02 <= step <= 1.0):
+        raise SpecValidationError(
+            "csv_step", step, "0.02 <= step <= 1.0",
+            "the step is a fraction of the design draft; below 0.02 the "
+            "table exceeds 50 rows for no reading benefit.")
+    n = max(1, round(1.0 / step))
+    return tuple(round(i / n, 6) for i in range(1, n + 1))
+
+
 def _hydrostatics_rows(hydro_table) -> list[dict]:
     """The hydrostatics table as plain dicts (JSON/CSV ready)."""
     return [
@@ -322,7 +389,8 @@ def run_taskbook(taskbook_path: str,
                  hydro_curve_chart: str | None = None,
                  report_path: str | None = None,
                  arrangement_dxf_path: str | None = None,
-                 arrangement_chart_path: str | None = None) -> dict:
+                 arrangement_chart_path: str | None = None,
+                 hydro_step: float = 0.1) -> dict:
     """Run the design chain for one task book; returns the summary dict.
 
     Pure computation and stdout formatting live apart: this function
@@ -408,8 +476,8 @@ def run_taskbook(taskbook_path: str,
         draft=balance.draft,
         target_cb=spec.cb,
     )
-    drafts = hydrostatic_draft_rows(
-        hull, design_draft, (0.25, 0.5, 0.75, 1.0))
+    drafts = hydrostatic_draft_rows(hull, design_draft,
+                                    _table_fractions(hydro_step))
     hydro_table = hydrostatics_table(hull, drafts)
     hydro_design = hydro_table.at(drafts[-1])
 
@@ -444,6 +512,31 @@ def run_taskbook(taskbook_path: str,
             ((data.get("constraints") or {}).get("stability") or {})
             .get("weather_criterion")
         )
+        weather_assumed = None
+        if isinstance(weather_block, str) and weather_block.strip() == "default":
+            # P1-5 (review 2026-09-25): a conservative-ASSUMPTION default
+            # so the first run answers the wind criterion instead of
+            # leaving section 4 empty.  Every line is an [ASSUMED]
+            # geometric derivation, the same pattern the JBC task book
+            # declares by hand:
+            #   windage area   = Lpp x freeboard (aft deckhouse neglected
+            #                    - the UNCONSERVATIVE direction, stated);
+            #   windage lever  = depth/2 (centre of A at T + F/2 above
+            #                    keel, minus the IS Code half-draft point);
+            #   bilge keels    = 0 (round bilge, k = 1.0);
+            #   waterline      = Ayre's standard 1.025 x Lpp.
+            freeboard = balance.depth - balance.draft
+            weather_block = {
+                "windage_area_m2": balance.lpp * freeboard,
+                "windage_lever_z_m": balance.depth / 2.0,
+                "bilge_keel_area_m2": 0.0,
+                "length_waterline_m": 1.025 * balance.lpp,
+            }
+            weather_assumed = {
+                "windage_area_m2": round(balance.lpp * freeboard, 1),
+                "windage_lever_z_m": round(balance.depth / 2.0, 2),
+                "freeboard_m": round(freeboard, 2),
+            }
         weather_summary = None
         if isinstance(weather_block, dict) and weather_block.get(
             "windage_area_m2"
@@ -467,6 +560,8 @@ def run_taskbook(taskbook_path: str,
                 ),
             )
             weather_summary = weather.to_dict()
+            if weather_assumed is not None:
+                weather_summary["assumed_inputs"] = weather_assumed
 
     propeller_summary = _design_propeller_at_service(data, balance, hydro_design)
 
@@ -475,7 +570,15 @@ def run_taskbook(taskbook_path: str,
     # Roll uses the GM WITHOUT free-surface correction (regulation
     # usage, Ship Theory vol. 2 p.391); requires the task-book KG.
     seakeeping_summary = None
+    seakeeping_block = (data.get("seakeeping") or {})
     if kg_value is not None:
+        wave_periods = seakeeping_block.get("wave_periods")
+        if wave_periods:
+            seas = tuple(
+                (float(t), f"task-book sea (T {float(t):g} s)")
+                for t in wave_periods)
+        else:
+            seas = None  # the standard reference seas
         try:
             seakeep = estimate_seakeeping(
                 beam_m=balance.beam,
@@ -485,10 +588,39 @@ def run_taskbook(taskbook_path: str,
                 cb=spec.cb,
                 cwp=hydro_design.cw,
                 speed_ms=spec.service_speed or 0.0,
+                **({"reference_seas": seas} if seas else {}),
             )
             seakeeping_summary = seakeep.to_dict()
         except SpecValidationError:
             seakeeping_summary = None
+        # P1-1b (review 2026-09-25): wire the whitelisted Kwon speed-loss
+        # method into the chain - the library has had it since 2026-09-23
+        loss_block = seakeeping_block.get("speed_loss")
+        if seakeeping_summary is not None and isinstance(loss_block, dict):
+            try:
+                percent, ratio = kwon_speed_loss_percent(
+                    cb=spec.cb,
+                    fr=(spec.service_speed
+                        / math.sqrt(GRAVITY * balance.lpp)),
+                    bn=float(loss_block.get("beaufort", 0)),
+                    nabla_m3=balance.displacement_t / 1.025,
+                    direction=str(loss_block.get("direction", "head")),
+                    ship_type=str(loss_block.get("ship_type", "general")),
+                    loading=str(loss_block.get("loading", "loaded")),
+                )
+                seakeeping_summary["speed_loss"] = {
+                    "method": "Kwon (JMSE 2025 transcription; Kwon 1981)",
+                    "beaufort": float(loss_block.get("beaufort", 0)),
+                    "direction": str(loss_block.get("direction", "head")),
+                    "delta_v_percent": round(percent, 2),
+                    "speed_ratio_v2_v1": round(ratio, 4),
+                    "speed_loss_kn": round(
+                        (spec.service_speed or 0.0) / 0.514444
+                        * percent / 100.0, 2),
+                }
+            except SpecValidationError as refused:
+                seakeeping_summary["speed_loss"] = {
+                    "skipped": True, "reason": str(refused)}
 
     hydro_curve_chart_path = None
     if hydro_curve_chart:
@@ -713,6 +845,14 @@ def _print_summary(summary: dict) -> None:
                 f"{check['wave_period_s']:.0f} s: Lambda "
                 f"{check['tuning_factor']:.2f} -> {verdict}"
             )
+        loss = seakeep.get("speed_loss")
+        if loss and not loss.get("skipped"):
+            print(f"  speed loss (Kwon)  : BN {loss['beaufort']:.0f} "
+                  f"{loss['direction']} -> -{loss['delta_v_percent']:.1f}% "
+                  f"(V2/V1 {loss['speed_ratio_v2_v1']})")
+        elif loss and loss.get("skipped"):
+            print(f"  speed loss (Kwon)  : refused - "
+                  f"{' '.join(str(loss['reason']).split())[:90]}")
         print("-" * 64)
         # P0-3 (review 2026-09-25): stdout is the agent-facing contract —
     # the chain's terminal product (power, diameter, efficiency) must
@@ -767,6 +907,22 @@ def _print_json(summary: dict) -> None:
     print(json.dumps(summary, indent=2, ensure_ascii=False))
 
 
+def _write_json(summary: dict, path: str) -> None:
+    """P2-1: --json PATH writes the document instead of stdout."""
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(json.dumps(summary, indent=2, ensure_ascii=False))
+
+
+def _write_csv(summary: dict, path: str) -> None:
+    """P2-1: --csv PATH writes the UTF-8-SIG table instead of stdout."""
+    labels = [label for _, label in _HYDRO_COLUMNS]
+    with open(path, "w", encoding="utf-8-sig", newline="") as handle:
+        writer = csv.writer(handle, lineterminator="\n")
+        writer.writerow(labels)
+        for row in summary["hydrostatics"]:
+            writer.writerow([f"{row[label]:.4f}" for label in labels])
+
+
 def _print_csv(summary: dict) -> None:
     """Stream the CSV as UTF-8-SIG bytes: redirection on any console
     codepage (GBK included) lands Excel-ready bytes in the file."""
@@ -793,15 +949,26 @@ def main(argv: list[str] | None = None) -> int:
         "run", help="run the design chain for one task book (YAML)"
     )
     run.add_argument("taskbook", help="path to the task book YAML")
-    fmt = run.add_mutually_exclusive_group()
-    fmt.add_argument(
-        "--csv", action="store_true",
-        help="print the hydrostatics table as CSV (redirect to a .csv "
-        "file; BOM included for Excel)",
+    # P2-1 (review 2026-09-25): the two outputs are no longer mutually
+    # exclusive and both accept an optional PATH - bare flag keeps the
+    # historical stdout behaviour, `--json out.json` / `--csv out.csv`
+    # write the file instead
+    run.add_argument(
+        "--csv", nargs="?", const=True, default=None, metavar="CSV_PATH",
+        help="hydrostatics table as CSV: bare flag prints to stdout, "
+             "--csv PATH writes the file (UTF-8-SIG, Excel-ready)",
     )
-    fmt.add_argument(
-        "--json", action="store_true",
-        help="print the full result as JSON",
+    run.add_argument(
+        "--json", nargs="?", const=True, default=None, metavar="JSON_PATH",
+        help="full result as JSON: bare flag prints to stdout, "
+             "--json PATH writes the file",
+    )
+    run.add_argument(
+        "--csv-step", type=float, default=0.1, metavar="FRACTION",
+        help="draft step of the hydrostatics table as a fraction of the "
+             "design draft (default 0.1 -> 10 rows, aligned with the "
+             "curves chart; 0.25 -> the historical 4 rows); affects the "
+             "CSV and JSON table alike",
     )
     run.add_argument(
         "--hydro-curve-chart", default=None, metavar="PATH",
@@ -835,7 +1002,11 @@ def main(argv: list[str] | None = None) -> int:
         help="B/T sweep lo:hi:steps (default 2.5:3.5:6)")
     opt.add_argument(
         "--grid-cb", default="0.81:0.87:4",
-        help="Cb sweep lo:hi:steps (default 0.81:0.87:4)")
+        help="Cb sweep lo:hi:steps (default 0.81:0.87:4).  Adjust for "
+             "the task book's speed: the Ayre C0 family band rejects "
+             "fat hulls at higher speeds, so fast ships (20 kn class) "
+             "usually need the grid shifted DOWN; check with `openhull "
+             "check` first")
     opt.add_argument(
         "--out", default="optimize_out",
         help="directory for the CSV/JSON/PNG outputs (default "
@@ -844,6 +1015,17 @@ def main(argv: list[str] | None = None) -> int:
         "--json", action="store_true",
         help="print the scan summary as JSON",
     )
+    check = sub.add_parser(
+        "check",
+        help="preflight one task book: main dimensions + guard bands in "
+             "seconds (P1-3)",
+    )
+    check.add_argument("taskbook", help="path to the task book YAML")
+    check.add_argument(
+        "--json", nargs="?", const=True, default=None, metavar="JSON_PATH",
+        help="machine-readable gate list: bare flag prints to stdout, "
+             "--json PATH writes the file.  Exit code: 0 all gates "
+             "predicted pass, 1 a refusal is predicted.")
     rao = sub.add_parser(
         "rao",
         help="zero-speed rigid-body RAOs via capytaine "
@@ -866,12 +1048,23 @@ def main(argv: list[str] | None = None) -> int:
                                    hydro_curve_chart=args.hydro_curve_chart,
                                    report_path=args.report,
                                    arrangement_dxf_path=args.arrangement_dxf,
-                                   arrangement_chart_path=args.arrangement_chart)
-            if args.csv:
+                                   arrangement_chart_path=args.arrangement_chart,
+                                   hydro_step=args.csv_step)
+            # P2-1: the file forms combine freely; stdout can serve
+            # only one stream, so two bare flags are an argument error
+            if args.json is True and args.csv is True:
+                raise RuntimeError(
+                    "--json and --csv cannot both stream to stdout; "
+                    "give at least one of them a PATH")
+            if args.csv and args.csv is not True:
+                _write_csv(summary, args.csv)
+            elif args.csv:
                 _print_csv(summary)
+            if args.json and args.json is not True:
+                _write_json(summary, args.json)
             elif args.json:
                 _print_json(summary)
-            else:
+            if not args.json and not args.csv:
                 _print_summary(summary)
             # artefact confirmations go to stderr: stdout must stay a
             # pure JSON document (--json) or a pure CSV stream (--csv)
@@ -885,6 +1078,8 @@ def main(argv: list[str] | None = None) -> int:
                     print(f"{label} -> {summary[key]}", file=sys.stderr)
         elif args.command == "optimize":
             _run_optimize(args)
+        elif args.command == "check":
+            return _run_check(args)
         elif args.command == "rao":
             _run_rao(args)
     except SpecValidationError as error:
@@ -960,12 +1155,147 @@ def _parse_axis(spec: str) -> tuple[float, float, int]:
     return float(lo), float(hi), int(steps)
 
 
+def _run_check(args) -> int:
+    """P1-3 (review 2026-09-25): seconds-level preflight.
+
+    Runs ONLY the cheap part of the chain - the weight balance and the
+    dimension-ratio algebra - and predicts which guard bands the full
+    `run` would trip, with the numbers.  The expensive stages (hull
+    transform, IS Code criteria, cavitation, seakeeping) are listed as
+    full-chain-only instead of being guessed at.
+    """
+    data = _load_taskbook(Path(args.taskbook))
+    spec, declared_draft = _ship_spec_from_taskbook(data)
+    hard = bool(((data.get("requirements") or {}).get("drafts") or {})
+                .get("draft_is_hard", False))
+    gates: list[dict] = []
+
+    def gate(name, value, band, unit=""):
+        ok = within_band(value, *band)
+        gates.append({"gate": name, "value": round(value, 4),
+                      "band": list(band), "pass": ok, "unit": unit})
+        return ok
+
+    if hard:
+        balance = solve_weight_balance_for_draft(spec, declared_draft)
+        hard_note = (f"hard draft {declared_draft:.3f} m -> B/T solved "
+                     f"{balance.solved_b_over_t:.4f} in "
+                     f"{balance.hard_draft_iterations} probes")
+    else:
+        balance = solve_weight_balance(spec)
+        hard_note = None
+    mismatch = abs(declared_draft - balance.draft)
+
+    balance_gate = {"gate": "weight balance",
+                    "value": round(balance.imbalance_ratio * 100, 4),
+                    "band": ["<= 0.1 %", "converged"], "pass": True,
+                    "unit": "% |W-B|/W"}
+    gates.insert(0, balance_gate)
+
+    lpp, disp = balance.lpp, balance.displacement_t
+    gate("Froude number",
+         spec.service_speed / math.sqrt(GRAVITY * lpp), FN_BAND)
+    gate("L/B", lpp / balance.beam, L_OVER_B_BAND)
+    gate("B/T", balance.beam / balance.draft, B_OVER_T_BAND)
+    gate("L/D", lpp / balance.depth, L_OVER_DEPTH_BAND)
+    v_sqrt_l = _service_kn(spec) / math.sqrt(lpp / 0.3048)
+    gate("Ayre speed band V/sqrt(L)", v_sqrt_l,
+         (AYRE_V_SQRT_L_MIN, AYRE_V_SQRT_L_MAX), "kn/sqrt-ft")
+    length_ratio = lpp / disp ** (1.0 / 3.0)
+    gate("Ayre C0 family band L/Delta^(1/3)", length_ratio,
+         C0_FAMILY_BAND, "(Delta in tonnes)")
+    if hard:
+        # the hard solve either converged above or raised: no draft gate
+        gates.append({"gate": "declared draft (hard)",
+                      "value": round(mismatch, 3),
+                      "band": ["converged to ±0.01 m"], "pass": True,
+                      "unit": "m"})
+    else:
+        # soft mode: a mismatch beyond 5 cm is REPORTED, never fatal
+        gates.append({"gate": "declared draft vs balance",
+                      "value": round(mismatch, 3),
+                      "band": ["<= 0.05 m, else reported"],
+                      "pass": True, "fatal": False, "unit": "m",
+                      "warn": mismatch > 0.05})
+
+    refused = [g for g in gates if not g["pass"]]
+    payload = {
+        "taskbook_id": data.get("taskbook_id", ""),
+        "hard_draft": hard,
+        "hard_draft_note": hard_note,
+        "lpp_m": round(lpp, 3), "beam_m": round(balance.beam, 3),
+        "depth_m": round(balance.depth, 3),
+        "draft_m": round(balance.draft, 3),
+        "declared_draft_m": round(declared_draft, 3),
+        "displacement_t": round(disp, 3),
+        "gates": gates,
+        "predicted_refusals": len(refused),
+    }
+    if getattr(args, "json", None):
+        if args.json is not True:
+            with open(args.json, "w", encoding="utf-8") as handle:
+                handle.write(json.dumps(payload, indent=2,
+                                        ensure_ascii=False))
+        else:
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 1 if refused else 0
+
+    print("=" * 64)
+    print(f"OpenHull check - {payload['taskbook_id'] or '(task book)'} "
+          f"(preflight: main dimensions + guard bands)")
+    print("=" * 64)
+    print(f"Lpp / B / D / T     : {lpp:.2f} / {balance.beam:.2f} / "
+          f"{balance.depth:.2f} / {balance.draft:.3f} m"
+          f"   ({hard_note or 'soft draft mode'})")
+    for g in gates:
+        band = g["band"]
+        band_txt = (f"[{band[0]}, {band[1]}]"
+                    if not isinstance(band[0], str) else str(band))
+        if not g["pass"]:
+            state = "REFUSED (predicted)"
+        elif g.get("warn"):
+            state = "WARN (reported in run, not fatal)"
+        else:
+            state = "PASS"
+        print(f"{g['gate']:<24s}: {g['value']:>10.4f} {band_txt:<24s} "
+              f"{state}")
+    if refused:
+        print("-" * 64)
+        print(f"verdict             : {len(refused)}/{len(gates)} gates "
+              f"predict a refusal - adjust the task book above before "
+              f"running; `openhull optimize` can sweep the feasible "
+              f"region")
+        return 1
+    print("-" * 64)
+    print("verdict             : all gates predicted PASS -> run the "
+          "full chain")
+    print("full-chain only     : IS Code 2.2/2.3 criteria, cavitation "
+          "check, seakeeping, propeller stage")
+    return 0
+
+
+def _service_kn(spec) -> float:
+    return spec.service_speed * 3600.0 / 1852.0
+
+
 def _run_optimize(args) -> None:
     data = _load_taskbook(Path(args.taskbook))
     spec, _design_draft = _ship_spec_from_taskbook(data)
     requirements = data.get("requirements") or {}
     stability = (data.get("constraints") or {}).get("stability") or {}
     weather_block = stability.get("weather_criterion") or {}
+    if isinstance(weather_block, str) and weather_block.strip() == "default":
+        # P1-5: resolve the assumed default against the task book's OWN
+        # ship (the base-spec balance), then the declared scan
+        # limitation applies to those numbers unchanged across candidates
+        base_balance = solve_weight_balance(spec)
+        freeboard = base_balance.depth - base_balance.draft
+        weather_block = {
+            "windage_area_m2": base_balance.lpp * freeboard,
+            "windage_lever_z_m": base_balance.depth / 2.0,
+            "bilge_keel_area_m2": 0.0,
+            "length_waterline_m": 1.025 * base_balance.lpp,
+        }
     kg_m = requirements.get("kg_m")
     if kg_m is None:
         raise SpecValidationError(

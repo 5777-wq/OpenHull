@@ -22,9 +22,9 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.2.0"
+UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.3.0"
 # 没有 uv 时：
-pip install "git+https://github.com/5777-wq/OpenHull@v1.2.0"
+pip install "git+https://github.com/5777-wq/OpenHull@v1.3.0"
 ```
 
 **主命令自带官方源覆盖**：`uv tool install` 会按本机配置的镜像源解析
@@ -32,11 +32,11 @@ pip install "git+https://github.com/5777-wq/OpenHull@v1.2.0"
 官方源可在任何环境一次装成。本机 uv 已默认官方源时可省略该前缀。
 网络受限时给 uv 配置代理（`HTTPS_PROXY=http://host:port`）。
 
-**锁定版本安装**（`@v1.2.0`）：可复现、可审计；需要跟踪最新修复时
+**锁定版本安装**（`@v1.3.0`）：可复现、可审计；需要跟踪最新修复时
 换成 `@main` 或具体 commit。安装后验证：
 
 ```bash
-openhull --version        # 应输出 openhull 1.2.0
+openhull --version        # 应输出 openhull 1.3.0
 ```
 
 耐波性 RAO 是可选扩展（capytaine），主流程不需要；需要时：
@@ -96,8 +96,12 @@ propeller:                       # 可选：填了才有螺旋桨设计与功率
 ## 第三步：常用命令
 
 ```bash
-# 完整设计链（终端报告；--json / --csv 可重定向）
+# 预检（秒级：主尺度 + 全部守卫带；exit 0 可跑 / 1 预计拒绝。先 check 再 run）
+openhull check 任务书.yaml            # 加 --json 出机器可读的门列表
+
+# 完整设计链（终端报告；--json / --csv 均可带路径写文件，且可同时给）
 openhull run 任务书.yaml
+openhull run 任务书.yaml --json summary.json --csv table.csv
 
 # 一条命令出齐成果物（报告/曲线图/总布置图+DXF）
 openhull run 任务书.yaml \
@@ -106,12 +110,28 @@ openhull run 任务书.yaml \
   --arrangement-chart ga.png \
   --arrangement-dxf ga.dxf
 
+# 静水力表步长（默认 0.1T = 10 行，与曲线图对齐；0.25 = 旧 4 行）
+openhull run 任务书.yaml --csv 表.csv --csv-step 0.25
+
 # 方案空间扫描（L/B × B/T × Cb 网格 → 可行方案 + 帕累托前沿 + 图）
 openhull optimize 任务书.yaml --out optimize_out
 
 # 零航速 RAO（需 [seakeeping] 扩展）
 openhull rao 任务书.yaml --periods 6,8,12,16,20
 ```
+
+**任务书可选块（v1.3.0 起）**：
+
+- `constraints.stability.weather_criterion: default` —— 不想手工推导
+  受风面积时用它：按 [ASSUMED] 几何默认（Lpp×干舷，**忽略上层建筑——
+  偏不保守方向**；力臂 = 型深/2；舵龙骨 0）自动运行风浪衡准，报告 §4
+  写明全部推导，总布置细化后回填实测值；
+- `seakeeping.wave_periods: [5, 7]` —— 换掉默认的两个参考海区
+  （东海短波 6 s / 洋涌 8 s）；
+- `seakeeping.speed_loss: {beaufort: 6, direction: head}` —— 接入
+  Kwon 波浪失速（库层已白名单化并测试）；**出数域有限**（Cb/Fr 越界
+  即诚实拒绝，肥大低速船常在域外），拒绝时如实转述。未提供海况时
+  报告明示"所有功率均为静水值"。
 
 ## 第四步：把结果讲给用户
 
@@ -131,7 +151,7 @@ openhull rao 任务书.yaml --periods 6,8,12,16,20
 
 - "能算波浪失速吗？" → Kwon 失速法已在库层实现并通过测试，但**尚未接入 run 链**（需要海况入参：浪向、Beaufort 级）；当前报告所有功率均为**静水**值，如实转述，不要声称已含失速修正；
 - "这个数靠谱吗？" → 指路验证记录：公开基准船（JBC / DTMB 1712 /
-  NMRI MP687）+ 书内算例 + 全量测试（当前 405 项；未装 seakeeping
+  NMRI MP687）+ 书内算例 + 全量测试（当前 419 项；未装 seakeeping
   可选扩展时个别用例自动跳过），见仓库 VALIDATION.md；
 - "任务书里的 length_waterline_m 影响功率吗？" → 分两处说清：单船
   `run` 一次运行一个水线值（任务书声明了就用声明的，否则 Ayre 标准

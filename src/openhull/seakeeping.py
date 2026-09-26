@@ -461,6 +461,7 @@ def estimate_seakeeping(
     cwp: float,
     speed_ms: float = 0.0,
     roll_mu: float = DEFAULT_ROLL_MU,
+    reference_seas: tuple[tuple[float, str], ...] = REFERENCE_SEAS,
 ) -> SeakeepingEstimate:
     """Full first-level estimate for one condition (stage-1 layer).
 
@@ -472,7 +473,7 @@ def estimate_seakeeping(
     roll_reg = roll_period_regulation(beam_m, zg_m, gm_m)
     pitch_cv = pitch_period_cv(draft_m, cb / cwp)
     checks: list[ResonanceCheck] = []
-    for wave_t, label in REFERENCE_SEAS:
+    for wave_t, label in reference_seas:
         roll_tuning = tuning_factor(roll_reg, wave_t)
         checks.append(ResonanceCheck(
             label=label, motion="roll", wave_period_s=wave_t,

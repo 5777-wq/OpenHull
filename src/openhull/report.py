@@ -59,6 +59,23 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
             lines.append(
                 f"- 生效主尺度：Lpp {lpp:.1f} m / Δ {disp:,.0f} t → "
                 f"L/Δ^(1/3) = {ratio:.2f}（艾亚法惯例，Δ 以吨计）")
+        hint = prop.get("feasibility_hint")
+        if hint and hint.get("field") == "block_coefficient_design":
+            lo, hi = hint.get("band", [4.88, 6.41])
+            lines.append(
+                f"- 可行方向（一次反算，口径：{hint.get('rule')}）："
+                f"保持当前排水量与主尺度比不变时，Cb "
+                f"{'≲' if hint.get('direction') == 'lower' else '≳'} "
+                f"{_fmt(hint.get('bound'), 3)} 可进入 C₀ 谱系带 "
+                f"[{lo}, {hi}]；实际边界受重量再平衡影响，用 "
+                f"`openhull optimize --grid-cb …` 精确定位。")
+        elif hint and hint.get("field") == "service_speed_kn":
+            lo_kn, hi_kn = hint.get("reachable_kn", [0, 0])
+            lines.append(
+                f"- 可行方向（本船几何下艾亚速度带对应的航速窗口）："
+                f"{_fmt(lo_kn, 2)}–{_fmt(hi_kn, 2)} kn"
+                f"（任务书声明 {_fmt(hint.get('declared_kn'), 2)} kn）；"
+                f"也可用 `openhull optimize` 换主尺度比重扫。")
         lines.append(f"- 工具原文（保留可溯源）：")
         lines.append("")
         lines.append(f"  > {reason_first}")
@@ -147,7 +164,7 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
     return lines
 
 
-def _section_seakeeping(sk: dict | None) -> list[str]:
+def _section_seakeeping(sk: dict | None, summary: dict) -> list[str]:
     if not sk:
         return ["- 未运行（任务书缺 KG 时跳过）。", ""]
     lines = [
@@ -169,13 +186,39 @@ def _section_seakeeping(sk: dict | None) -> list[str]:
             f"| {check['motion']} | {check['label']} "
             f"| {check['wave_period_s']:.0f} s "
             f"| {check['tuning_factor']:.2f} | {verdict} |")
-    lines += [
-        "",
-        "> 波浪失速：Kwon 失速法**已在库层实现并通过测试**"
-        "（2026-09-23 白名单化），尚未接入 `run` 链——接入需要任务书"
-        "提供海况输入（浪向、Beaufort 级等），当前版本**不输出**失速"
-        "修正，本报告所有功率均为**静水**值（review 2026-09-25 P1-1）。",
-        ""]
+    weather = summary.get("weather_criterion") or {}
+    if weather.get("roll_period_s"):
+        # P2-3 (review 2026-09-25): two roll periods coexist in this
+        # report and they are NOT the same calibre - say so here
+        lines.append("")
+        lines.append(
+            f"> 口径注：§4 风浪衡准的横摇周期 "
+            f"{_fmt(weather.get('roll_period_s'), 2)} s 用 IS Code 2.3 的"
+            f"规范简式（T = 2·C·B/√GM，不计附连水质量修正）；本节 "
+            f"{_fmt(sk['roll_period_s'], 2)} s 用《船舶原理》下册的横摇"
+            f"固有周期式（式 3-27/3-49，含附连水惯量）。两式口径不同、"
+            f"并存是规范实践，不是矛盾。")
+    loss = sk.get("speed_loss")
+    if loss and not loss.get("skipped"):
+        lines += [
+            f"- 波浪失速（Kwon 法）：BN {_fmt(loss.get('beaufort'), 0)}、"
+            f"浪向 {loss.get('direction')} → **ΔV/V₁ = "
+            f"{_fmt(loss.get('delta_v_percent'), 1)}%**（V₂/V₁ = "
+            f"{_fmt(loss.get('speed_ratio_v2_v1'), 4)}，本报告静水航速下"
+            f"损失 {_fmt(loss.get('speed_loss_kn'), 2)} kn）。",
+        ]
+    elif loss and loss.get("skipped"):
+        lines += [
+            f"- 波浪失速（Kwon 法）**声明式拒绝**："
+            f"{' '.join(str(loss.get('reason')).split())}",
+        ]
+    else:
+        lines += [
+            "- 波浪失速：任务书未提供海况输入（`seakeeping.speed_loss: "
+            "{beaufort, direction}`），未运行失速修正；**本报告所有功率"
+            "均为静水值**。Kwon 法已在库层实现并通过测试，随任务书给海况"
+            "即自动运行。",
+        ]
     return lines
 
 
@@ -318,6 +361,19 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
 
     weather = summary.get("weather_criterion")
     lines += ["## 4. 恶劣海况稳性（IS Code 2.3）", ""]
+    _w = summary.get("weather_criterion") or {}
+    if _w.get("assumed_inputs"):
+        a = _w["assumed_inputs"]
+        lines += [
+            f"- 受风面积/力臂为**[ASSUMED] 默认推导**（任务书填了 "
+            f"`weather_criterion: default`）：面积 = Lpp×干舷 = "
+            f"{_fmt(a.get('windage_area_m2'), 1)} m²（干舷 "
+            f"{_fmt(a.get('freeboard_m'), 2)} m，**忽略上层建筑——偏不"
+            f"保守方向**）；力臂 = 型深/2 = {_fmt(a.get('windage_lever_z_m'), 2)} m"
+            f"（受风面中心 T+干舷/2 减半吃水点）；舵龙骨面积 0（圆舭假定，"
+            f"k=1）；水线长取 1.025×Lpp。随总布置细化后请回填实测值。",
+            "",
+        ]
     if weather:
         lines += [
             f"- 波浪衡准：面积 a = {_fmt(weather['area_a_mrad'], 4)} vs "
@@ -335,7 +391,7 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
                                summary)
 
     lines += ["## 6. 耐波性初估（第一级，书内公式）", ""]
-    lines += _section_seakeeping(summary.get("seakeeping"))
+    lines += _section_seakeeping(summary.get("seakeeping"), summary)
 
     if arrangement_summary:
         lines += ["## 7. 总布置简图（声明式分舱）", "",

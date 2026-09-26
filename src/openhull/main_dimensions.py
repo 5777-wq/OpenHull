@@ -45,6 +45,8 @@ GRAVITY = 9.81
 L_OVER_B_BAND = (4.5, 8.0)
 B_OVER_T_BAND = (2.0, 3.5)
 L_OVER_DEPTH_BAND = (8.0, 14.0)
+#: Froude-number applicability of the statistical ratios (AGENTS.md §6)
+FN_BAND = (0.10, 0.25)
 
 # ---------------------------------------------------------------------------
 # Registry metadata
@@ -205,7 +207,7 @@ def _chain_solve(
 
     # -- applicability guards on the RESULT (AGENTS.md §6) ---------------
     fn = spec.service_speed / math.sqrt(GRAVITY * l_est)
-    if not within_band(fn, 0.10, 0.25):
+    if not within_band(fn, *FN_BAND):
         raise SpecValidationError(
             "service_speed", spec.service_speed,
             "resulting Froude number within 0.10-0.25",

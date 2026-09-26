@@ -26,7 +26,7 @@ def test_run_returns_stage1_chain_results(summary):
     assert abs(summary["displacement_t"] - 182829.1) / 182829.1 < 0.01
     assert summary["iterations"] == 3
     assert summary["norman_coefficient"] > 1.0
-    assert len(summary["hydrostatics"]) == 4
+    assert len(summary["hydrostatics"]) == 10  # 0.1 T step (P2-2)
     design = summary["hydrostatics"][-1]
     # ONE design draft for the whole chain (review-response 2026-09-24):
     # the top hydrostatic row IS the balance draft, not the declared
@@ -62,7 +62,7 @@ def test_cli_csv_flag_streams_parseable_table(capsys):
     text = out_bytes.decode("utf-8-sig")
     lines = text.strip().splitlines()
     assert lines[0].split(",")[0] == "draft_m"
-    assert len(lines) == 5  # header + four drafts
+    assert len(lines) == 11  # header + ten drafts (0.1 T step)
     header = lines[0].split(",")
     row = dict(zip(header, lines[-1].split(",")))
     assert float(row["draft_m"]) == pytest.approx(16.7674, abs=0.01)
@@ -82,7 +82,7 @@ def test_cli_json_flag_roundtrips(capsys):
     assert rc == 0
     loaded = json.loads(out)
     assert loaded["deadweight_t"] == 149920.0
-    assert len(loaded["hydrostatics"]) == 4
+    assert len(loaded["hydrostatics"]) == 10  # 0.1 T step (P2-2)
 
 
 def test_missing_taskbook_keys_exit_code_2(tmp_path, capsys):

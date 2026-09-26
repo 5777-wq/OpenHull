@@ -4,6 +4,60 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [1.3.0] - 2026-09-26
+
+### Added
+
+- **`openhull check` preflight** (P1-3): seconds-level prediction of
+  which guard bands a task book would trip — weight balance, Froude,
+  L/B, B/T, L/D, the Ayre speed band, the C0 family band, and the
+  draft declaration — with the numbers and exit 0 (all clear) / 1 (a
+  refusal is predicted); `--json` for agents.  The reviewer's Cb 0.84
+  case predicts the C0 refusal at 4.8324, matching their sweep's
+  4.832.  The full-chain-only stages are listed, not guessed.
+- **Kwon speed loss wired into `run`** (P1-1b):
+  `seakeeping.speed_loss: {beaufort, direction}` runs the whitelisted
+  method (library-implemented and tested since 2026-09-23); the
+  report, console and JSON carry dV/V1, the speed ratio and the lost
+  knots; the honest domain is kept (Cb 0.80 at Fr 0.19 refuses —
+  page-verified applicability); without the block the report states
+  that all powers are calm-water.
+- **`weather_criterion: default`** (P1-5): the [ASSUMED] geometric
+  derivation productised (area = Lpp x freeboard with the deckhouse
+  neglected — the non-conservative direction, declared; lever =
+  depth/2; bilge keels 0; LWL = 1.025 x Lpp) in both `run` and
+  `optimize`; report section 4 shows the whole derivation.
+- **Feasibility hints on refusals** (P1-2 first half): an ayre refusal
+  now carries the nearest feasible Cb under the declared held-(Δ,
+  ratios) rule (the reviewer's Cb 0.84 case: bound in (0.78, 0.82],
+  matching their measured 0.80–0.82 boundary), or the reachable speed
+  window for a speed-band refusal — plus the `optimize` pointer
+  (already shipped in v1.2.0).
+
+### Changed
+
+- **`--json` / `--csv` accept optional PATHs and combine** (P2-1):
+  bare flags keep the historical stdout behaviour; two bare flags
+  refuse with guidance since stdout serves one stream; the JSON
+  purity contract is re-pinned at the process boundary.
+- **`--csv-step`** (P2-2): the hydrostatics table defaults to 0.1 T
+  (10 rows, aligned with the curves chart); 0.25 restores the
+  historical 4 rows.
+- **`seakeeping.wave_periods`** (P2-4) replaces the two reference
+  seas; the report's two roll periods now carry a calibre footnote
+  (IS Code 2.3 simple form vs the book's Eqs 3-27/3-49) (P2-3); the
+  optimize grid help says how the speed shifts the Cb band (P2-6).
+- SKILL.md: the check-first workflow, the new flags and the new
+  task-book blocks.  Tests 405 → 419.  Froude band hoisted to
+  `FN_BAND`, the C0 band to `C0_FAMILY_BAND` (single sources).
+
+### Deferred (still on the books)
+
+- PyPI wheels (P1-4, waiting on the parked licensing decision), R2-B
+  second anchor and Wigley referee (source hunts), the feasible-Cb
+  hint's weight-re-balance refinement, P2-8 count automation, the
+  two-method resistance cross-check (Holtrop transcription).
+
 ## [1.2.0] - 2026-09-25
 
 ### Added
