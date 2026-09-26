@@ -209,3 +209,28 @@ def test_summary_stays_json_serialisable_with_the_new_fields(
     prop = restored["propeller_design"]
     assert prop["resistance_sensitivity"]["in_c0_peak_zone"] is True
     assert prop["cavitation_unchecked"]["side"] == "low"
+
+
+def test_json_purity_at_process_boundary(tmp_path):
+    """The N4 purity check runs in-process, where capsys only sees calls
+    made AFTER import - an import-time print pollutes real subprocess
+    pipelines while every in-process test stays green.  This round's
+    own cold-install verification caught exactly that (a stray
+    top-level print dedented out of _print_summary); pin the contract
+    at the process boundary."""
+    import subprocess
+    import sys
+
+    taskbook = REVIEW_TASKBOOK.replace(
+        "block_coefficient_design: 0.76", "block_coefficient_design: 0.84")
+    # the refusal path too: both must be pure JSON documents
+    for taskbook_text in (REVIEW_TASKBOOK, taskbook):
+        path = tmp_path / "tb.yaml"
+        path.write_text(taskbook_text, encoding="utf-8")
+        result = subprocess.run(
+            [sys.executable, "-m", "openhull.cli", "run", str(path),
+             "--json"],
+            capture_output=True, text=True, encoding="utf-8", timeout=300)
+        assert result.returncode == 0, result.stderr
+        payload = json.loads(result.stdout)  # raises if polluted
+        assert payload["taskbook_id"] == "REVIEW-P0"

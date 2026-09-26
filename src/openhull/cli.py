@@ -760,7 +760,7 @@ def _print_summary(summary: dict) -> None:
                   f"{sens.get('c0_local_slope_pct_per_0p05'):+.1f}%/0.05, "
                   f"Ac corridor {sens.get('admiralty_corridor')}) - "
                   f"single-point power is trend-unreliable here")
-print("JSON summary and CSV available via --json / --csv redirection.")
+    print("JSON summary and CSV available via --json / --csv redirection.")
 
 
 def _print_json(summary: dict) -> None:

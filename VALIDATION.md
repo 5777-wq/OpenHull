@@ -664,12 +664,13 @@ These are features of the current stage, not hidden weaknesses:
 | P0-3 stdout contract | the quickness section appears in ALL three states: result (D/P/D/ηo/power/cavitation/sensitivity), refused (stage + one line + see --report), not requested; `--json` purity regression untouched | agent contract |
 | P1-1a Kwon wording | the report no longer claims "no speed-loss formula exists"; it states Kwon is implemented/tested in the library, not yet wired into `run` (needs sea-state inputs), and all powers are calm-water | library facts |
 | P1-2 refusal guidance | the refusal block points to `openhull optimize --grid-cb …` for the feasibility sweep | no more blind retries |
-| Regression | 404 tests green (11 new); the 393 prior numbers unchanged | no numeric drift |
+| Self-caught regression at the process boundary | the first v1.2.0 build printed a stray module-level line into `--json` (an edit dedent moved the trailing hint out of `_print_summary`); in-process tests stayed green because capsys starts after import — caught by the cold-install check, fixed, and pinned by a SUBPROCESS-level purity test (in-process capsys cannot see import-time prints) | the contract needs a process-boundary test |
+| Regression | 405 tests green (12 new); the 393 prior numbers unchanged | no numeric drift |
 
 ## Reproducing
 
 ```bash
-uv run pytest                        # 404 tests (396 passed + 8 skipped without the optional extra)
+uv run pytest                        # 405 tests (397 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 
