@@ -4,6 +4,41 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [1.3.1] - 2026-09-26
+
+### Fixed
+
+- **Stale SKILL paragraph rewritten** (round-5 review, item 6.1): the
+  FAQ entry on speed loss still said "not yet wired into `run`" — a
+  v1.2.0-era residue contradicting the same file's v1.3.0 section.
+  Agents copy SKILL.md verbatim, so the contradiction mattered.
+- **The `optimize` chart degrades to a declared note** (item 6.2):
+  a broken optional plotting stack used to surface as a bare
+  third-party traceback; the chart call now catches it, prints a
+  declared note, records `outputs.chart_note` in the scan summary,
+  and the CSV/JSON products stay complete.
+
+### Added
+
+- **SKILL install recovery notes** (items 6.2/§7): the uv
+  `os error 5` malformed-tool recovery and the slow-network tarball
+  fallback.
+- **Machine-readable field path quickref** (item 6.3): where
+  `resistance_sensitivity`, `cavitation_unchecked`,
+  `feasibility_hint` and `seakeeping.speed_loss` actually live in
+  the `--json` payloads.
+- **README bilingual rework** (owner-directed): `README.md` becomes
+  the Chinese full version (the repo default view), English moves to
+  `README.en.md`, `README_zh.md` is a redirect stub, and the eight
+  minor-language stubs are retired.
+
+### Changed
+
+- **Console Kwon line reads "1.7% slower"** (item 6.4) instead of a
+  bare "-1.7%" that reads like a speed gain at a glance.
+- Recorded (item 6.5): the changelog's 4.8324 quote came from the
+  100,000 t book; the verifier measured 4.8322 on the 45,000 t one.
+
 ## [1.3.0] - 2026-09-26
 
 ### Added

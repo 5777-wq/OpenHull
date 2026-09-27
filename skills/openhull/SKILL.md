@@ -22,9 +22,9 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.3.0"
+UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.3.1"
 # 没有 uv 时：
-pip install "git+https://github.com/5777-wq/OpenHull@v1.3.0"
+pip install "git+https://github.com/5777-wq/OpenHull@v1.3.1"
 ```
 
 **主命令自带官方源覆盖**：`uv tool install` 会按本机配置的镜像源解析
@@ -32,11 +32,21 @@ pip install "git+https://github.com/5777-wq/OpenHull@v1.3.0"
 官方源可在任何环境一次装成。本机 uv 已默认官方源时可省略该前缀。
 网络受限时给 uv 配置代理（`HTTPS_PROXY=http://host:port`）。
 
-**锁定版本安装**（`@v1.3.0`）：可复现、可审计；需要跟踪最新修复时
+**安装应急两则**（round-5 核查补充）：
+①重装若报 `failed to remove directory … os error 5`——那是 uv 自身的
+毛病，装出来的环境会残缺（`uv tool list` 显示 malformed tool；症状是
+`run` 正常、`optimize` 画图时才报缺依赖）。先 `uv tool uninstall
+openhull`，删残留 `%APPDATA%\uv\tools\openhull`（含 `.lock`）再装，
+**不要先怀疑产品**；
+②网络慢时 git+ 安装可能挂住数分钟不报错——超过 2-3 分钟改走兜底：
+从 Release 页取 `openhull-vX.Y.Z.tar.gz` 解压后
+`uv tool install <本地目录>`。
+
+**锁定版本安装**（`@v1.3.1`）：可复现、可审计；需要跟踪最新修复时
 换成 `@main` 或具体 commit。安装后验证：
 
 ```bash
-openhull --version        # 应输出 openhull 1.3.0
+openhull --version        # 应输出 openhull 1.3.1
 ```
 
 耐波性 RAO 是可选扩展（capytaine），主流程不需要；需要时：
@@ -120,6 +130,13 @@ openhull optimize 任务书.yaml --out optimize_out
 openhull rao 任务书.yaml --periods 6,8,12,16,20
 ```
 
+**机器可读字段的嵌套路径速查**（--json 时别按顶层找）：
+`propeller_design.resistance_sensitivity`（C₀ 峰区诊断，v1.2.0 起，
+**在 propeller_design 里不在顶层**）；`cavitation_unchecked`（空泡出带
+的结构化说明，此时顶层 `cavitation` 为 null）；`propeller_design.
+feasibility_hint`（可行域提示）；`seakeeping.speed_loss`（Kwon，域外时
+`skipped: true` 带 `reason`）。
+
 **任务书可选块（v1.3.0 起）**：
 
 - `constraints.stability.weather_criterion: default` —— 不想手工推导
@@ -149,9 +166,12 @@ openhull rao 任务书.yaml --periods 6,8,12,16,20
 
 ## 常见追问的答法
 
-- "能算波浪失速吗？" → Kwon 失速法已在库层实现并通过测试，但**尚未接入 run 链**（需要海况入参：浪向、Beaufort 级）；当前报告所有功率均为**静水**值，如实转述，不要声称已含失速修正；
+- "能算波浪失速吗？" → **已接入 `run`**（v1.3.0 起）：任务书写
+  `seakeeping.speed_loss: {beaufort: 6, direction: head}` 即自动运行；
+  出数域有限（Cb/Fr 越界**诚实拒绝**，肥大低速船常在域外），拒绝时
+  如实转述原因；未给海况时报告明示所有功率均为**静水**值；
 - "这个数靠谱吗？" → 指路验证记录：公开基准船（JBC / DTMB 1712 /
-  NMRI MP687）+ 书内算例 + 全量测试（当前 419 项；未装 seakeeping
+  NMRI MP687）+ 书内算例 + 全量测试（当前 423 项；未装 seakeeping
   可选扩展时个别用例自动跳过），见仓库 VALIDATION.md；
 - "任务书里的 length_waterline_m 影响功率吗？" → 分两处说清：单船
   `run` 一次运行一个水线值（任务书声明了就用声明的，否则 Ayre 标准

@@ -848,8 +848,8 @@ def _print_summary(summary: dict) -> None:
         loss = seakeep.get("speed_loss")
         if loss and not loss.get("skipped"):
             print(f"  speed loss (Kwon)  : BN {loss['beaufort']:.0f} "
-                  f"{loss['direction']} -> -{loss['delta_v_percent']:.1f}% "
-                  f"(V2/V1 {loss['speed_ratio_v2_v1']})")
+                  f"{loss['direction']} -> {loss['delta_v_percent']:.1f}% "
+                  f"slower (V2/V1 {loss['speed_ratio_v2_v1']})")
         elif loss and loss.get("skipped"):
             print(f"  speed loss (Kwon)  : refused - "
                   f"{' '.join(str(loss['reason']).split())[:90]}")
@@ -911,6 +911,18 @@ def _write_json(summary: dict, path: str) -> None:
     """P2-1: --json PATH writes the document instead of stdout."""
     with open(path, "w", encoding="utf-8") as handle:
         handle.write(json.dumps(summary, indent=2, ensure_ascii=False))
+
+
+def _write_scan_chart(result, chart_path) -> str | None:
+    """Round-5 review (2026-09-26, item 6.2): a broken optional plotting
+    stack must degrade to a declared note, not a bare third-party
+    traceback - the scan's data products (CSV/JSON) stay complete."""
+    try:
+        write_tradeoff_chart(result, chart_path)
+    except Exception as exc:  # matplotlib/cycler gaps surface here
+        return (f"chart unavailable - plotting dependency incomplete "
+                f"({type(exc).__name__}); scan data products unaffected")
+    return None
 
 
 def _write_csv(summary: dict, path: str) -> None:
@@ -1368,7 +1380,9 @@ def _run_optimize(args) -> None:
                 "cb": r.cb, "stage": r.stage,
                 "reason": " ".join(str(r.reason).split())[:200]})
     chart_path = out_dir / "tradeoff_speed_displacement_gm.png"
-    write_tradeoff_chart(result, chart_path)
+    chart_note = _write_scan_chart(result, chart_path)
+    if chart_note:
+        print(f"  note: {chart_note}")
     front = [c.to_dict() for c in __import__(
         "openhull.optimize", fromlist=["pareto_front"]).pareto_front(
         result.feasible)]
@@ -1408,7 +1422,8 @@ def _run_optimize(args) -> None:
         "off_reference_causes": off_causes,
         "pareto_count": len(front),
         "outputs": {"csv": str(csv_path), "rejected_csv":
-                    str(rejected_path), "chart": str(chart_path)},
+                    str(rejected_path), "chart": str(chart_path),
+                    **({"chart_note": chart_note} if chart_note else {})},
         "designs": rows,
         "rejected_points": [
             {"l_over_b": r.l_over_b, "b_over_t": r.b_over_t, "cb": r.cb,

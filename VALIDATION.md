@@ -687,10 +687,30 @@ These are features of the current stage, not hidden weaknesses:
 | P2-4 | `seakeeping.wave_periods` | custom seas replace the reference seas, labels say "task-book sea" | configurability |
 | Regression | 419 tests green (14 new); prior acceptance numbers unchanged | no numeric drift |
 
+27. **Review round 5 (external verifier, 2026-09-26): v1.1.0-v1.3.0
+    audit cleared, two code-level findings fixed (v1.3.1).**  The
+    round-5 report reproduced every quantitative claim across three
+    releases (hard-draft anchors bit-for-bit, check preflight, the
+    feasibility-hint bound 0.816 vs an independently measured
+    boundary at about 0.815, Kwon 1.71 %, weather default
+    A = 980 m2, baseline zero-drift, 419 tests) and found one stale
+    agent-facing paragraph plus minor items; all dispositioned here.
+
+| Item | Fix | Check |
+|---|---|---|
+| 6.1 stale SKILL paragraph | the FAQ Kwon entry still said "not yet wired into run" (v1.2.0-era residue contradicting the same file's v1.3.0 section) - rewritten to the wired contract | agents copy SKILL verbatim; the contradiction is gone |
+| 6.2 chart degrade | a broken plotting stack surfaced as a bare third-party traceback from `optimize`; the chart call now degrades to a declared note (console line + `outputs.chart_note`), CSV/JSON products complete | 3 new tests incl. an end-to-end optimize with a monkeypatched-broken chart |
+| 6.2 install recovery | the SKILL install section documents the uv `os error 5` malformed-tool recovery (uninstall + purge %APPDATA%\uv\tools\openhull) and the slow-network tarball fallback | agent-facing docs |
+| 6.3 JSON paths | SKILL gains a machine-readable-field path quickref (`propeller_design.resistance_sensitivity`, `cavitation_unchecked`, `feasibility_hint`, `seakeeping.speed_loss`) | docs |
+| 6.4 console sign | the Kwon line printed "-1.7%" (reads like a gain at a glance); now "1.7% slower" | no bare negative sign remains |
+| 6.5 changelog 4.8324 | recorded: the verifier measured 4.8322 on the 45,000 t book (the changelog quoted the 100,000 t book); a noted difference, no change | provenance note |
+| README rework | README.md becomes the Chinese full version (the repo default view), English moves to README.en.md, README_zh.md is a redirect stub, the eight minor-language stubs are retired (stale translations are worse than none) | repo facade |
+| Regression | 423 tests green (4 new); prior acceptance numbers unchanged | no numeric drift |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 419 tests (411 passed + 8 skipped without the optional extra)
+uv run pytest                        # 423 tests (415 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 
