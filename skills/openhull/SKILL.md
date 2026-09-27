@@ -22,9 +22,9 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.3.1"
+UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.3.2"
 # 没有 uv 时：
-pip install "git+https://github.com/5777-wq/OpenHull@v1.3.1"
+pip install "git+https://github.com/5777-wq/OpenHull@v1.3.2"
 ```
 
 **主命令自带官方源覆盖**：`uv tool install` 会按本机配置的镜像源解析
@@ -42,11 +42,11 @@ openhull`，删残留 `%APPDATA%\uv\tools\openhull`（含 `.lock`）再装，
 从 Release 页取 `openhull-vX.Y.Z.tar.gz` 解压后
 `uv tool install <本地目录>`。
 
-**锁定版本安装**（`@v1.3.1`）：可复现、可审计；需要跟踪最新修复时
+**锁定版本安装**（`@v1.3.2`）：可复现、可审计；需要跟踪最新修复时
 换成 `@main` 或具体 commit。安装后验证：
 
 ```bash
-openhull --version        # 应输出 openhull 1.3.1
+openhull --version        # 应输出 openhull 1.3.2
 ```
 
 耐波性 RAO 是可选扩展（capytaine），主流程不需要；需要时：
@@ -136,6 +136,13 @@ openhull rao 任务书.yaml --periods 6,8,12,16,20
 的结构化说明，此时顶层 `cavitation` 为 null）；`propeller_design.
 feasibility_hint`（可行域提示）；`seakeeping.speed_loss`（Kwon，域外时
 `skipped: true` 带 `reason`）。
+
+**可选图表的降级契约**（v1.3.2 起）：静水力曲线图 / 总布置图 / 扫描图
+出不了（绘图依赖残缺）时**链条不中止**——图表路径字段置空或不出现，
+`chart_notes`（run，stderr 同步一行）/ `outputs.chart_note`（optimize）
+给一句声明带补救指引，报告与数据产物照常完整；outputs 里列出的文件
+必定真实写盘（幻影路径不存在）。`check` 在绘图依赖缺失时加一行提示，
+**不参与退出码**（0/1 只关于设计，不关于环境），--json 不含该提示。
 
 **任务书可选块（v1.3.0 起）**：
 

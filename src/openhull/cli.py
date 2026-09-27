@@ -623,15 +623,20 @@ def run_taskbook(taskbook_path: str,
                     "skipped": True, "reason": str(refused)}
 
     hydro_curve_chart_path = None
+    chart_notes: list[str] = []
     if hydro_curve_chart:
         from .hydrostatics_chart import write_hydrostatic_curves_chart
         chart_fractions = [0.2 + 0.1 * i for i in range(9)]  # 0.2T..1.0T
         chart_drafts = hydrostatic_draft_rows(
             hull, design_draft, chart_fractions)
         chart_table = hydrostatics_table(hull, chart_drafts)
-        hydro_curve_chart_path = str(write_hydrostatic_curves_chart(
-            chart_table, hydro_curve_chart,
-            title=str(data.get("taskbook_id") or "")))
+        hydro_curve_chart_path, note = _write_optional_chart(
+            lambda: write_hydrostatic_curves_chart(
+                chart_table, hydro_curve_chart,
+                title=str(data.get("taskbook_id") or "")),
+            hydro_curve_chart, "hydrostatic curves chart")
+        if note:
+            chart_notes.append(note)
 
     from .arrangement import (
         arrangement_from_taskbook,
@@ -647,9 +652,13 @@ def run_taskbook(taskbook_path: str,
             export_arrangement_dxf(arrangement, arrangement_dxf_path))
     arrangement_chart_written = None
     if arrangement_chart_path:
-        arrangement_chart_written = str(write_arrangement_chart(
-            arrangement, arrangement_chart_path,
-            title=str(data.get("taskbook_id") or "")))
+        arrangement_chart_written, note = _write_optional_chart(
+            lambda: write_arrangement_chart(
+                arrangement, arrangement_chart_path,
+                title=str(data.get("taskbook_id") or "")),
+            arrangement_chart_path, "arrangement chart")
+        if note:
+            chart_notes.append(note)
 
     summary = {
         "taskbook_id": data.get("taskbook_id", ""),
@@ -691,6 +700,7 @@ def run_taskbook(taskbook_path: str,
         "seakeeping": seakeeping_summary,
         "hydrostatic_curve_chart": hydro_curve_chart_path,
         "arrangement": arrangement.to_dict(),
+        **({"chart_notes": chart_notes} if chart_notes else {}),
     }
 
     if report_path:
@@ -703,7 +713,6 @@ def run_taskbook(taskbook_path: str,
         summary["arrangement_dxf"] = arrangement_dxf_written
     if arrangement_chart_written:
         summary["arrangement_chart"] = arrangement_chart_written
-    return summary
     return summary
 
 
@@ -913,16 +922,29 @@ def _write_json(summary: dict, path: str) -> None:
         handle.write(json.dumps(summary, indent=2, ensure_ascii=False))
 
 
-def _write_scan_chart(result, chart_path) -> str | None:
-    """Round-5 review (2026-09-26, item 6.2): a broken optional plotting
-    stack must degrade to a declared note, not a bare third-party
-    traceback - the scan's data products (CSV/JSON) stay complete."""
+def _write_optional_chart(write_fn, path, label: str) -> tuple[str | None,
+                                                               str | None]:
+    """Round-5/6 reviews: an OPTIONAL chart must never abort the chain
+    nor bare-trace a third-party stack - the report and every data
+    product survive a broken plotting stack.  Returns (written, note):
+    exactly one is non-None (the written path, or the declared note)."""
     try:
-        write_tradeoff_chart(result, chart_path)
+        written = write_fn()
     except Exception as exc:  # matplotlib/cycler gaps surface here
-        return (f"chart unavailable - plotting dependency incomplete "
-                f"({type(exc).__name__}); scan data products unaffected")
-    return None
+        return None, (f"{label} unavailable - plotting dependency "
+                      f"incomplete ({type(exc).__name__}); data products "
+                      f"unaffected. remedy: reinstall the tool "
+                      f"(uninstall, purge %APPDATA%\\uv\\tools\\openhull, "
+                      f"reinstall - SKILL install notes)")
+    return (str(written) if written is not None else str(path)), None
+
+
+def _missing_chart_deps() -> list[str]:
+    """Round-6 review: existence probes only (milliseconds) - importing
+    matplotlib here would cost 200-400 ms and break check's promise."""
+    import importlib.util
+    return [name for name in ("matplotlib", "cycler")
+            if importlib.util.find_spec(name) is None]
 
 
 def _write_csv(summary: dict, path: str) -> None:
@@ -1081,6 +1103,8 @@ def main(argv: list[str] | None = None) -> int:
             # artefact confirmations go to stderr: stdout must stay a
             # pure JSON document (--json) or a pure CSV stream (--csv)
             # so both remain pipeable (review 2026-09-24, N4)
+            for note in summary.get("chart_notes") or ():
+                print(f"note: {note}", file=sys.stderr)
             for label, key in (
                     ("hydrostatic curves chart", "hydrostatic_curve_chart"),
                     ("design report", "report_path"),
@@ -1271,6 +1295,11 @@ def _run_check(args) -> int:
             state = "PASS"
         print(f"{g['gate']:<24s}: {g['value']:>10.4f} {band_txt:<24s} "
               f"{state}")
+    missing_deps = _missing_chart_deps()
+    if missing_deps:
+        print(f"note: plotting deps missing ({', '.join(missing_deps)}) "
+              f"-> charts will degrade to declared notes; data products "
+              f"unaffected (exit code unchanged)")
     if refused:
         print("-" * 64)
         print(f"verdict             : {len(refused)}/{len(gates)} gates "
@@ -1380,9 +1409,9 @@ def _run_optimize(args) -> None:
                 "cb": r.cb, "stage": r.stage,
                 "reason": " ".join(str(r.reason).split())[:200]})
     chart_path = out_dir / "tradeoff_speed_displacement_gm.png"
-    chart_note = _write_scan_chart(result, chart_path)
-    if chart_note:
-        print(f"  note: {chart_note}")
+    chart_written, chart_note = _write_optional_chart(
+        lambda: write_tradeoff_chart(result, chart_path),
+        chart_path, "scan chart")
     front = [c.to_dict() for c in __import__(
         "openhull.optimize", fromlist=["pareto_front"]).pareto_front(
         result.feasible)]
@@ -1422,7 +1451,8 @@ def _run_optimize(args) -> None:
         "off_reference_causes": off_causes,
         "pareto_count": len(front),
         "outputs": {"csv": str(csv_path), "rejected_csv":
-                    str(rejected_path), "chart": str(chart_path),
+                    str(rejected_path),
+                    **({"chart": chart_written} if chart_written else {}),
                     **({"chart_note": chart_note} if chart_note else {})},
         "designs": rows,
         "rejected_points": [
@@ -1462,7 +1492,10 @@ def _run_optimize(args) -> None:
             print(f"  why off-axis     : {off_causes}")
     print(f"outputs            : {csv_path}")
     print(f"                     {rejected_path}")
-    print(f"                     {chart_path}")
+    if chart_written:
+        print(f"                     {chart_written}")
+    else:
+        print(f"  note: {chart_note}")
     print(f"                     {json_path}")
 
 

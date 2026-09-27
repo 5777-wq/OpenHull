@@ -4,6 +4,40 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [1.3.2] - 2026-09-27
+
+### Fixed
+
+- **The `run` chart options are guarded like `optimize`'s** (round-6
+  review): `--hydro-curve-chart` / `--arrangement-chart` used to abort
+  the whole chain on a broken plotting stack — exit 1, a bare
+  17-line third-party traceback, and with `--report` the primary
+  deliverable was lost to an optional chart.  The round-5 guard is
+  generalised to `_write_optional_chart`, shared by all three chart
+  call sites: a broken stack now degrades to a declared note (stderr
+  + `chart_notes` in the JSON) carrying the reinstall remedy, and the
+  report always ships.
+- **No phantom chart paths in outputs** (round-6 residual): a
+  degraded scan listed the PNG that was never written, violating the
+  v1.0.1 invariant that every file listed in `outputs` is really on
+  disk.  `outputs.chart` now appears only when the chart exists; the
+  declared note replaces it.  (Also removed a duplicated `return` in
+  `run_taskbook`.)
+
+### Added
+
+- **`check` surface for missing plotting deps** (round-6, the
+  zero-cost channel): one console line via `importlib.util.find_spec`
+  existence probes — milliseconds, not an import; the exit-code
+  contract (0 = all gates pass, 1 = a refusal is predicted) stays
+  about the design only, and the hint never enters `--json`.
+
+### Changed
+
+- The round-5 chart tests were re-pointed at the shared helper and
+  extended with the phantom-path invariant; five new round-6 tests
+  pin the run-path guards and the check hint.
+
 ## [1.3.1] - 2026-09-26
 
 ### Fixed

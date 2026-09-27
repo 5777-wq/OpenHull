@@ -707,10 +707,27 @@ These are features of the current stage, not hidden weaknesses:
 | README rework | README.md becomes the Chinese full version (the repo default view), English moves to README.en.md, README_zh.md is a redirect stub, the eight minor-language stubs are retired (stale translations are worse than none) | repo facade |
 | Regression | 423 tests green (4 new); prior acceptance numbers unchanged | no numeric drift |
 
+28. **Round-6 (the v1.3.1 verifier, 2026-09-27): the same defect class
+    on `run`'s chart options, guarded everywhere (v1.3.2).**  The
+    controlled cycler-hiding experiment confirmed the round-5
+    optimize guard; the same probe then showed `run`'s
+    `--hydro-curve-chart` / `--arrangement-chart` unguarded (exit 1,
+    a bare 17-line traceback, and with `--report` the PRIMARY
+    deliverable lost to an optional chart), plus a residual phantom
+    path in the degraded scan's outputs.
+
+| Item | Fix | Check |
+|---|---|---|
+| run chart guards | the round-5 guard generalised to `_write_optional_chart`, shared by all three chart call sites (hydro curves, arrangement, scan); degrade = declared note on stderr with the remedy + `chart_notes` in the JSON; the report and data products complete | 5 new tests: both run paths degrade with the report surviving; JSON carries notes, not phantom paths |
+| outputs invariant restored | a degraded scan lists NO phantom chart path: `outputs.chart` present only when written - the v1.0.1 "every listed file is really on disk" invariant now holds on BOTH the healthy and the degraded path | degraded optimize: no `chart` key, PNG absent, `chart_note` present |
+| remedy in the note | the degrade message carries the reinstall remedy (uninstall, purge %APPDATA%\uv\tools\openhull, reinstall), pointing at the SKILL install notes | self-service without reading docs |
+| check dep hint | missing matplotlib/cycler surfaces as ONE console line via `importlib.util.find_spec` existence probes (milliseconds, not an import); the exit-code contract stays about the design; the hint never enters `--json` | console hint with exit 0; `--json` payload clean |
+| Regression | 428 tests green (5 new); the 45,000 t default path and the TB-001S scan unchanged (verifier re-measured both bit-for-bit) | no numeric drift |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 423 tests (415 passed + 8 skipped without the optional extra)
+uv run pytest                        # 428 tests (420 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 
