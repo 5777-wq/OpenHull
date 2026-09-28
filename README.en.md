@@ -133,6 +133,7 @@ SKILL.md can install it from the URL alone.
 | book worked examples (Ship Theory vol. 2) | propeller terminal design 0.07 kn; roll-period identities exact |
 | panel-mesh vs station integration | displacement volume 0.1 % |
 | KCS speed loss (published comparison) | speed ratio f_w 0.929 vs 0.932 |
+| Holtrop-Mennen 1982 paper worked example | all twenty printed quantities reproduced (R_total 1793.26 kN, P_E 23063 kW) |
 
 ## Documentation
 

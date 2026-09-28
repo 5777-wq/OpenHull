@@ -4,6 +4,33 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [1.5.0] - 2026-09-28
+
+### Added
+
+- **Holtrop-Mennen (1982) effective-power method** (round-8 backlog:
+  the registered section-3.1 placeholder discharged).  The source
+  paper was located on a public university mirror, archived with the
+  1984 re-analysis, PAGE-VERIFIED against rendered images, and the
+  section-5 whitelist amended BEFORE coding (f61578d).
+  `openhull.holtrop` implements the full resistance chain - form
+  factor, wetted area, ITTC-1957 friction, appendages, wave
+  resistance with the humps term, bulb and transom pressure
+  resistances, correlation allowance - as a LIBRARY module for
+  validation and cross-check (deliberately not wired into the default
+  chain yet; the Kwon library-first pattern).  Acceptance anchor: the
+  paper's own section-5 worked example reproduces with ZERO declared
+  defects - all twenty printed quantities (S, 1+k1, CF, iE, m1, m2,
+  lambda, CA, RF, RW, RB, RA, Rtotal 1793.26 kN, PE 23063 kW, ...)
+  pinned by tests/test_holtrop.py.
+
+### Changed
+
+- **JBC-band external anchor declared OPEN**: the Tokyo 2015 EFD
+  tables (workshop proceedings) were not secured at implementation
+  time; the planned plus/minus 10-15 % acceptance row lands when they
+  are.
+
 ## [1.4.0] - 2026-09-28
 
 ### The task-book input contract (round-7 end-to-end QA)

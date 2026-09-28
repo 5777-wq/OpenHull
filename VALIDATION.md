@@ -752,10 +752,32 @@ These are features of the current stage, not hidden weaknesses:
 | OH-16 P2 | 11 contract tests in `tests/test_taskbook_contract.py`, one per refusal above, asserting rc + field name + no traceback | this file is the check |
 | Regression | 440 tests green (12 new); the numeric chain untouched - every prior acceptance number stands (the QA run re-verified byte-identical reproducibility) | no numeric drift |
 
+30. **Holtrop–Mennen (1982) effective-power method — second
+    resistance method, library-validated (round-8 backlog, 2026-09-28).**
+    The registered placeholder from §3.1 is discharged: the source
+    paper was located, archived and PAGE-VERIFIED (rendered images,
+    pp. 166–170; the 1984 re-analysis is archived with it and
+    registered, not implemented), the §5 whitelist was amended BEFORE
+    coding (f61578d), and the method is implemented as a library
+    module (`openhull.holtrop`) for validation and cross-check —
+    deliberately NOT wired into the default chain yet (chain wiring +
+    guard rework is the follow-up proposal, the Kwon
+    library-first pattern).
+
+| Check | Result | Criterion |
+|---|---|---|
+| Source | Holtrop & Mennen (1982), ISP vol. 29, pp. 166–170 — full scan archived (University of Trieste public course mirror; publisher metadata IOS Press cross-checked) | §5 page-verification rule |
+| Worked-example anchor (the paper's own §5 numerical example) | S 7381.45 m², 1+k₁ 1.156, L_R 81.385 m, c₁₂ 0.5102, C_F 0.001390, i_E 12.08°, c₁ 1.398, c₂ 0.7595, c₃ 0.02119, c₅ 0.9592, m₁ −2.1274, m₂ −0.17087, λ 0.6513, C_A 0.000352, R_F 869.63 kN, R_APP 8.83 kN, R_W 557.11 kN, R_B 0.049 kN, R_A 221.98 kN, R_total 1793.26 kN, P_E 23063 kW — every printed quantity reproduced, ZERO declared defects | published worked example (the charter's anchor class) |
+| Transcription-fidelity pins | form factor takes (1−Cp+0.0225·lcb) while i_E takes (1−Cp−0.0225·lcb) — the sign genuinely differs between the two printed formulae; pinned by tests | both verified against the example |
+| Cp calibre | the paper's Cp 0.5833 sits between ∇/(Lpp·B·T) 0.5859 and ∇/(L·B·T) 0.5716 — the module accepts DECLARED Cp/C_B (the anchor feeds the printed values) or derives on LWL with the calibre stated | declared, not hidden |
+| lcb datum | Holtrop lcb is % of LWL, datum ½L — conversion from %-Lpp validated by the example (−2.02 %Lpp → −0.75 %L) | example table |
+| JBC-band external anchor | OPEN, declared: the Tokyo 2015 EFD tables live in workshop proceedings not secured at implementation time; the ±10–15 % planned-acceptance row (AGENTS planned table) lands when they are | honest deferral, not a silent drop |
+| Regression | 446 tests green (6 new); the default chain untouched — every prior number stands | no numeric drift |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 440 tests (432 passed + 8 skipped without the optional extra)
+uv run pytest                        # 446 tests (438 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 
