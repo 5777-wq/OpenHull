@@ -244,6 +244,49 @@ no page numbers from memory).
 - Holtrop, J. & Mennen, G.G.J. (1982), "An Approximate Power Prediction
   Method", International Shipbuilding Progress, vol. 29 — residual
   resistance, appendage/air corrections, propulsion factors.
+- **Holtrop–Mennen effective-power (resistance) method — transcription
+  declared 2026-09-28, implemented same session (owner directed the
+  backlog cleared per charter).**  Source archived and PAGE-VERIFIED:
+  the 1982 paper (pp. 166–170, formulae read from rendered page
+  images, all cross-checked against the paper's own §5 numerical
+  example: S 7381.45 m², 1+k₁ 1.156, C_A 0.000352, i_E 12.08°,
+  m₁ −2.1274, m₂ −0.17087, λ 0.6513, R_W 557.11 kN, R_T 1793.26 kN,
+  P_E 23063 kW — reproduced to 4 digits WITH ZERO declared defects
+  (every printed component, R_B 0.049 kN included, reproduces).  Transcribed formula
+  inventory: R_total = R_F(1+k₁) + R_APP + R_W + R_B + R_TR + R_A;
+  form factor 1+k₁ = c₁₃(0.93 + c₁₂(B/L_R)^0.92497 (0.95−C_p)^−0.521448
+  (1−C_p+0.0225·lcb)^0.6906); L_R/L = 1−C_p+0.06C_p·lcb/(4C_p−1);
+  c₁₂/c₁₃ piecewise; wetted area S (C_M/C_B/C_WP/B/T and bulb terms);
+  R_W = c₁c₂c₅∇ρg·exp{m₁Fn^d + m₂cos(λFn⁻²)}, d = −0.9, with
+  c₁/c₇/λ/m₁/c₁₆/m₂/c₁₅ piecewise as printed and i_E by regression
+  (the paper's own replacement for the negative-i_E [1] equation);
+  bulb R_B via P_B/F_ni, transom R_TR via c₆/F_nT, correlation
+  C_A = 0.006(L+100)^−0.16 − 0.00205 + 0.003√(L/7.5)C_B⁴c₂(0.04−c₄).
+  **Transcription-fidelity notes (implementation-verified)**: the
+  form factor uses (1−Cp+0.0225·lcb) while the i_E regression uses
+  (1−Cp−0.0225·lcb) — the sign GENUINELY DIFFERS between the two
+  printed formulae (both verified against the example: 1+k₁ 1.156
+  needs the plus, i_E 12.08° needs the minus); the paper computes Cp
+  on a length between Lpp and LWL (example Cp 0.5833 while
+  ∇/(L·B·T) = 0.5716), so the module ACCEPTS declared Cp/C_B and
+  otherwise derives on LWL, stating the calibre in the output.
+  **Conventions declared**: Holtrop's lcb is % of the WATERLINE length,
+  datum ½L (NOT ½Lpp) — verified against the example (2.02 %Lpp aft of
+  ½Lpp ↔ lcb −0.75 %L); the module converts from the task book's
+  %-Lpp-forward declaration and states the conversion.  A_BT, A_T,
+  S_APP, C_stern optional; undeclared ⇒ 0 / normal stern, an
+  [ASSUMED] simplification stated in output.  **Applicability**: hulls
+  resembling the average ship of the regression sample (the paper's
+  own limitation); used here as a validation/cross-check method, not
+  wired into the default chain.  **Registered, not implemented**:
+  Holtrop (1984) "A Statistical Re-Analysis" (archived with the same
+  PDF, pp. 1–4 of the reprint) — the 334-model update; its wake/thrust
+  constants and Fn > 0.55 wave formula are transcribed in the archive
+  for a future increment.  **Anchor status**: the paper's worked
+  example is the acceptance anchor (published worked example = the
+  charter's own anchor class); the JBC-band ±10–15 % row (planned-
+  acceptance table) stays OPEN pending secured proceedings EFD tables
+  — declared, not silently dropped.
 
 **Freeboard**
 - International Convention on Load Lines, 1966, as amended by the 1988
