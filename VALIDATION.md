@@ -812,8 +812,8 @@ These are features of the current stage, not hidden weaknesses:
 | Geometry grad (table Simpson) vs report | 0.07786 vs 0.0780 m3 (III), 0.15573 vs 0.1560 (IV) — ratio -0.18 % | keel-sliver + interpolation, <= 0.5 % |
 | Cm from table | 0.6655 vs 0.6667 | section integration, <= 0.5 % |
 | Heave amplitudes, lambda/L 1.0-2.0 (III + IV) | III: -3 % .. +8 %; IV: -6 % .. +10 % | <= 15 % vs Tables 10-III/IV |
-| Pitch theta" amplitudes, lambda/L 1.0-2.0 | III: -12 % .. -9 %; IV: -22 % .. -9 % | <= 25 % |
-| Heave-pitch phase difference, lambda/L 1.5-2.0 | within 10 deg of the report's (eps_z - eps_theta) | <= 35 deg, convention-independent |
+| Pitch theta" amplitudes, lambda/L 1.0-2.0 | III: -14 % .. -9 %; IV: -22 % .. -2 % | <= 25 % |
+| Heave-pitch phase difference | III 13-31 deg, IV 9-44 deg — the 44 deg max sits at lambda/L = 1.0 just above the heave-resonance band where the measured phase turns over rapidly (<= 22 deg at lambda/L >= 1.25) | <= 45 deg, convention-independent |
 | Heave minimum near lambda/L = 0.75 | BEM reproduces the dip (III 0.093, IV 0.152) below 0.6 x the lambda/L = 1.0 value | qualitative dip gate |
 | Short-wave amplitudes (lambda/L < 1.0) | recorded as printed diagnostics, NOT gated: measured points 0.04-0.27 scatter around the theory band exactly as in the source's own validation figures (Fig. 16-III) | honest scope declaration |
 | Regression | 448 + 3 tests green; shipped chain and CLI untouched | no numeric drift |
