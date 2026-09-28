@@ -586,6 +586,60 @@ resonance check)**
   geometry the table layer integrates.  Validation = cross-checks
   against the table layer (VALIDATION.md item 19).
 
+**External anchor data: Wigley parabolic hulls, zero-speed RAOs
+(Journee 1992, Delft report 0909)**
+- Source and archiving (backlog web-search delegation, 2026-09-28):
+  J.M.J. Journee (1992), "Experiments and Calculations on 4 Wigley
+  Hull Forms in Head Waves", Report 0909, Ship Hydromechanics
+  Laboratory, TU Delft, May 1992 — the author's electronic reprint
+  (reprint note dated 2003-11-26, p.1) retrieved from the Internet
+  Archive's 2013-03-19 snapshot of shipmotions.nl (the origin site
+  lapsed in 2026); archived as `知识库/Wigley/Journee_1992_Report_
+  0909_Wigley4.pdf` (SHA256 in `知识库/Wigley/sha256.txt`), key pages
+  page-verified as rendered PNGs (particulars p.2, hull definition
+  p.3, Table 1-III p.31, Tables 10-III/IV p.57-58, 400 dpi
+  digit-by-digit).
+- Hull form (p.3, verified): eta = (1-zeta^2)(1-xi^2)(1+a2 xi^2 +
+  a4 xi^4) + alpha*zeta^2*(1-zeta^8)*(1-xi^2)^4 with a2 = 0.2, a4 = 0
+  for all four models and alpha = 0 for models III/IV (Cm = 0.667,
+  the ones anchored here).  Scaling xi, eta, zeta x L/2, B/2, d;
+  zeta = (d-z)/d measured downward from the still-water plane.
+  **Declared print defect**: p.3 prints the domains as xi, eta in
+  [-0.5, +0.5], but the report's own Table 1-III offsets (ordinates
+  15/19 read 0.1181/0.0331) and the tabulated grad = 0.0780 m^3
+  (Cb = 0.4622, equal to the analytic 0.078000 of the form) are
+  consistent ONLY with xi, eta in [-1, +1] — the data governs, same
+  disposition class as the Ayre tables' print defects (section 5
+  preamble).
+- Particulars (p.2, verified): L = 3.0000 m, d = 0.1875 m,
+  B = 0.3000 m (III) / 0.6000 m (IV), grad = 0.0780 / 0.1560 m^3,
+  KG = 0.1700 / 0.1875 m, kyy = 0.7500 m (= 0.25*L, the whitelisted
+  p.428 default), KR = 0.1875 m (waterline).  Fresh water
+  rho = 1.000 t/m^3 declared (the report tabulates volume; rho
+  cancels to first order in the RAO).
+- Anchored quantities (Tables 10-III/IV, p.57-58; zero forward
+  speed; regular head waves; the model was free in heave and pitch
+  only — roll restrained by the rig, surge restrained):
+  z_a" = z_a/zeta_a; theta_a" = theta_a*L/(2*pi*zeta_a); phases
+  epsilon in degrees on z, theta = a*cos(omega*t + epsilon) relative
+  to the wave elevation amidships; zeta_a = 2-2.5 cm and the
+  lambda/L = 1.25 triple (2.34/4.86/6.50 cm) documents linearity.
+  Unwrapped phases (383, 411 degrees) reduce mod 360; only the
+  convention-independent heave-pitch phase difference is gated.
+- Anchor disposition (roadmap 3.8 acceptance line "Wigley or
+  Series 60 public RAO comparison"): tests/test_wigley_anchor.py
+  gates heave/pitch amplitudes at lambda/L >= 1.0 (where the
+  source's own SEAWAY and 3-D panel curves track the data tightly,
+  Fig. 16-III) within ±15 % / ±25 %, the heave-pitch phase
+  difference within ±35 deg, the lambda/L = 0.75 heave minimum
+  qualitatively, and records the short-wave amplitude comparison as
+  printed diagnostics — the measured short-wave points (0.04-0.27)
+  scatter about the theory band exactly as in the source's own
+  validation figures.  NOT a formula source for design output;
+  R_sw (p.2) and the speed-dependent Tables 8-x are recorded as
+  anchor material for future resistance / added-resistance work
+  (owner-gated as before).
+
 **Adding a formula:** propose the source, owner approves, this section is
 amended first, implementation second. A formula without a whitelisted
 source must not be merged.

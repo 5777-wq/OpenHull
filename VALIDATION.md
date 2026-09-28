@@ -790,6 +790,34 @@ These are features of the current stage, not hidden weaknesses:
 | Axis contract | a multi-valued B/T axis with draft_is_hard refuses with guidance (B/T is solved, not scanned) | declared contract |
 | Regression | 448 tests green (2 new); the soft scan path untouched - the TB-001S and 100k scan numbers stand | no numeric drift |
 
+32. **Wigley zero-speed RAO external anchor (backlog web-search
+    clearance, 2026-09-28).**  The roadmap 3.8 acceptance line
+    "Wigley or Series 60 public RAO comparison" closes with
+    Journee (1992), TU Delft report 0909 (archived via the Internet
+    Archive; constitution section 5 amendment "External anchor
+    data: Wigley parabolic hulls").  Geometry = the report's own
+    analytic form (data-verified domain xi in [-1, 1]; the printed
+    [-0.5, 0.5] is a declared print defect), spot-checked
+    digit-by-digit against the report's Table 1-III offsets; the
+    form's analytic grad = 0.078000 m3 equals the report's
+    tabulated 0.0780 exactly.  The BEM comparison reproduces the
+    rig's degrees of freedom (heave + pitch free, roll restrained,
+    surge restrained).  Gates sit at lambda/L >= 1.0, the region
+    where the source's own SEAWAY / 3-D-panel curves track the
+    data (Fig. 16-III); the measured short-wave points scatter
+    about the theory band in the source's own figures too.
+
+| Check | Result | Criterion |
+|---|---|---|
+| Geometry grad (table Simpson) vs report | 0.07786 vs 0.0780 m3 (III), 0.15573 vs 0.1560 (IV) — ratio -0.18 % | keel-sliver + interpolation, <= 0.5 % |
+| Cm from table | 0.6655 vs 0.6667 | section integration, <= 0.5 % |
+| Heave amplitudes, lambda/L 1.0-2.0 (III + IV) | III: -3 % .. +8 %; IV: -6 % .. +10 % | <= 15 % vs Tables 10-III/IV |
+| Pitch theta" amplitudes, lambda/L 1.0-2.0 | III: -12 % .. -9 %; IV: -22 % .. -9 % | <= 25 % |
+| Heave-pitch phase difference, lambda/L 1.5-2.0 | within 10 deg of the report's (eps_z - eps_theta) | <= 35 deg, convention-independent |
+| Heave minimum near lambda/L = 0.75 | BEM reproduces the dip (III 0.093, IV 0.152) below 0.6 x the lambda/L = 1.0 value | qualitative dip gate |
+| Short-wave amplitudes (lambda/L < 1.0) | recorded as printed diagnostics, NOT gated: measured points 0.04-0.27 scatter around the theory band exactly as in the source's own validation figures (Fig. 16-III) | honest scope declaration |
+| Regression | 448 + 3 tests green; shipped chain and CLI untouched | no numeric drift |
+
 ## Reproducing
 
 ```bash
