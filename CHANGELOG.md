@@ -4,6 +4,27 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [1.6.0] - 2026-09-28
+
+### Added
+
+- **Hard-draft scan mode** (round-8 backlog): with
+  `draft_is_hard: true`, `optimize` sweeps L/B x Cb and SOLVES B/T per
+  candidate (the R2-A bisection, +-1 cm) - the scan's feasibility map
+  and the single-point `run` finally live in the same design space
+  (v1.4.0 refused the combination).  The B/T grid axis must be pinned
+  to one value; the solved B/T lands in every row and the scan
+  summary declares the mode.  Unreachable candidates are recorded as
+  `hard_draft` refusals with the endpoint numbers.  The weather
+  default in hard mode derives from the hard balance's freeboard.
+- The grid-axis parser accepts a pinned single-value axis
+  (`lo:lo:1`), used by the hard-draft scan.
+
+### Changed
+
+- The resistance registry and module docs no longer describe
+  Holtrop-Mennen as "awaiting the source paper" (stale since v1.5.0).
+
 ## [1.5.0] - 2026-09-28
 
 ### Added

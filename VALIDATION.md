@@ -774,10 +774,26 @@ These are features of the current stage, not hidden weaknesses:
 | JBC-band external anchor | OPEN, declared: the Tokyo 2015 EFD tables live in workshop proceedings not secured at implementation time; the ±10–15 % planned-acceptance row (AGENTS planned table) lands when they are | honest deferral, not a silent drop |
 | Regression | 446 tests green (6 new); the default chain untouched — every prior number stands | no numeric drift |
 
+31. **Hard-draft scan mode (round-8 backlog, 2026-09-28).**  The R2-A
+    decision extended to `optimize`: with `draft_is_hard: true` the
+    scan sweeps L/B x Cb and SOLVES B/T per candidate (the v1.1.0
+    bisection, +-1 cm), so the scan's feasibility map and the
+    single-point `run` live in the same design space.  The B/T grid
+    axis must be pinned to one value (it is not scanned - explicit
+    refusal otherwise); the solved B/T lands in every row and the
+    scan summary declares the mode.
+
+| Check | Result | Criterion |
+|---|---|---|
+| Solved draft | 45,000 t / Cb 0.80 / declared 11.6 m, 1x1x1 grid: the feasible row's draft 11.603 m (bisection tolerance) and its B/T matches the single-design hard solve exactly | the scan's ship floats at the DECLARED draft |
+| Unreachable candidates | declared 15.5 m at Cb 0.72: the candidate is recorded with stage `hard_draft` and the endpoint reason (zero-extrapolation promise extends to the scan) | declared refusal, not a crash |
+| Axis contract | a multi-valued B/T axis with draft_is_hard refuses with guidance (B/T is solved, not scanned) | declared contract |
+| Regression | 448 tests green (2 new); the soft scan path untouched - the TB-001S and 100k scan numbers stand | no numeric drift |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 446 tests (438 passed + 8 skipped without the optional extra)
+uv run pytest                        # 448 tests (440 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

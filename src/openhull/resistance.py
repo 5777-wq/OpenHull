@@ -23,8 +23,10 @@ outside the digitised band the module refuses rather than
 extrapolate (AGENTS.md section 6) — the remaining curves of the
 chart are future data-entry work.
 
-Holtrop & Mennen (whitelisted for JBC-band work) is a registered
-placeholder until its source paper arrives.
+Holtrop & Mennen (1982) is whitelisted and implemented as the library
+module `openhull.holtrop` (v1.5.0, worked-example anchored) for
+validation and cross-check; wiring it into this chain's registry is
+the registered follow-up.
 """
 
 from __future__ import annotations
@@ -93,7 +95,9 @@ RESISTANCE_ALGORITHMS: dict[str, ResistanceAlgorithmInfo] = {
         citation=(
             "Holtrop, J. & Mennen, G.G.J. (1982), 'An Approximate "
             "Power Prediction Method', International Shipbuilding "
-            "Progress vol. 29 - whitelisted; awaiting the source paper"
+            "Progress vol. 29 - whitelisted and page-verified; "
+            "implemented as the library module openhull.holtrop "
+            "(v1.5.0), not wired into the chain registry yet"
         ),
         applicability="general merchant ships up to Fr 0.55",
         implemented=False,

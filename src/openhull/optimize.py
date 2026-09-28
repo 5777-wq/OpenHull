@@ -58,7 +58,8 @@ from .seakeeping import estimate_seakeeping
 from .spec import (ShipSpec, SpecValidationError, knots_to_ms,
                    within_band)
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
-from .weight_balance import solve_weight_balance
+from .weight_balance import (solve_weight_balance,
+                             solve_weight_balance_for_draft)
 
 __all__ = [
     "SweepGrid",
@@ -128,6 +129,7 @@ class ScanConfig:
     windage_lever_z_m: float | None = None
     bilge_keel_area_m2: float = 0.0
     length_waterline_m: float | None = None
+    hard_draft_m: float | None = None
     max_tip_diameter_draft_ratio: float = 0.75
 
 
@@ -258,10 +260,23 @@ def design_space_scan(
         config.propeller_blades, config.propeller_aear)
     result = ScanResult()
     points = list(grid.values())
+    if config.hard_draft_m is not None:
+        # the B/T axis is not scanned in hard mode: each (L/B, Cb)
+        # pair is evaluated once with B/T solved
+        seen: set[tuple[float, float]] = set()
+        deduped = []
+        for lob, bot, cb in points:
+            if (lob, cb) in seen:
+                continue
+            seen.add((lob, cb))
+            deduped.append((lob, bot, cb))
+        points = deduped
     for index, (lob, bot, cb) in enumerate(points):
         if progress is not None:
-            progress(index, len(points), f"L/B {lob:.2f} B/T {bot:.2f} "
-                                        f"Cb {cb:.3f}")
+            mode = ("hard draft" if config.hard_draft_m is not None
+                    else "L/B")
+            progress(index, len(points),
+                     f"{mode} {lob:.2f} B/T {bot:.2f} Cb {cb:.3f}")
         outcome = _evaluate_point(
             base_spec, lob, bot, cb, service_kn, n_rps, series, config)
         if isinstance(outcome, RejectedPoint):
@@ -415,12 +430,30 @@ def _evaluate_point(
     config: ScanConfig,
 ):
     spec = replace(base_spec, cb=cb)
-    try:
-        balance = solve_weight_balance(spec, ratios=RatioParameters(
-            deadweight_ratio=config.deadweight_ratio,
-            l_over_b=lob, b_over_t=bot, l_over_depth=config.l_over_depth))
-    except (SpecValidationError, RuntimeError) as error:
-        return RejectedPoint(lob, bot, cb, "weight_balance", str(error)[:200])
+    if config.hard_draft_m is not None:
+        # hard-draft scan (round-8 backlog, the R2-A decision extended
+        # to the scan): B/T is SOLVED per candidate to honour the
+        # declared draft — the grid's B/T axis only seeds the
+        # bisection and is not scanned
+        try:
+            balance = solve_weight_balance_for_draft(
+                spec, config.hard_draft_m,
+                ratios=RatioParameters(
+                    deadweight_ratio=config.deadweight_ratio,
+                    l_over_b=lob, b_over_t=bot,
+                    l_over_depth=config.l_over_depth))
+        except (SpecValidationError, RuntimeError) as error:
+            return RejectedPoint(lob, bot, cb, "hard_draft",
+                                 str(error)[:200])
+    else:
+        try:
+            balance = solve_weight_balance(spec, ratios=RatioParameters(
+                deadweight_ratio=config.deadweight_ratio,
+                l_over_b=lob, b_over_t=bot,
+                l_over_depth=config.l_over_depth))
+        except (SpecValidationError, RuntimeError) as error:
+            return RejectedPoint(lob, bot, cb, "weight_balance",
+                                 str(error)[:200])
 
     v_ratio = service_kn / math.sqrt(balance.lpp * _FT_PER_M)
     if not _AYRE_BAND[0] <= v_ratio <= _AYRE_BAND[1]:
@@ -597,7 +630,9 @@ def _evaluate_point(
 
     return ScanCandidate(
         l_over_b=lob,
-        b_over_t=bot,
+        # the balance-derived B/T: equals the scanned axis value in the
+        # soft path, and the SOLVED value in hard-draft mode
+        b_over_t=round(balance.beam / balance.draft, 4),
         cb=cb,
         lpp_m=round(balance.lpp, 3),
         beam_m=round(balance.beam, 3),

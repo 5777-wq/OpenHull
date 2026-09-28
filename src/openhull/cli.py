@@ -1511,10 +1511,15 @@ def _parse_axis(spec: str) -> tuple[float, float, int]:
         raise SpecValidationError(
             "grid axis", spec, "lo:hi:steps  (e.g. 5.5:8.0:6)",
             "all three parts must be numbers.")
-    if lo >= hi or steps < 1:
+    if lo > hi or steps < 1:
         raise SpecValidationError(
-            "grid axis", spec, "lo < hi and steps >= 1",
+            "grid axis", spec, "lo <= hi and steps >= 1",
             f"got lo {lo} / hi {hi} / steps {steps}.")
+    if lo == hi and steps != 1:
+        raise SpecValidationError(
+            "grid axis", spec, "a pinned single value uses steps = 1",
+            f"lo == hi ({lo}) pins the axis to one point: give steps 1 "
+            "(e.g. 2.7:2.7:1).")
     return lo, hi, steps
 
 
@@ -1657,29 +1662,31 @@ def _service_kn(spec) -> float:
 
 def _run_optimize(args) -> None:
     data = _load_taskbook(Path(args.taskbook))
-    spec, _design_draft = _ship_spec_from_taskbook(data)
-    if _draft_is_hard(data):
-        # round-7 OH-07: the scan varies B/T per candidate, while
-        # draft_is_hard solves B/T for a fixed declared draft - running
-        # the scan anyway would silently evaluate a DIFFERENT ship than
-        # `run`/`check` on the same task book
+    spec, declared_draft = _ship_spec_from_taskbook(data)
+    hard_mode = _draft_is_hard(data)
+    bt_axis = _parse_axis(args.grid_bt)
+    if hard_mode and bt_axis[0] != bt_axis[1]:
+        # round-8 backlog: the hard-draft scan mode.  B/T is SOLVED per
+        # candidate to honour the declared draft, so it is not scanned -
+        # the scan sweeps L/B x Cb and reports the solved B/T
         raise SpecValidationError(
-            "requirements.drafts.draft_is_hard", True,
-            "false or absent for optimize",
-            "the scan varies B/T per candidate while draft_is_hard "
-            "solves B/T to honour the declared draft - the two are "
-            "mutually exclusive. Remove draft_is_hard to scan, or use "
-            "`openhull run` for the hard-draft single design. (A "
-            "hard-draft scan mode - solve B/T per candidate - is a "
-            "registered backlog item.)")
+            "requirements.drafts.draft_is_hard + --grid-bt",
+            args.grid_bt, "a single-value B/T axis (lo:lo:1)",
+            "in hard-draft mode B/T is solved per candidate to honour "
+            "the declared draft - it is not scanned. Give one B/T "
+            "value (e.g. --grid-bt 2.7:2.7:1); the scan sweeps L/B x "
+            "Cb and reports the solved B/T for every candidate.")
     requirements = data.get("requirements") or {}
     stability = (data.get("constraints") or {}).get("stability") or {}
     weather_block = stability.get("weather_criterion") or {}
     if isinstance(weather_block, str) and weather_block.strip() == "default":
         # P1-5: resolve the assumed default against the task book's OWN
-        # ship (the base-spec balance), then the declared scan
-        # limitation applies to those numbers unchanged across candidates
-        base_balance = solve_weight_balance(spec)
+        # ship (the hard balance when draft_is_hard - the freeboard of
+        # the ship that will actually be delivered), then the declared
+        # scan limitation applies to those numbers unchanged across
+        # candidates
+        base_balance = (solve_weight_balance_for_draft(spec, declared_draft)
+                        if hard_mode else solve_weight_balance(spec))
         freeboard = base_balance.depth - base_balance.draft
         weather_block = {
             "windage_area_m2": base_balance.lpp * freeboard,
@@ -1697,11 +1704,12 @@ def _run_optimize(args) -> None:
     flooding = stability.get("flooding_angle_deg")
     grid = SweepGrid(
         l_over_b=_parse_axis(args.grid_lob),
-        b_over_t=_parse_axis(args.grid_bt),
+        b_over_t=bt_axis,
         cb=_parse_axis(args.grid_cb),
     )
     config = ScanConfig(
         kg_m=float(kg_m),
+        hard_draft_m=declared_draft if hard_mode else None,
         flooding_angle_deg=None if flooding is None else float(flooding),
         windage_area_m2=weather_block.get("windage_area_m2"),
         windage_lever_z_m=weather_block.get("windage_lever_z_m"),
@@ -1792,6 +1800,11 @@ def _run_optimize(args) -> None:
         "taskbook_id": data.get("taskbook_id", ""),
         "grid": {"l_over_b": args.grid_lob, "b_over_t": args.grid_bt,
                  "cb": args.grid_cb},
+        "scan_mode": ("hard draft - B/T solved per candidate to the "
+                      "declared %.3f m" % declared_draft
+                      if hard_mode else
+                      "soft - B/T scanned, declared-draft mismatch "
+                      "reported in run"),
         "feasible": len(result.feasible),
         "rejected": len(result.rejected),
         "rejection_histogram": result.rejection_histogram(),

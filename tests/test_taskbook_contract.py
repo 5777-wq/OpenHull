@@ -136,7 +136,7 @@ def _write_ok(tmp_path, tag):
     return str(path)
 
 
-def test_optimize_refuses_draft_is_hard(tmp_path, capsys):
+def test_optimize_hard_draft_needs_a_single_bt_axis(tmp_path, capsys):
     text = BASE.format(tag="HD").replace(
         "    design_draft_m: 11.6",
         "    design_draft_m: 11.6\n    draft_is_hard: true")
@@ -144,7 +144,8 @@ def test_optimize_refuses_draft_is_hard(tmp_path, capsys):
     path.write_text(text, encoding="utf-8")
     rc = main(["optimize", str(path), "--out", str(tmp_path / "out")])
     assert rc == 2
-    assert "draft_is_hard" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "B/T" in err and "solved" in err
 
 
 def test_non_bulk_ship_type_refused(tmp_path, capsys):

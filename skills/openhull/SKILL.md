@@ -22,9 +22,9 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.5.0"
+UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.6.0"
 # 没有 uv 时：
-pip install "git+https://github.com/5777-wq/OpenHull@v1.5.0"
+pip install "git+https://github.com/5777-wq/OpenHull@v1.6.0"
 ```
 
 **主命令自带官方源覆盖**：`uv tool install` 会按本机配置的镜像源解析
@@ -42,11 +42,11 @@ openhull`，删残留 `%APPDATA%\uv\tools\openhull`（含 `.lock`）再装，
 从 Release 页取 `openhull-vX.Y.Z.tar.gz` 解压后
 `uv tool install <本地目录>`。
 
-**锁定版本安装**（`@v1.5.0`）：可复现、可审计；需要跟踪最新修复时
+**锁定版本安装**（`@v1.6.0`）：可复现、可审计；需要跟踪最新修复时
 换成 `@main` 或具体 commit。安装后验证：
 
 ```bash
-openhull --version        # 应输出 openhull 1.5.0
+openhull --version        # 应输出 openhull 1.6.0
 ```
 
 耐波性 RAO 是可选扩展（capytaine），主流程不需要；需要时：
@@ -190,7 +190,7 @@ feasibility_hint`（可行域提示）；`seakeeping.speed_loss`（Kwon，域外
   出数域有限（Cb/Fr 越界**诚实拒绝**，肥大低速船常在域外），拒绝时
   如实转述原因；未给海况时报告明示所有功率均为**静水**值；
 - "这个数靠谱吗？" → 指路验证记录：公开基准船（JBC / DTMB 1712 /
-  NMRI MP687）+ 书内算例 + 全量测试（当前 446 项；未装 seakeeping
+  NMRI MP687）+ 书内算例 + 全量测试（当前 448 项；未装 seakeeping
   可选扩展时个别用例自动跳过），见仓库 VALIDATION.md；
 - "任务书里的 length_waterline_m 影响功率吗？" → 分两处说清：单船
   `run` 一次运行一个水线值（任务书声明了就用声明的，否则 Ayre 标准
