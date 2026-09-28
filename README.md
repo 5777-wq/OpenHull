@@ -45,16 +45,24 @@
 安装命令行工具（锁定发布标签，可复现、可审计）：
 
 ```bash
-uv tool install "git+https://github.com/5777-wq/OpenHull@v1.3.1"
+uv tool install "git+https://github.com/5777-wq/OpenHull@v1.4.0"
 ```
 
-跑通仓库自带的 25 万吨散货船示例（JBC 基准船锚定）：
+跑通仓库自带的旗舰示例（JBC 基准船锚定的 15 万载重吨级 Capesize
+散货船）：
 
 ```bash
 openhull run examples/taskbook_bulk_carrier.yaml
 # 跑全链之前，可先秒级预检 8 道适用域关卡：
 openhull check examples/taskbook_bulk_carrier.yaml
 ```
+
+> 诚实声明：TB-001 是 JBC 在**真实 14.5 kn 服务航速**下的验证船，
+> 该点落在艾亚速度带之外（V/√L ≈ 0.48 < 0.50），所以这个示例的
+> **功率与螺旋桨段会声明式拒绝**——主尺度、静水力、稳性、
+> 总布置照常产出。这是工具"拒绝优于外推"纪律的演示，不是故障。
+> 想首次跑通**含螺旋桨的完整链条**，用技能自带的
+> `minimal_taskbook.yaml`（45,000 t / 16 kn）。
 
 带图纸与报告：
 
@@ -101,7 +109,7 @@ AI 智能体（ZCode、Claude Code 等），它会自己安装工具、写好任
 1. **白名单先行。** 经验公式只有在 [AGENTS.md §5](AGENTS.md) 立账之后
    才能实现——先改章程再改代码，转录对照原书页面核验。
 2. **验收靠数字。** 书内算例、独立路径互检、公开基准船钉住每一个功能——
-   423 项测试（未装可选扩展时个别用例自动跳过），
+   440 项测试（未装可选扩展时个别用例自动跳过），
    逐条记录见 [VALIDATION.md](VALIDATION.md)。
 3. **近似必须声明。** 直壁甲板、阻尼区间、被约束的自由度：假定写在哪里，
    就声明在哪里。
@@ -145,7 +153,7 @@ AI 智能体（ZCode、Claude Code 等），它会自己安装工具、写好任
   author       = {5777-wq},
   title        = {OpenHull: agent-orchestrated parametric ship
                   preliminary design},
-  version      = {1.3.1},
+  version      = {1.4.0},
   year         = {2026},
   url          = {https://github.com/5777-wq/OpenHull}
 }

@@ -4,6 +4,80 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [1.4.0] - 2026-09-28
+
+### The task-book input contract (round-7 end-to-end QA)
+
+An independent QA pass on v1.3.2 (45 probe batteries, source
+read-through) confirmed the numeric chain healthy and byte-for-byte
+reproducible, and located the entire gap at the INPUT layer: unknown
+keys, type errors, duplicate keys and partial blocks all passed
+silently or crashed.  All 16 findings dispositioned; the input
+contract now exists.
+
+### Added
+
+- **Key whitelist with spelling suggestions** (OH-03): unknown or
+  misspelled keys are refused naming the path and suggesting
+  `did you mean 'kg_m'?` (case-folded) — a typo can no longer remove
+  a whole report section without a trace.
+- **Duplicate-key refusal** (OH-15): a strict YAML loader refuses
+  repeated keys with the line number, instead of the last value
+  silently winning.
+- **Number coercion through `_number`** (OH-02): every task-book
+  number becomes a field-named refusal instead of a bare
+  `ValueError` traceback.
+- **Catch-all in `main()`** (OH-02): nothing user-facing surfaces as
+  a bare traceback any more; exit 1 stays exclusive to `check`'s
+  predicted-refusal verdict (crash exit-1 collision removed);
+  `OPENHULL_DEBUG=1` re-raises for debugging.
+- **Typed chart-degrade notes** (OH-06): a dependency gap, an
+  unwritable path and an unexpected failure now declare themselves
+  differently — one fixed "reinstall" message for every exception was
+  itself a misdiagnosis.
+- **`cavitation_skipped`** (OH-05): a missing `shaft_immersion_m`
+  declares the un-run check in JSON and the report, completing the
+  unchecked-is-not-passed contract (the console already declared it).
+- **Task-book contract tests** (OH-16): 11 tests, one per refusal,
+  asserting exit code + field name + no traceback.
+- **Report §5 carries the shaft power PS line** (OH-13), the
+  main-engine selection input.
+- **check labels statistical-constant gates** (OH-09):
+  `PASS (statistical constant)` on L/B, L/D (and B/T in soft mode),
+  in the console and as `by_construction` in JSON.
+
+### Changed
+
+- **`ship_type` is refused unless `bulk_carrier`** (OH-14): the field
+  took no part in any computation, so a tanker task book produced a
+  bulk-carrier design under a wrong label.
+- **`optimize` refuses `draft_is_hard`** (OH-07): the scan varies B/T
+  per candidate while hard mode solves it — running the scan anyway
+  silently evaluated a different ship.  run/check/rao share ONE
+  balance resolver.
+- **Auto-created parent directories** for `--report/--json/--csv`,
+  charts and DXF outputs (OH-02 #8).
+- **The flagship example is documented as a real-domain refusal**
+  (OH-08): TB-001 at JBC's true 14.5 kn sits below the Ayre band, so
+  its power section is declined by design; README (zh+en) and the
+  demo README say so up front and point at the minimal taskbook for
+  the full chain.
+- **demo_outputs regenerated** from the current chain (OH-10) — the
+  committed CSV was 15 versions stale and carried stray stderr lines.
+- **README numbers/tonnage corrected** (OH-12): 440 tests, v1.4.0,
+  and the example named as a ~150,000 t deadweight Capesize (the
+  "25万吨" claim was wrong).
+- **AGENTS.md draft_is_hard acceptance amended** (OH-09): anchors the
+  solved quantities (B/T vs JBC 2.727, draft ±1 cm) and declares the
+  held-L/B calibre, instead of an L test that passed by construction.
+
+### Fixed
+
+- **OH-01 (P0)**: `run` without `kg_m` crashed with an
+  `UnboundLocalError` although the field is documented optional —
+  two initialisations sat inside the `if kg_m` block.  Documented
+  behaviour restored.
+
 ## [1.3.2] - 2026-09-27
 
 ### Fixed

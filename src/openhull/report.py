@@ -116,6 +116,8 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
         f"进速系数 J = {_fmt(prop.get('advance_coefficient'), 4)}",
         f"- 收到功率 = {_fmt(prop.get('delivered_power_kw'), 1)} kW，"
         f"推力 = {_fmt(prop.get('thrust_n'), 0)} N",
+        f"- 轴功率 = {_fmt(prop.get('shaft_power_kw'), 1)} kW"
+        f"（主机选型输入；收到功率 / 轴系效率）",
     ]
     sens = prop.get("resistance_sensitivity")
     if sens and sens.get("in_c0_peak_zone"):
@@ -160,6 +162,14 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
             f"σ 上升）；请结合总布置与主机选型复核。")
         full_note = " ".join(str(prop["cavitation_note"]).split())
         lines.append(f"  - 工具原文（保留可溯源，不截断）：{full_note}")
+    elif prop.get("cavitation_skipped"):
+        # round-7 OH-05: a missing shaft immersion used to silence the
+        # whole cavitation section - now a DECLARED un-run state, per
+        # the same "unchecked is not passed" contract
+        lines.append(
+            "- **Burrill 空泡校核：未运行（非通过）**——任务书未声明 "
+            "`propeller.shaft_immersion_m`，σ0.7R 无法构成。"
+            "补声明该字段后重跑即自动校核。")
     lines.append("")
     return lines
 

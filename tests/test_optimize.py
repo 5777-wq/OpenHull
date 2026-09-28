@@ -199,7 +199,10 @@ def test_ayre_band_gate_declares_the_short_speed():
                             config=ScanConfig(**CONFIG_KW))
     assert res.feasible == []
     assert len(res.rejected) == 1
-    assert res.rejected[0].stage == "ayre_band"
+    # round-7 OH-11: one stage name ("ayre"); the speed-band reason
+    # lives in the refusal text, not in a second stage name
+    assert res.rejected[0].stage == "ayre"
+    assert "V/sqrt(L)" in res.rejected[0].reason
 
 
 def test_pareto_front_is_non_dominated():

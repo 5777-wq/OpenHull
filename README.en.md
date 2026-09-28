@@ -50,11 +50,20 @@ regenerates all of them.
 Install the CLI (pinned to the release tag — reproducible, auditable):
 
 ```bash
-uv tool install "git+https://github.com/5777-wq/OpenHull@v1.3.1"
+uv tool install "git+https://github.com/5777-wq/OpenHull@v1.4.0"
 openhull run examples/taskbook_bulk_carrier.yaml
 # optional seconds-level preflight of all guard bands:
 openhull check examples/taskbook_bulk_carrier.yaml
 ```
+
+> Honest note: TB-001 is the JBC validation ship at its REAL 14.5 kn
+> service speed, which sits below the whitelisted Ayre speed band
+> (V/√L ≈ 0.48 < 0.50) — the power & propeller section is therefore
+> DECLINED with a declared refusal while dimensions, hydrostatics,
+> stability and the arrangement compute normally.  That is the
+> refuse-over-extrapolate discipline working, not a failure.  For a
+> first run through the FULL chain including the propeller, use the
+> skill's `minimal_taskbook.yaml` (45,000 t / 16 kn).
 
 From source (development):
 
@@ -105,7 +114,7 @@ SKILL.md can install it from the URL alone.
    the code, transcriptions verified against page images of the
    source.
 2. **Acceptance by numbers.** Book worked examples, independent-path
-   cross-checks and public benchmarks pin every feature — 423 tests
+   cross-checks and public benchmarks pin every feature — 440 tests
    (8 marked skips without the optional extra),
    full record in [VALIDATION.md](VALIDATION.md).
 3. **Declared approximations.** Wall-sided decks, damping ranges,
@@ -155,7 +164,7 @@ If OpenHull contributes to your research, please cite it via
   author       = {5777-wq},
   title        = {OpenHull: agent-orchestrated parametric ship
                   preliminary design},
-  version      = {1.3.1},
+  version      = {1.4.0},
   year         = {2026},
   url          = {https://github.com/5777-wq/OpenHull}
 }

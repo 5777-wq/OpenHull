@@ -637,7 +637,7 @@ These are features of the current stage, not hidden weaknesses:
 
 | Check | Result | Criterion |
 |---|---|---|
-| JBC reverse anchor | DW 149,920 t / Cb 0.858 / hard 16.5 m → L 274.57 m (−1.94 %), B 45.76 m (+1.69 %), D 24.52 m (−1.9 %), T 16.5002 m, B/T 2.7734, 8 probes | ±5 % on the NMRI 280/45/25 particulars |
+| JBC reverse anchor | DW 149,920 t / Cb 0.858 / hard 16.5 m → L 274.57 m (−1.94 %), B 45.76 m (+1.69 %), D 24.52 m (−1.9 %), T 16.5002 m, B/T 2.7734, 8 probes | anchors amended 2026-09-28 (round-7 OH-09): the solved quantities — B/T vs JBC actual 45/16.5 = 2.727 (+1.7 %, ±5 %), draft residual ±1 cm; the L deviation is dominated by the HELD L/B 6.0 vs JBC 6.222 (−3.57 % by the declared rule, not by the solver) and is reported as calibre, not error |
 | Hint ↔ hard consistency | hint B/T 2.7659 vs solved 2.7734 → 0.27 % | within the declared one-shot residual |
 | Convergence from both sides | 45,000 t case: declared 12.5 m → B/T 2.3984 (slimmer), declared 11.0 m → wider than 2.7; both to ±1 cm | bisection on a monotone draft(B/T) |
 | Refusal, too deep | declared 20.0 m → exit 2: "even at the band floor B/T 2.00 the balance draft is 13.955 m, shallower than the declared 20.000 m" | endpoint numbers in the message |
@@ -724,10 +724,38 @@ These are features of the current stage, not hidden weaknesses:
 | check dep hint | missing matplotlib/cycler surfaces as ONE console line via `importlib.util.find_spec` existence probes (milliseconds, not an import); the exit-code contract stays about the design; the hint never enters `--json` | console hint with exit 0; `--json` payload clean |
 | Regression | 428 tests green (5 new); the 45,000 t default path and the TB-001S scan unchanged (verifier re-measured both bit-for-bit) | no numeric drift |
 
+29. **Round-7 (independent end-to-end QA on v1.3.2, owner-commissioned
+    2026-09-28): the task-book input contract (v1.4.0).**  The QA run
+    (45 probe batteries, source read-through, per-issue repro) found
+    the numeric chain healthy and reproducible, with the entire gap
+    on the input layer: 16 issues (2 P0 crash, 6 P1 silent wrong
+    conclusions, 8 P2).  All 16 dispositioned; 11 of 16 shared one
+    root cause - the missing input contract - now implemented.
+
+| ID | Disposition | Check |
+|---|---|---|
+| OH-01 P0 | `weather_summary`/`weather_assumed` were initialised INSIDE the `if kg_m` block while the summary referenced them unconditionally: `run` without kg_m crashed (UnboundLocalError) although SKILL documents kg_m as optional. Initialisations moved out; the documented optional behaviour restored | contract test: run without kg_m -> rc 0, gz/weather/seakeeping None |
+| OH-02 P0 | 8 uncaught-input paths (bare traceback + exit 1, colliding with check's refusal=1). Fixed at three layers: `_load_taskbook` wraps decode/parse (UTF-8 hint incl. GBK guidance, YAML line numbers, directory-path check); a `_number` helper converts every task-book number into a field-named refusal; `main()` gains a catch-all -> exit 2 (OPENHULL_DEBUG re-raises), exit 1 stays check-exclusive; `_parse_axis` validates lo:hi:steps | contract tests: type error / GBK / grid axis each refuse readably, no Traceback |
+| OH-03 P1 | unknown/misspelled keys were silently ignored (a typo'd `defualt` removed the whole weather section while the report claimed "not declared"). Key whitelist over the union of consumed keys (TB-001 full form), refusal + case-folded did-you-mean | contract test: `KG_m` refused suggesting `kg_m`. The whitelist flagged a stray key our OWN v1.3.0 weather test had been carrying: vindication on our suite |
+| OH-04 P1 | `block.get(key) or 1.0` replaced a declared 0 efficiency with 1.0 (most optimistic), under-reporting shaft power ~2 %. `_efficiency` helper: explicit None + range (0, 1.2] | contract test: shaft_efficiency 0 refused, not silently 1.0 |
+| OH-05 P1 | missing shaft_immersion_m silenced the whole cavitation section (null with no note) - bypassing the project's own unchecked-is-not-passed contract. Now `cavitation_skipped.reason` in JSON + a report line (console already declared it) | contract test: skipped declaration present |
+| OH-06 P1 | every chart-write failure was diagnosed as "reinstall the tool" (a bad output dir said the same as a broken matplotlib). Typed notes: dependency gap / OSError with the OS text / unexpected + issue hint; parent dirs auto-created upstream | chart-guard tests updated |
+| OH-07 P1 | optimize/rao ignored draft_is_hard (the scan evaluated a DIFFERENT ship than run/check on the same book). One resolver (`_resolve_balance`) for run/check/rao; optimize REFUSES hard mode with guidance (B/T is the scan axis; hard-draft scan mode = backlog) | contract test: optimize + draft_is_hard -> rc 2 naming the field |
+| OH-08 P1 | the flagship example is a REAL-domain refusal at 14.5 kn, presented as a success demo. README (zh+en) and demo README now state the refusal up front and point at the minimal taskbook for the full chain; JBC-band resistance validation stays scheduled with Holtrop (registered backlog, VALIDATION §3.1) | docs |
+| OH-09 P2 | check's L/B and L/D gates are constants of the statistical algebra (B/T too in soft mode); the draft_is_hard anchor's ±5 % L criterion passed by construction (held L/B 6.0 vs JBC 6.222). Gates now labelled `PASS (statistical constant)` (JSON `by_construction`); AGENTS.md + VALIDATION 24 anchor the SOLVED quantities (B/T vs JBC 45/16.5 = 2.727, +1.7 %; draft ±1 cm) and declare the L calibre | check output shows the label; charter amended |
+| OH-10 P2 | demo_outputs were 15 versions stale and the committed CSV carried 4 stray stderr lines. All artifacts regenerated from the current chain; demo README corrected (0.1 T / 10 rows, refusal framing); demo CSV pinned by a drift test | regenerated files in repo |
+| OH-11 P2 | the scan histogram named one stage twice (`ayre` vs `ayre_band`). Unified to `ayre`; the distinction lives in the reason/field breakdown | test_optimize updated |
+| OH-12 P2 | README said 423 tests / pinned @v1.3.1 / CITATION 1.3.1 / "25万吨" - the v1.3.2 release missed the README+CITATION sync, and the example is a 149,920 t (approx 150k deadweight) Capesize, not 250k. Fixed; demo CSV drift test guards future README-number drift at the artifact layer | this release |
+| OH-13 P2 | report section 5 now carries the shaft power PS line (the main-engine selection input) next to the delivered power; `--json PATH` stdout silence is kept (contract) - stderr confirmations were already emitted | report line |
+| OH-14 P2 | ship_type took no part in any computation (a tanker task book produced a bulk design under a wrong label). Refused until per-type statistics are calibrated; SKILL template and FAQ updated | contract test |
+| OH-15 P2 | duplicate YAML keys silently took the last value (a stale line once worth +18.8 % shaft power). Strict loader refuses duplicates with the line number | contract test |
+| OH-16 P2 | 11 contract tests in `tests/test_taskbook_contract.py`, one per refusal above, asserting rc + field name + no traceback | this file is the check |
+| Regression | 440 tests green (12 new); the numeric chain untouched - every prior acceptance number stands (the QA run re-verified byte-identical reproducibility) | no numeric drift |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 428 tests (420 passed + 8 skipped without the optional extra)
+uv run pytest                        # 440 tests (432 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

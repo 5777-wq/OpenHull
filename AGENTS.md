@@ -121,9 +121,14 @@ no page numbers from memory).
   CONSTRAINT and B/T is the solved variable — bisection on B/T over the
   guard band, each trial a full Norman weight balance, converged when
   the balance draft meets the declared draft within 1 cm.  Same rule as
-  the hint (L/B and Cb held), no new source; acceptance gated by the
-  JBC reverse anchor (solved L/B within ±5 % of the NMRI
-  280 m / 45 m particulars).  A draft the band cannot reach is refused
+  the hint (L/B and Cb held), no new source.  Acceptance anchors the
+  quantities the solver ACTUALLY determines (amended 2026-09-28,
+  round-7 OH-09): the solved B/T vs the JBC actual 45/16.5 = 2.727
+  (±5 %) and the draft residual (±1 cm) — NOT the solved L alone,
+  whose deviation from the NMRI 280 m is dominated by the held
+  L/B = 6.0 vs the JBC actual 6.222 (a declared rule calibre, −3.57 %
+  by construction, which a ±5 % L test would pass even without the
+  solver).  A draft the band cannot reach is refused
   with the endpoint numbers, never extrapolated.
 
 **Weight estimation (lightweight) and weight-buoyancy balance**

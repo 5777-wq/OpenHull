@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import difflib
 import io
 import json
 import math
@@ -74,11 +75,22 @@ def _design_propeller_at_service(data, balance, hydro_design):
     propeller_block = data.get("propeller") or {}
     if propeller_block.get("rpm") is None:
         return None
-    rpm = float(propeller_block["rpm"])
+    rpm = _number("propeller.rpm", propeller_block["rpm"],
+                  "propeller.rpm")
     n_rps = rpm / 60.0
-    z = int(propeller_block.get("blades_z", 5))
-    aear = float(propeller_block.get("expanded_area_ratio", 0.50))
-    eta_r = float(propeller_block.get("relative_rotative_eff") or 1.0)
+    z_raw = _number("propeller.blades_z",
+                    propeller_block.get("blades_z", 5),
+                    "propeller.blades_z")
+    if z_raw != int(z_raw):
+        raise SpecValidationError(
+            "propeller.blades_z", z_raw, "an integer 2-7",
+            "the blade count is an integer; a fractional blade is not "
+            "a physical propeller.")
+    z = int(z_raw)
+    aear = _number("propeller.expanded_area_ratio",
+                   propeller_block.get("expanded_area_ratio", 0.50),
+                   "propeller.expanded_area_ratio")
+    eta_r = _efficiency(propeller_block, "relative_rotative_eff")
     service_kn = float(
         (data.get("requirements") or {}).get("service_speed_kn"))
     v_ms = knots_to_ms(service_kn)
@@ -223,18 +235,29 @@ def _design_propeller_at_service(data, balance, hydro_design):
         return {"skipped": True, "stage": "propeller",
                 "reason": str(refuse)}
     shaft_power_kw = prop.delivered_power_kw / (
-        float(propeller_block.get("shaft_efficiency") or 1.0) * eta_r)
+        _efficiency(propeller_block, "shaft_efficiency") * eta_r)
     cav = None
     cav_note = None
     cav_unchecked = None
+    cav_skipped = None
     hs_m = propeller_block.get("shaft_immersion_m")
-    if hs_m is not None:
+    if hs_m is None:
+        # round-7 OH-05: a missing immersion used to silence the whole
+        # cavitation section - the un-checked state is DECLARED, per the
+        # same "unchecked is not passed" contract as the band refusal
+        cav_skipped = {
+            "reason": "propeller.shaft_immersion_m is not declared - "
+                      "the Burrill check needs the shaft immersion to "
+                      "form sigma; declare it to enable the check",
+        }
+    else:
         try:
             cav = check_cavitation(
                 thrust_n=prop.thrust_n, va_ms=prop.va_ms, n_rps=n_rps,
                 diameter_m=prop.diameter_m,
                 pitch_ratio=prop.pitch_ratio, aeao_available=aear,
-                hs_m=float(hs_m))
+                hs_m=_number("propeller.shaft_immersion_m", hs_m,
+                             "propeller.shaft_immersion_m"))
         except SpecValidationError as cav_refuse:
             # sigma outside the verified Burrill band: the check is
             # UNAVAILABLE here, not passed (review 2026-09-25, P0-2).
@@ -268,6 +291,7 @@ def _design_propeller_at_service(data, balance, hydro_design):
         "cavitation": None,
         "cavitation_note": cav_note,
         "cavitation_unchecked": cav_unchecked,
+        "cavitation_skipped": cav_skipped,
         "resistance_sensitivity": resistance_sensitivity,
     }
     if cav is not None:
@@ -303,6 +327,165 @@ _HYDRO_COLUMNS = [
 ]
 
 
+_TASKBOOK_SCHEMA = {
+    "schema_version": None, "taskbook_id": None, "title": None,
+    "status": None, "ship_type": None,
+    "units": {"length": None, "volume": None, "mass": None,
+              "speed": None, "power": None, "angle": None},
+    "requirements": {
+        "deadweight_t": None, "service_speed_kn": None, "kg_m": None,
+        "trading_area": None,
+        "drafts": {"design_draft_m": None, "scantling_draft_m": None,
+                   "draft_is_hard": None,
+                   "ballast_condition": {"draft_aft_m": None,
+                                         "draft_mid_m": None,
+                                         "draft_fore_m": None,
+                                         "service_speed_kn": None}},
+    },
+    "constraints": {
+        "block_coefficient_design": None,
+        "freeboard": {"actual_m": None, "rule": None},
+        "stability": {"rule": None, "gm_reference_m": None,
+                      "flooding_angle_deg": None,
+                      "weather_criterion": {
+                          "windage_area_m2": None,
+                          "windage_lever_z_m": None,
+                          "bilge_keel_area_m2": None,
+                          "length_waterline_m": None}},
+    },
+    "propeller": {"blades_z": None, "expanded_area_ratio": None,
+                  "rpm": None, "shaft_immersion_m": None,
+                  "shaft_efficiency": None,
+                  "relative_rotative_eff": None},
+    "seakeeping": {"wave_periods": None,
+                   "speed_loss": {"beaufort": None, "direction": None,
+                                  "ship_type": None, "loading": None}},
+    "arrangement": {"double_bottom_top_m": None, "n_holds": None,
+                    "compartments": {"name": None, "kind": None,
+                                     "x0_m": None, "x1_m": None,
+                                     "z0_m": None, "z1_m": None}},
+    "validation_anchors": {
+        "lpp_m": None, "beam_m": None, "depth_m": None,
+        "displacement_volume_design_m3": None,
+        "block_coefficient_design": None,
+        "midship_coefficient_design": None,
+        "lcb_percent_lpp_design": None, "froude_number_design": None,
+        "displacement_volume_ballast_m3": None},
+    "derived": None,     # free-form derivation notes
+    "references": None,  # free-form link list
+}
+
+
+def _strict_yaml_load(text: str) -> dict:
+    """yaml.safe_load plus duplicate-key refusal (round-7 OH-15): plain
+    YAML lets the last value silently win, and a stale leftover line has
+    already changed a design's power by double-digit percentages."""
+
+    class StrictLoader(yaml.SafeLoader):
+        pass
+
+    def construct_mapping(loader, node, deep=False):
+        seen = set()
+        for key_node, _value_node in node.value:
+            try:
+                key = loader.construct_object(key_node, deep=True)
+            except Exception:
+                key = str(key_node.value)
+            if not isinstance(key, (str, int, float, bool)):
+                key = str(key)
+            if key in seen:
+                raise SpecValidationError(
+                    "taskbook (YAML)", str(key), "each key appears once",
+                    f"duplicate key {key!r} at line "
+                    f"{key_node.start_mark.line + 1}: in plain YAML the "
+                    "last value silently wins, which has already changed "
+                    "a whole design - delete or fix the duplicated line.")
+            seen.add(key)
+        return yaml.SafeLoader.construct_mapping(loader, node, deep)
+
+    StrictLoader.add_constructor(
+        yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, construct_mapping)
+    return yaml.load(text, Loader=StrictLoader)
+
+
+def _reject_unknown_keys(data: dict) -> None:
+    """Round-7 OH-03: an unknown or misspelled key is REFUSED with a
+    spelling suggestion - a silently ignored key drops its whole
+    section from the report without a trace, which is worse than an
+    error.  The schema is the union of every key the chain consumes
+    (the full form is examples/taskbook_bulk_carrier.yaml)."""
+    unknowns: list[str] = []
+
+    def walk(node, schema, where):
+        if not isinstance(schema, dict):
+            return  # free-form subtree (derived, references, ...)
+        if isinstance(node, dict):
+            for key, value in node.items():
+                skey = str(key)
+                if skey not in schema:
+                    # casefold: a shift-key slip (KG_m vs kg_m) is the
+                    # single most common misspelling and difflib is
+                    # case-sensitive by default
+                    folded = {k.casefold(): k for k in schema}
+                    hint = (folded.get(skey.casefold())
+                            or next(iter(difflib.get_close_matches(
+                                skey.casefold(), list(folded), n=1)),
+                            None))
+                    unknowns.append(
+                        f"{where}.{skey}"
+                        + (f" (did you mean '{hint}'?)" if hint
+                           else " (not a known task-book key)"))
+                elif isinstance(value, (dict, list)):
+                    walk(value, schema[skey], f"{where}.{skey}")
+        elif isinstance(node, list):
+            for i, item in enumerate(node):
+                walk(item, schema, f"{where}[{i}]")
+
+    walk(data, _TASKBOOK_SCHEMA, "taskbook")
+    if unknowns:
+        raise SpecValidationError(
+            "taskbook keys", "; ".join(unknowns[:6]),
+            "only the documented task-book keys",
+            "unknown keys are refused rather than silently ignored - "
+            "a misspelled optional key would otherwise remove its "
+            "whole section from the report with no trace. Fix the "
+            "key names; the full form with every key is "
+            "examples/taskbook_bulk_carrier.yaml.")
+
+
+def _number(where: str, value, field: str) -> float:
+    """Round-7 OH-02: every task-book number goes through here, so a
+    string like 'thirteen' becomes a declared input error instead of a
+    bare ValueError traceback."""
+    try:
+        return float(value)
+    except (TypeError, ValueError) as error:
+        raise SpecValidationError(
+            field, value, "a number",
+            f"{field} must be a number (got {value!r} in {where})."
+        ) from error
+
+
+def _efficiency(block: dict, key: str) -> float:
+    """Round-7 OH-04: `block.get(key) or 1.0` used to replace a declared
+    0 with 1.0 - the MOST optimistic value - and under-report shaft
+    power by design-critical percentages.  Explicit None handling plus
+    a physical range."""
+    value = block.get(key)
+    if value is None:
+        return 1.0
+    number = _number(f"propeller.{key}", value, f"propeller.{key}")
+    if not (0.0 < number <= 1.2):
+        raise SpecValidationError(
+            f"propeller.{key}", number, "0 < eta <= 1.2",
+            f"{key} = 0 is physically meaningless and used to be "
+            "silently replaced by 1.0 (the most optimistic value), "
+            "under-reporting shaft power - refusing instead. "
+            "Typical shaft efficiency is 0.98-0.99; relative "
+            "rotative efficiency 0.98-1.05.")
+    return number
+
+
 def _load_taskbook(path) -> dict:
     if not path.exists():
         raise SpecValidationError(
@@ -310,8 +493,33 @@ def _load_taskbook(path) -> dict:
             "the task book is the input contract of the whole chain; "
             "without it there is nothing to run.",
         )
-    with open(path, encoding="utf-8") as fh:
-        data = yaml.safe_load(fh)
+    if not path.is_file():
+        raise SpecValidationError(
+            "taskbook", str(path), "an existing YAML file",
+            "the path exists but is a directory; give the path to the "
+            "task-book YAML file itself.")
+    try:
+        text = path.read_text(encoding="utf-8")
+    except UnicodeDecodeError as error:
+        raise SpecValidationError(
+            "taskbook", str(path), "a UTF-8 encoded YAML file",
+            f"the file is not valid UTF-8 ({error.reason} near byte "
+            f"{error.start}); re-save the task book as UTF-8 - on "
+            "Chinese Windows do NOT save with the default ANSI/GBK "
+            "code page (VS Code: Save with Encoding > UTF-8)."
+        ) from error
+    try:
+        data = _strict_yaml_load(text)
+    except yaml.YAMLError as error:
+        mark = getattr(error, "problem_mark", None)
+        where = f" at line {mark.line + 1}" if mark else ""
+        problem = getattr(error, "problem", None) or str(error)
+        raise SpecValidationError(
+            "taskbook", str(path), "well-formed YAML",
+            f"the file could not be parsed as YAML{where}: {problem} "
+            "- check indentation (two spaces per level, no tabs) and "
+            "that every key line ends with a colon."
+        ) from error
     if not isinstance(data, dict):
         raise SpecValidationError(
             "taskbook", str(path), "a YAML mapping",
@@ -319,7 +527,24 @@ def _load_taskbook(path) -> dict:
             f"(requirements, constraints, ...); the file parsed to "
             f"{type(data).__name__}.",
         )
+    _reject_unknown_keys(data)
     return data
+
+
+def _draft_is_hard(data: dict) -> bool:
+    return bool((((data.get("requirements") or {})
+                  .get("drafts") or {}).get("draft_is_hard", False)))
+
+
+def _resolve_balance(data: dict, spec, declared_draft: float):
+    """Round-7 OH-07: ONE balance resolver for run/check/rao, so a
+    draft_is_hard task book designates the SAME ship in every
+    subcommand.  optimize refuses hard mode instead (B/T is its scan
+    axis - silently scanning a different ship is the one option this
+    tool does not take)."""
+    if _draft_is_hard(data):
+        return solve_weight_balance_for_draft(spec, declared_draft), True
+    return solve_weight_balance(spec), False
 
 
 def _ship_spec_from_taskbook(data: dict) -> tuple[ShipSpec, float]:
@@ -327,6 +552,20 @@ def _ship_spec_from_taskbook(data: dict) -> tuple[ShipSpec, float]:
     requirements = data.get("requirements") or {}
     constraints = data.get("constraints") or {}
     drafts = requirements.get("drafts") or {}
+
+    ship_type = str(data.get("ship_type", "bulk_carrier"))
+    # Round-7 OH-14: ship_type took no part in any computation, so a
+    # tanker task book silently produced a bulk-carrier design under a
+    # wrong label.  Refuse until per-type statistics are calibrated.
+    if ship_type != "bulk_carrier":
+        raise SpecValidationError(
+            "ship_type", ship_type, "bulk_carrier (the only calibrated type)",
+            "the statistical parent (Series 60 hull + component-cubic "
+            "weights) is calibrated on bulk carriers; any other type "
+            "would return a bulk-carrier design under a wrong label - "
+            "refusing instead of mislabelling. Per-type dispatch is "
+            "future work (proposal via the formula-source issue "
+            "template).")
 
     values = {
         "requirements.deadweight_t": requirements.get("deadweight_t"),
@@ -346,13 +585,23 @@ def _ship_spec_from_taskbook(data: dict) -> tuple[ShipSpec, float]:
             "in the task book (see examples/taskbook_bulk_carrier.yaml).",
         )
     spec = ShipSpec(
-        ship_type=str(data.get("ship_type", "bulk_carrier")),
-        deadweight=float(values["requirements.deadweight_t"]),
-        service_speed=knots_to_ms(
-            float(values["requirements.service_speed_kn"])
-        ),
-        cb=float(values["constraints.block_coefficient_design"]),
-        draft=float(values["requirements.drafts.design_draft_m"]),
+        ship_type=ship_type,
+        deadweight=_number(
+            "requirements.deadweight_t",
+            values["requirements.deadweight_t"],
+            "requirements.deadweight_t"),
+        service_speed=knots_to_ms(_number(
+            "requirements.service_speed_kn",
+            values["requirements.service_speed_kn"],
+            "requirements.service_speed_kn")),
+        cb=_number(
+            "constraints.block_coefficient_design",
+            values["constraints.block_coefficient_design"],
+            "constraints.block_coefficient_design"),
+        draft=_number(
+            "requirements.drafts.design_draft_m",
+            values["requirements.drafts.design_draft_m"],
+            "requirements.drafts.design_draft_m"),
     )
     return spec, float(values["requirements.drafts.design_draft_m"])
 
@@ -403,9 +652,7 @@ def run_taskbook(taskbook_path: str,
     """
     data = _load_taskbook(Path(taskbook_path))
     spec, design_draft_declared = _ship_spec_from_taskbook(data)
-    draft_is_hard = bool(
-        ((data.get("requirements") or {}).get("drafts") or {})
-        .get("draft_is_hard", False))
+    draft_is_hard = _draft_is_hard(data)
 
     # TWO contract modes for the declared draft (R2-A, owner-approved
     # 2026-09-25).  Default: the weight-balance draft is authoritative
@@ -414,10 +661,9 @@ def run_taskbook(taskbook_path: str,
     # B/T is bisected on the converged balance (L/B and Cb held) so the
     # ship IS designed to the declared waterline; an unreachable draft
     # is refused with the band endpoints.
-    if draft_is_hard:
-        balance = solve_weight_balance_for_draft(spec, design_draft_declared)
-    else:
-        balance = solve_weight_balance(spec)
+    balance = solve_weight_balance_for_draft(
+        spec, design_draft_declared) if draft_is_hard \
+        else solve_weight_balance(spec)
 
     design_draft = balance.draft
     draft_mismatch_m = design_draft_declared - design_draft
@@ -487,12 +733,16 @@ def run_taskbook(taskbook_path: str,
     # the IS Code 2.2 criteria are evaluated on the curve
     gz_summary = None
     criteria_summary = None
+    weather_summary = None
+    weather_assumed = None
     kg_value = (data.get("requirements") or {}).get("kg_m")
-    if kg_value is not None:
+    kg_number = None if kg_value is None else _number(
+        "requirements.kg_m", kg_value, "requirements.kg_m")
+    if kg_number is not None:
         gz = gz_curve(
             hull,
             balance.displacement_t,
-            float(kg_value),
+            kg_number,
             depth_m=balance.depth,
         )
         gz_summary = gz.to_dict()
@@ -503,16 +753,17 @@ def run_taskbook(taskbook_path: str,
         criteria = intact_stability_criteria(
             hull,
             balance.displacement_t,
-            float(kg_value),
+            kg_number,
             depth_m=balance.depth,
-            flooding_angle_deg=None if flooding is None else float(flooding),
+            flooding_angle_deg=None if flooding is None else _number(
+                "constraints.stability.flooding_angle_deg",
+                flooding, "constraints.stability.flooding_angle_deg"),
         )
         criteria_summary = criteria.to_dict()
         weather_block = (
             ((data.get("constraints") or {}).get("stability") or {})
             .get("weather_criterion")
         )
-        weather_assumed = None
         if isinstance(weather_block, str) and weather_block.strip() == "default":
             # P1-5 (review 2026-09-25): a conservative-ASSUMPTION default
             # so the first run answers the wind criterion instead of
@@ -537,26 +788,50 @@ def run_taskbook(taskbook_path: str,
                 "windage_lever_z_m": round(balance.depth / 2.0, 2),
                 "freeboard_m": round(freeboard, 2),
             }
-        weather_summary = None
         if isinstance(weather_block, dict) and weather_block.get(
             "windage_area_m2"
         ) is not None:
+            # round-7 OH-02: a partial weather mapping (area without the
+            # lever) used to die with a bare KeyError - require the pair
+            if weather_block.get("windage_lever_z_m") is None:
+                raise SpecValidationError(
+                    "constraints.stability.weather_criterion",
+                    "{windage_area_m2: ...} without windage_lever_z_m",
+                    "both windage_area_m2 and windage_lever_z_m",
+                    "the weather criterion needs the windage area AND "
+                    "its vertical lever; or use the string 'default' "
+                    "for the [ASSUMED] geometric derivation.")
             weather = weather_criterion(
                 hull,
                 balance.displacement_t,
-                float(kg_value),
+                kg_number,
                 depth_m=balance.depth,
-                windage_area_m2=float(weather_block["windage_area_m2"]),
-                windage_lever_z_m=float(weather_block["windage_lever_z_m"]),
-                bilge_keel_area_m2=float(
-                    weather_block.get("bilge_keel_area_m2") or 0.0
-                ),
+                windage_area_m2=_number(
+                    "weather_criterion.windage_area_m2",
+                    weather_block["windage_area_m2"],
+                    "weather_criterion.windage_area_m2"),
+                windage_lever_z_m=_number(
+                    "weather_criterion.windage_lever_z_m",
+                    weather_block["windage_lever_z_m"],
+                    "weather_criterion.windage_lever_z_m"),
+                bilge_keel_area_m2=(
+                    0.0 if weather_block.get("bilge_keel_area_m2") is None
+                    else _number(
+                        "weather_criterion.bilge_keel_area_m2",
+                        weather_block["bilge_keel_area_m2"],
+                        "weather_criterion.bilge_keel_area_m2")),
                 length_waterline_m=(
                     None if weather_block.get("length_waterline_m") is None
-                    else float(weather_block["length_waterline_m"])
+                    else _number(
+                        "weather_criterion.length_waterline_m",
+                        weather_block["length_waterline_m"],
+                        "weather_criterion.length_waterline_m")
                 ),
                 flooding_angle_deg=(
-                    None if flooding is None else float(flooding)
+                    None if flooding is None else _number(
+                        "constraints.stability.flooding_angle_deg",
+                        flooding,
+                        "constraints.stability.flooding_angle_deg")
                 ),
             )
             weather_summary = weather.to_dict()
@@ -571,11 +846,13 @@ def run_taskbook(taskbook_path: str,
     # usage, Ship Theory vol. 2 p.391); requires the task-book KG.
     seakeeping_summary = None
     seakeeping_block = (data.get("seakeeping") or {})
-    if kg_value is not None:
+    if kg_number is not None:
         wave_periods = seakeeping_block.get("wave_periods")
         if wave_periods:
             seas = tuple(
-                (float(t), f"task-book sea (T {float(t):g} s)")
+                (_number("seakeeping.wave_periods", t,
+                         "seakeeping.wave_periods"),
+                 f"task-book sea (T {float(t):g} s)")
                 for t in wave_periods)
         else:
             seas = None  # the standard reference seas
@@ -583,7 +860,7 @@ def run_taskbook(taskbook_path: str,
             seakeep = estimate_seakeeping(
                 beam_m=balance.beam,
                 draft_m=balance.draft,
-                zg_m=float(kg_value),
+                zg_m=kg_number,
                 gm_m=criteria.gm0_m + criteria.free_surface_correction_m,
                 cb=spec.cb,
                 cwp=hydro_design.cw,
@@ -597,12 +874,17 @@ def run_taskbook(taskbook_path: str,
         # method into the chain - the library has had it since 2026-09-23
         loss_block = seakeeping_block.get("speed_loss")
         if seakeeping_summary is not None and isinstance(loss_block, dict):
+            # numbers are coerced BEFORE the domain try: a type error is
+            # an input-contract refusal (exit 2), not a domain skip
+            bn = _number("seakeeping.speed_loss.beaufort",
+                         loss_block.get("beaufort", 0),
+                         "seakeeping.speed_loss.beaufort")
             try:
                 percent, ratio = kwon_speed_loss_percent(
                     cb=spec.cb,
                     fr=(spec.service_speed
                         / math.sqrt(GRAVITY * balance.lpp)),
-                    bn=float(loss_block.get("beaufort", 0)),
+                    bn=bn,
                     nabla_m3=balance.displacement_t / 1.025,
                     direction=str(loss_block.get("direction", "head")),
                     ship_type=str(loss_block.get("ship_type", "general")),
@@ -648,6 +930,8 @@ def run_taskbook(taskbook_path: str,
         beam_m=balance.beam)
     arrangement_dxf_written = None
     if arrangement_dxf_path:
+        Path(arrangement_dxf_path).parent.mkdir(
+            parents=True, exist_ok=True)
         arrangement_dxf_written = str(
             export_arrangement_dxf(arrangement, arrangement_dxf_path))
     arrangement_chart_written = None
@@ -705,6 +989,7 @@ def run_taskbook(taskbook_path: str,
 
     if report_path:
         from .report import write_report_md
+        Path(report_path).parent.mkdir(parents=True, exist_ok=True)
         written = write_report_md(
             summary, report_path, chart_path=hydro_curve_chart_path,
             arrangement_summary=arrangement.to_dict())
@@ -918,24 +1203,37 @@ def _print_json(summary: dict) -> None:
 
 def _write_json(summary: dict, path: str) -> None:
     """P2-1: --json PATH writes the document instead of stdout."""
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w", encoding="utf-8") as handle:
         handle.write(json.dumps(summary, indent=2, ensure_ascii=False))
 
 
 def _write_optional_chart(write_fn, path, label: str) -> tuple[str | None,
                                                                str | None]:
-    """Round-5/6 reviews: an OPTIONAL chart must never abort the chain
+    """Round-5/6/7 reviews: an OPTIONAL chart must never abort the chain
     nor bare-trace a third-party stack - the report and every data
     product survive a broken plotting stack.  Returns (written, note):
-    exactly one is non-None (the written path, or the declared note)."""
+    exactly one is non-None (the written path, or the declared note).
+    The note names the ACTUAL cause: a dependency gap, an unwritable
+    path, or an unexpected failure - one fixed "reinstall" message for
+    every exception was itself a silent misdiagnosis (round-7 OH-06)."""
+    path = Path(path)
     try:
+        path.parent.mkdir(parents=True, exist_ok=True)
         written = write_fn()
-    except Exception as exc:  # matplotlib/cycler gaps surface here
+    except (ModuleNotFoundError, ImportError) as exc:
         return None, (f"{label} unavailable - plotting dependency "
-                      f"incomplete ({type(exc).__name__}); data products "
-                      f"unaffected. remedy: reinstall the tool "
+                      f"incomplete ({type(exc).__name__}: {exc}); data "
+                      f"products unaffected. remedy: reinstall the tool "
                       f"(uninstall, purge %APPDATA%\\uv\\tools\\openhull, "
                       f"reinstall - SKILL install notes)")
+    except OSError as exc:
+        return None, (f"{label} not written - {exc}; data products "
+                      "unaffected")
+    except Exception as exc:
+        return None, (f"{label} not written - unexpected "
+                      f"{type(exc).__name__}: {exc}; data products "
+                      "unaffected (please file an issue)")
     return (str(written) if written is not None else str(path)), None
 
 
@@ -949,6 +1247,7 @@ def _missing_chart_deps() -> list[str]:
 
 def _write_csv(summary: dict, path: str) -> None:
     """P2-1: --csv PATH writes the UTF-8-SIG table instead of stdout."""
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
     labels = [label for _, label in _HYDRO_COLUMNS]
     with open(path, "w", encoding="utf-8-sig", newline="") as handle:
         writer = csv.writer(handle, lineterminator="\n")
@@ -1124,6 +1423,19 @@ def main(argv: list[str] | None = None) -> int:
     except RuntimeError as error:
         print(f"error: {error}", file=sys.stderr)
         return 3
+    except Exception as error:
+        # round-7 OH-02 last resort: nothing user-facing may surface as
+        # a bare traceback (and exit 1 stays exclusive to `check`'s
+        # predicted-refusal verdict).  Set OPENHULL_DEBUG=1 to re-raise.
+        import os
+        if os.environ.get("OPENHULL_DEBUG"):
+            raise
+        print(f"error: unexpected {type(error).__name__}: {error}",
+              file=sys.stderr)
+        print("hint: this should not happen - please file an issue "
+              "(https://github.com/5777-wq/OpenHull/issues) with the "
+              "task book and this message.", file=sys.stderr)
+        return 2
     return 0
 
 
@@ -1132,14 +1444,14 @@ def _run_rao(args) -> None:
     from .seakeeping_bem import CapytaineUnavailable, compute_rigid_rao
 
     data = _load_taskbook(Path(args.taskbook))
-    spec, _declared = _ship_spec_from_taskbook(data)
+    spec, declared = _ship_spec_from_taskbook(data)
     kg_value = (data.get("requirements") or {}).get("kg_m")
     if kg_value is None:
         raise SpecValidationError(
             "requirements.kg_m", None, "the RAO sweep needs the loading KG",
             "the roll/pitch stiffness needs the loading KG in the "
             "task book.")
-    balance = solve_weight_balance(spec)
+    balance, _hard_used = _resolve_balance(data, spec, declared)
     hull, _transform = parent_to_taskbook(
         lpp=balance.lpp,
         beam=balance.beam,
@@ -1187,8 +1499,23 @@ def _run_rao(args) -> None:
 
 
 def _parse_axis(spec: str) -> tuple[float, float, int]:
-    lo, hi, steps = spec.split(":")
-    return float(lo), float(hi), int(steps)
+    parts = str(spec).split(":")
+    if len(parts) != 3:
+        raise SpecValidationError(
+            "grid axis", spec, "lo:hi:steps  (e.g. 5.5:8.0:6)",
+            "the axis is three colon-separated numbers: low, high, "
+            "number of steps.")
+    try:
+        lo, hi, steps = float(parts[0]), float(parts[1]), int(parts[2])
+    except ValueError as error:
+        raise SpecValidationError(
+            "grid axis", spec, "lo:hi:steps  (e.g. 5.5:8.0:6)",
+            "all three parts must be numbers.")
+    if lo >= hi or steps < 1:
+        raise SpecValidationError(
+            "grid axis", spec, "lo < hi and steps >= 1",
+            f"got lo {lo} / hi {hi} / steps {steps}.")
+    return lo, hi, steps
 
 
 def _run_check(args) -> int:
@@ -1202,14 +1529,16 @@ def _run_check(args) -> int:
     """
     data = _load_taskbook(Path(args.taskbook))
     spec, declared_draft = _ship_spec_from_taskbook(data)
-    hard = bool(((data.get("requirements") or {}).get("drafts") or {})
-                .get("draft_is_hard", False))
+    hard = _draft_is_hard(data)
     gates: list[dict] = []
 
-    def gate(name, value, band, unit=""):
+    def gate(name, value, band, unit="", by_construction=False):
         ok = within_band(value, *band)
-        gates.append({"gate": name, "value": round(value, 4),
-                      "band": list(band), "pass": ok, "unit": unit})
+        entry = {"gate": name, "value": round(value, 4),
+                 "band": list(band), "pass": ok, "unit": unit}
+        if by_construction:
+            entry["by_construction"] = True
+        gates.append(entry)
         return ok
 
     if hard:
@@ -1231,9 +1560,14 @@ def _run_check(args) -> int:
     lpp, disp = balance.lpp, balance.displacement_t
     gate("Froude number",
          spec.service_speed / math.sqrt(GRAVITY * lpp), FN_BAND)
-    gate("L/B", lpp / balance.beam, L_OVER_B_BAND)
-    gate("B/T", balance.beam / balance.draft, B_OVER_T_BAND)
-    gate("L/D", lpp / balance.depth, L_OVER_DEPTH_BAND)
+    # round-7 OH-09: L/B and L/D are CONSTANTS of the statistical
+    # algebra (and B/T is too in soft mode) - labelling them keeps the
+    # "8/8 PASS" from reading as more assurance than it carries
+    gate("L/B", lpp / balance.beam, L_OVER_B_BAND, by_construction=True)
+    gate("B/T", balance.beam / balance.draft, B_OVER_T_BAND,
+         by_construction=not hard)
+    gate("L/D", lpp / balance.depth, L_OVER_DEPTH_BAND,
+         by_construction=True)
     v_sqrt_l = _service_kn(spec) / math.sqrt(lpp / 0.3048)
     gate("Ayre speed band V/sqrt(L)", v_sqrt_l,
          (AYRE_V_SQRT_L_MIN, AYRE_V_SQRT_L_MAX), "kn/sqrt-ft")
@@ -1291,6 +1625,8 @@ def _run_check(args) -> int:
             state = "REFUSED (predicted)"
         elif g.get("warn"):
             state = "WARN (reported in run, not fatal)"
+        elif g.get("by_construction"):
+            state = "PASS (statistical constant)"
         else:
             state = "PASS"
         print(f"{g['gate']:<24s}: {g['value']:>10.4f} {band_txt:<24s} "
@@ -1322,6 +1658,20 @@ def _service_kn(spec) -> float:
 def _run_optimize(args) -> None:
     data = _load_taskbook(Path(args.taskbook))
     spec, _design_draft = _ship_spec_from_taskbook(data)
+    if _draft_is_hard(data):
+        # round-7 OH-07: the scan varies B/T per candidate, while
+        # draft_is_hard solves B/T for a fixed declared draft - running
+        # the scan anyway would silently evaluate a DIFFERENT ship than
+        # `run`/`check` on the same task book
+        raise SpecValidationError(
+            "requirements.drafts.draft_is_hard", True,
+            "false or absent for optimize",
+            "the scan varies B/T per candidate while draft_is_hard "
+            "solves B/T to honour the declared draft - the two are "
+            "mutually exclusive. Remove draft_is_hard to scan, or use "
+            "`openhull run` for the hard-draft single design. (A "
+            "hard-draft scan mode - solve B/T per candidate - is a "
+            "registered backlog item.)")
     requirements = data.get("requirements") or {}
     stability = (data.get("constraints") or {}).get("stability") or {}
     weather_block = stability.get("weather_criterion") or {}

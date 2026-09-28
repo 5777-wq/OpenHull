@@ -8,12 +8,25 @@ uv run openhull run examples/taskbook_bulk_carrier.yaml \
   --arrangement-chart examples/demo_outputs/ga_schematic.png \
   --arrangement-dxf  examples/demo_outputs/ga_schematic.dxf \
   --report          examples/demo_outputs/design_report.md \
-  --csv > examples/demo_outputs/hydrostatics_table.csv
+  --csv examples/demo_outputs/hydrostatics_table.csv
 ```
 
 (Without uv: `pip install -e .` then drop the `uv run` prefix. For
 the optional stage-2 RAOs: `pip install -e '.[seakeeping]'` and run
 `openhull rao examples/taskbook_bulk_carrier.yaml`.)
+
+## What this demo shows — including one DELIBERATE refusal
+
+TB-001 is the JBC-anchored Capesize validation ship at its real
+14.5 kn service speed.  That point sits BELOW the whitelisted Ayre
+speed band (V/√L ≈ 0.48 < 0.50) — the real ship is outside the
+digitalised method's domain — so the **power & propeller section of
+the report is REFUSED, declared as such**, while dimensions,
+hydrostatics, stability, weather criterion and the arrangement all
+compute normally.  That refusal is the product working as designed
+(refuse rather than extrapolate), not a failure of the demo.  For a
+first-run that exercises the FULL chain including the propeller, use
+the skill's `minimal_taskbook.yaml` (45,000 t / 16 kn).
 
 ## Contents
 
@@ -23,9 +36,9 @@ the optional stage-2 RAOs: `pip install -e '.[seakeeping]'` and run
 | `hydro_curves.png` | 4.1 | hydrostatic curves chart, textbook layout (draft axis increasing downward), twelve panels of the task 1.4 table |
 | `ga_schematic.png` | 4.2 | general-arrangement schematic: side view + deck plan of the DECLARED default bulk-carrier compartment scheme |
 | `ga_schematic.dxf` | 4.2 | the same layout as a layered DXF (GA-SIDE / GA-PLAN / GA-DB / GA-LABELS) |
-| `hydrostatics_table.csv` | 1.4 | the hydrostatic table at quarter-drafts (Excel-friendly UTF-8-SIG) |
+| `hydrostatics_table.csv` | 1.4 | the hydrostatic table at 0.1 T steps, 10 rows, design waterline last (Excel-friendly UTF-8-SIG) |
 
 All numbers are traceable to the AGENTS.md section 5 formula
 whitelist or to task-book declarations; the arrangement schematic is
-a declared layout diagram, not hull lines.  Regenerated on
-2026-09-23 from commit history (v0.4.0).
+a declared layout diagram, not hull lines.  Regenerated 2026-09-28
+(v1.4.0 chain).

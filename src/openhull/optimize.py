@@ -424,8 +424,11 @@ def _evaluate_point(
 
     v_ratio = service_kn / math.sqrt(balance.lpp * _FT_PER_M)
     if not _AYRE_BAND[0] <= v_ratio <= _AYRE_BAND[1]:
+        # round-7 OH-11: the same stage used to appear twice in the
+        # histogram ("ayre" and "ayre_band"); the speed-vs-family
+        # distinction lives in the reason text and refusal_fields
         return RejectedPoint(
-            lob, bot, cb, "ayre_band",
+            lob, bot, cb, "ayre",
             f"V/sqrt(L) = {v_ratio:.3f} outside "
             f"{_AYRE_BAND[0]}-{_AYRE_BAND[1]} at Lpp {balance.lpp:.1f} m")
 

@@ -1,6 +1,6 @@
 # OpenHull 初步设计报告 — TB-001
 
-生成时间：2026-09-23 17:21 ｜ 工具链版本见 pyproject.toml
+生成时间：2026-09-28 12:29 ｜ 工具链：openhull 1.0.3
 
 ## 1. 主尺度与重量
 
@@ -8,22 +8,26 @@
 - 方形系数 Cb：目标 0.8580，实际 0.8578（Lackenby 变换 13 次收敛）
 - 载重量 DW = 149,920.0 t，排水量 Δ = 181,306.2 t，空船重量 LW = 31,386.2 t
 - 载重量比 = 0.8269
+- ⚠ 任务书声明吃水 16.50 m 与重量平衡吃水 16.767 m 不一致：声明值低于平衡值 0.267 m——本报告全部结果按**平衡吃水**完成。
+- 反算提示：按声明吃水 16.50 m 设计，所需 B/T ≈ 2.766（当前 2.700），在本工具的量纲比守卫带 [2.00, 3.50] 之内。
+  - 口径与限制：保持排水量、Cb 与 L/B 不变（L、B 同步缩放）；一次性估算、未计入重量再平衡（按该值实算的吃水与声明值仍有同量级残差，实测 0.3–1.3%）；B/T 属算法统计参数、任务书无此字段，本工具不自动改动。
 - 诺曼系数 N = 1.160（重量浮力平衡 3 次收敛）
 
 ## 2. 静水力表（设计吃水行）
 
 | 要素 | 数值 | 单位 |
 |---|---|---|
-| 排水体积 ∇ | 173,874.7 | m3 |
-| 排水量 Δ | 178,221.6 | t |
-| 水线面积 Aw | 11,245.8 | m2 |
-| KB | 8.492 | m |
-| BMT | 10.205 | m |
-| KM = KB+BMT | 18.698 | m |
-| TPC | 115.27 | t/cm |
-| LCB | +2.5250 | %Lpp（+中前） |
-| LCF | +0.9404 | %Lpp（+中前） |
-| Cb / Cw | 0.8569 / 0.9145 | — |
+| 排水体积 ∇ | 176,881.9 | m3 |
+| 排水量 Δ | 181,304.0 | t |
+| 水线面积 Aw | 11,265.3 | m2 |
+| KB | 8.631 | m |
+| BMT | 10.058 | m |
+| KM = KB+BMT | 18.690 | m |
+| TPC | 115.47 | t/cm |
+| LCB | +2.4975 | %Lpp（+中前） |
+| LCF | +0.8751 | %Lpp（+中前） |
+| Cb / Cw | 0.8578 / 0.9161 | — |
+> 口径注：本表 Δ = 181,304.0 t 是船体在自身最深水线（16.767 m）积分所得；§1 的 Δ = 181,306.2 t 是重量平衡的闭合目标，两者相差 2.3 t（0.0013%），源于浮力积分路径与 Lackenby 变换收敛残差，不是两个互相矛盾的数。
 
 > 完整静水力表由 `--csv` 输出；本表仅列设计吃水行。
 
@@ -47,24 +51,34 @@ GM0 = 5.400 m（KG 13.29 m，自由液面修正 0.000 m）；总体：**全部�
 
 ## 5. 快速性与螺旋桨初步设计
 
-- 螺旋桨设计**声明式跳过**：Invalid value for 'speed': 14.5
-  allowed: V/sqrt(L) within 0.5-1.2 (knots/sqrt-ft); this speed gives 0.486
-  why: the Ayre tables and corrections are tabulated for this speed-length band only (tables 7-5 and 7-7a/b); outside it the method refuses rather than extrapolate.
+- **本方案未能给出所需航速对应的功率。**
+
+- 拒绝阶段：艾亚阻力估算（ayre）
+- 生效主尺度：Lpp 271.6 m / Δ 181,306 t → L/Δ^(1/3) = 4.80（艾亚法惯例，Δ 以吨计）
+- 可行方向（本船几何下艾亚速度带对应的航速窗口）：14.93–35.82 kn（任务书声明 14.50 kn）；也可用 `openhull optimize` 换主尺度比重扫。
+- 工具原文（保留可溯源）：
+
+  > Invalid value for 'speed': 14.5 allowed: V/sqrt(L) within 0.5-1.2 (knots/sqrt-ft); this speed gives 0.486 why: the Ayre tables and corrections are tabulated for this speed-length band only (tables 7-5 and 7-7a/b); outside it the method refuses rather than extrapolate.
+
+- 可能原因：服务航速落在艾亚法速度-长度带 V/√L ∈ [0.50, 1.20] kn/√ft 之外，或 L/Δ^(1/3) 落在已数字化谱系带 [4.88, 6.41] 之外（图 7-3 目前只录入了中间谱系）。
+- 可行方向：调整 Cb 或主尺度比（L/B、B/T）使本船进入上述带内；或等待 C₀ 图谱全谱系补录（数据 backlog）。
+- 说明：白名单方法的适用域由项目章程锁定，工具拒绝在域外给出数字（拒绝优于外推）。是否调整设计需求属于专业判断，工具不替用户拍板。
+- 可行域扫描：`openhull optimize <任务书> --grid-cb 下限:上限:档数` 可自动扫出哪些组合能进入各适用带（例如 `--grid-cb 0.70:0.84:8`），不必逐点手试（review 2026-09-25 P1-2）。
 
 ## 6. 耐波性初估（第一级，书内公式）
 
-- 横摇固有周期 13.10 s（简式 15.59 s）、纵摇 11.11 s、垂荡 11.03 s
+- 横摇固有周期 13.10 s（简式 15.59 s）、纵摇 11.10 s、垂荡 11.02 s
 - 有效波倾系数 K = 0.680；谐摇放大因数 1/(2μ) = 8.3（μ = 0.06，书内区间中值假定）
 
 | 运动 | 海区 | 波浪周期 | 调谐因数 Λ | 判定 |
 |---|---|---|---|---|
 | roll | East China Sea short wave (lambda 50-60 m) | 6 s | 2.18 | 区外 |
-| pitch/heave | East China Sea short wave (lambda 50-60 m), head-sea encounter at 7.5 m/s | 6 s | 3.33 | 区外 |
+| pitch/heave | East China Sea short wave (lambda 50-60 m), head-sea encounter at 7.5 m/s | 6 s | 3.32 | 区外 |
 | roll | ocean swell (lambda ~ 100 m) | 8 s | 1.64 | 区外 |
 | pitch/heave | ocean swell (lambda ~ 100 m), head-sea encounter at 7.5 m/s | 8 s | 2.22 | 区外 |
 
-> 波浪失速不在本层范围：白名单书内无失速估算公式。
-
+> 口径注：§4 风浪衡准的横摇周期 12.18 s 用 IS Code 2.3 的规范简式（T = 2·C·B/√GM，不计附连水质量修正）；本节 13.10 s 用《船舶原理》下册的横摇固有周期式（式 3-27/3-49，含附连水惯量）。两式口径不同、并存是规范实践，不是矛盾。
+- 波浪失速：任务书未提供海况输入（`seakeeping.speed_loss: {beaufort, direction}`），未运行失速修正；**本报告所有功率均为静水值**。Kwon 法已在库层实现并通过测试，随任务书给海况即自动运行。
 ## 7. 总布置简图（声明式分舱）
 
 - 分舱来源：default bulk-carrier scheme；双层底高 2.26 m

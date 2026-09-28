@@ -22,9 +22,9 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.3.2"
+UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.4.0"
 # 没有 uv 时：
-pip install "git+https://github.com/5777-wq/OpenHull@v1.3.2"
+pip install "git+https://github.com/5777-wq/OpenHull@v1.4.0"
 ```
 
 **主命令自带官方源覆盖**：`uv tool install` 会按本机配置的镜像源解析
@@ -42,11 +42,11 @@ openhull`，删残留 `%APPDATA%\uv\tools\openhull`（含 `.lock`）再装，
 从 Release 页取 `openhull-vX.Y.Z.tar.gz` 解压后
 `uv tool install <本地目录>`。
 
-**锁定版本安装**（`@v1.3.2`）：可复现、可审计；需要跟踪最新修复时
+**锁定版本安装**（`@v1.4.0`）：可复现、可审计；需要跟踪最新修复时
 换成 `@main` 或具体 commit。安装后验证：
 
 ```bash
-openhull --version        # 应输出 openhull 1.3.2
+openhull --version        # 应输出 openhull 1.4.0
 ```
 
 耐波性 RAO 是可选扩展（capytaine），主流程不需要；需要时：
@@ -62,7 +62,8 @@ openhull --version        # 应输出 openhull 1.3.2
 ```yaml
 schema_version: 1
 taskbook_id: MIN-45000
-ship_type: bulk_carrier          # bulk_carrier / tanker / container …
+ship_type: bulk_carrier          # 当前唯一已校准船型；其他值会被拒绝
+                                 # （统计母型按散货船校准，拒绝错标）
 requirements:
   deadweight_t: 45000            # 载重量
   service_speed_kn: 16.0         # 服务航速
@@ -84,6 +85,13 @@ propeller:                       # 可选：填了才有螺旋桨设计与功率
 可选块（详见仓库 `examples/taskbook_bulk_carrier.yaml`）：
 `stability.weather_criterion:`（受风面积等）、`arrangement:`（总布置分舱表）。
 
+**任务书键契约（v1.4.0 起）**：只认文档里的键——未知/拼错的键会被
+**拒绝并给拼写建议**（"did you mean 'kg_m'?"），绝不静默忽略；YAML
+重复键会被拒绝并给行号；数字字段填了字符串（如 `kg_m: thirteen`）
+会被拒绝并指认字段；文件必须 UTF-8（GBK 编码会被拒绝并给另存指引）；
+输出路径的父目录不存在时自动创建。如实转述这些拒绝——它们都在替
+用户拦截"看起来正常但悄悄少了半页结论"的输出。
+
 **适用域关卡表**（任何一项不满足，对应模块声明式拒绝，报告会给出
 结构化中文说明；如实转述，不要换方法硬凑）：
 
@@ -98,6 +106,10 @@ propeller:                       # 可选：填了才有螺旋桨设计与功率
 | C₀ 峰区（方法敏感性，不拒绝） | V/√L 落在数字化 C₀ 族自身峰值 ±0.05~+0.10（族峰值 ≈0.70） | 不拒绝；报告/控制台出敏感性声明：单点功率不宜直接用于主机选型，建议扫描查看趋势（诊断只加文字不改数字） |
 | 重量平衡 | 诺曼迭代收敛 | 整轮拒绝（weight_balance） |
 | IS Code 衡准 | 六项 + 恶劣风浪 | 稳定段拒绝或整体 FAIL 判定 |
+
+（v1.4.0 起 `check` 把统计常数关标为 `PASS (statistical constant)`：
+L/B、L/D 由算法构造恒定，软模式下的 B/T 也是——真正的关卡是弗劳德
+数、吃水声明与艾亚两道；解读 8/8 PASS 时以这个信息量为准。）
 
 **任务书吃水说明**：全链只用一个设计吃水——重量平衡吃水；任务书里
 声明的 `design_draft_m` 若与平衡吃水相差超过 5 cm，报告会显式声明
@@ -178,7 +190,7 @@ feasibility_hint`（可行域提示）；`seakeeping.speed_loss`（Kwon，域外
   出数域有限（Cb/Fr 越界**诚实拒绝**，肥大低速船常在域外），拒绝时
   如实转述原因；未给海况时报告明示所有功率均为**静水**值；
 - "这个数靠谱吗？" → 指路验证记录：公开基准船（JBC / DTMB 1712 /
-  NMRI MP687）+ 书内算例 + 全量测试（当前 423 项；未装 seakeeping
+  NMRI MP687）+ 书内算例 + 全量测试（当前 440 项；未装 seakeeping
   可选扩展时个别用例自动跳过），见仓库 VALIDATION.md；
 - "任务书里的 length_waterline_m 影响功率吗？" → 分两处说清：单船
   `run` 一次运行一个水线值（任务书声明了就用声明的，否则 Ayre 标准
@@ -198,5 +210,7 @@ feasibility_hint`（可行域提示）；`seakeeping.speed_loss`（Kwon，域外
   守卫带够不到的吃水会被拒绝并给出带端点数字，如实转述该拒绝。提示值
   出带时说明该吃水下统计链路不自洽，不要自行外推；
 - "能不能算 XX 船型/XX 衡准？" → 先查仓库 AGENTS.md §5 白名单与 §7 红线：
-  白名单外的方法不能实现，如实说明并建议走 Issue 提案流程；
+  白名单外的方法不能实现，如实说明并建议走 Issue 提案流程；**船型
+  同理**——当前只校准了散货船（Series 60 母型 + 分项立方重量），
+  任务书写 tanker/container 等会被拒绝并说明原因，不要绕过或手改；
 - 用户想调参数重跑 → 改任务书 YAML 再跑，不要手改 Python。

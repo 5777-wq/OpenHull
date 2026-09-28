@@ -129,10 +129,12 @@ def test_check_hard_draft_reports_the_solved_ratio(tmp_path, capsys):
 
 def test_weather_default_runs_the_criterion(tmp_path):
     taskbook = BASE.format(
-        tag="WX-DEFAULT", cb="0.76", extra="").replace(
-        "propeller:",
-        "  weather_criterion: default\npropeller:")
-    # the weather block lives under constraints.stability
+        tag="WX-DEFAULT", cb="0.76", extra="")
+    # the weather block lives under constraints.stability.  (An earlier
+    # version of this test ALSO carried a stray constraints-level
+    # weather_criterion that the old loader silently ignored - the
+    # round-7 key whitelist refused it, vindicating OH-03 on our own
+    # suite before any user hit it.)
     taskbook = taskbook.replace(
         "constraints:\n  block_coefficient_design: 0.76",
         "constraints:\n  block_coefficient_design: 0.76\n"
