@@ -434,11 +434,11 @@ def solve_optimal_propeller(
     # coarse uniform scan over J, then golden-section refinement
     scan = [evaluate(j_lo + (j_hi - j_lo) * i / n_scan)
             for i in range(n_scan + 1)]
-    best_i, best = None, -math.inf
+    best_i, best_cand, best_eta = None, None, -math.inf
     for i, cand in enumerate(scan):
-        if cand and cand[0] > best:
-            best_i, best = i, cand[0]
-    if best_i is None:
+        if cand and cand[0] > best_eta:
+            best_i, best_cand, best_eta = i, cand, cand[0]
+    if best_cand is None:
         raise SpecValidationError(
             "diameter", d_bounds_m,
             "an admissible advance coefficient inside the series domain",
@@ -467,10 +467,14 @@ def solve_optimal_propeller(
             fd = evaluate(dd)
         if b - a < 1e-7:
             break
+        for cand in (fc, fd):
+            if cand and cand[0] > best_eta:
+                best_cand, best_eta = cand, cand[0]
     j_best = 0.5 * (a + b)
-    result = evaluate(j_best) or (best if best else None)
-    if result is None:
-        result = best
+    # round-9 fix: the fallback is the best feasible CANDIDATE TUPLE
+    # (scan + golden probes); the previous code fell back to the bare
+    # best eta_o float and crashed unpacking it
+    result = evaluate(j_best) or best_cand
     eta, d, pd, kt, kq = result
     thrust = rho * n_rps ** 2 * d ** 4 * kt
     return OptimumPropeller(
@@ -566,11 +570,11 @@ def solve_optimal_propeller_for_thrust(
 
     scan = [evaluate(j_lo + (j_hi - j_lo) * i / n_scan)
             for i in range(n_scan + 1)]
-    best_i, best = None, -math.inf
+    best_i, best_cand, best_eta = None, None, -math.inf
     for i, cand in enumerate(scan):
-        if cand and cand[0] > best:
-            best_i, best = i, cand[0]
-    if best_i is None:
+        if cand and cand[0] > best_eta:
+            best_i, best_cand, best_eta = i, cand, cand[0]
+    if best_cand is None:
         raise SpecValidationError(
             "thrust_n", thrust_n,
             "an admissible advance coefficient inside the series domain",
@@ -598,8 +602,13 @@ def solve_optimal_propeller_for_thrust(
             fd = evaluate(dd)
         if b - a < 1e-7:
             break
+        for cand in (fc, fd):
+            if cand and cand[0] > best_eta:
+                best_cand, best_eta = cand, cand[0]
     j_best = 0.5 * (a + b)
-    result = evaluate(j_best) or best
+    # round-9 fix: fall back to the best feasible candidate tuple, not
+    # the bare best eta_o float (which crashed unpacking)
+    result = evaluate(j_best) or best_cand
     eta, d, pd, kt, kq = result
     thrust = rho * n_rps ** 2 * d ** 4 * kt
     delivered_kw = 2.0 * math.pi * n_rps * (
@@ -618,6 +627,72 @@ def solve_optimal_propeller_for_thrust(
         eta_o=eta,
         provenance=series.provenance,
     )
+
+
+def design_propeller_with_diameter_retry(
+    *,
+    pe_kw: float,
+    v_ms: float,
+    n_rps: float,
+    series: OpenWaterSeries,
+    eta_r: float,
+    lpp_m: float,
+    lwl_m: float,
+    beam_m: float,
+    draft_m: float,
+    cb: float,
+    cp: float,
+    cm: float,
+    cwp: float,
+    lcb_pct_fwd: float,
+    d_bounds_m: Tuple[float, float],
+    max_attempts: int = 4,
+) -> Tuple["PropulsionFactors", OptimumPropeller]:
+    """Thrust-led propeller design at one operating point, shared by
+    the CLI run and the design-space scan (round 9: the two call sites
+    used to carry near-identical copies of this retry loop — the same
+    two-calibres-of-one-quantity class that produced the v1.0.4/1.0.5
+    scan defects).
+
+    The Holtrop wake depends on the guessed diameter and can leave its
+    physical band at the first guess, so each refusal shrinks the
+    diameter guess by 0.85 until the tip-clearance floor; the LAST
+    refusal is raised when every attempt fails.
+
+    The caller owns the waterline-length calibre (run: the declared
+    task-book value or 1.025*Lpp; scan: each candidate's own
+    1.025*Lpp) and the failure presentation.
+    """
+    from .propulsion import PropulsionFactors, propulsion_factors
+
+    d_guess = 0.55 * draft_m
+    last_error: SpecValidationError | None = None
+    for _ in range(max_attempts):
+        try:
+            factors = propulsion_factors(
+                lpp_m=lpp_m, lwl_m=lwl_m, beam_m=beam_m,
+                draft_m=draft_m, cb=cb, cp=cp, cm=cm, cwp=cwp,
+                lcb_pct_fwd=lcb_pct_fwd,
+                propeller_diameter_m=d_guess, speed_ms=v_ms,
+                screw="single", eta_r=eta_r,
+            )
+            va_ms = v_ms * (1.0 - factors.w)
+            # thrust-led design: the required thrust T = P_E/(V(1-t))
+            # is efficiency-independent, so no eta_o fixed-point is
+            # needed (the power-led iteration diverges near the
+            # series' eta_o pole)
+            thrust_required = pe_kw * 1e3 / (v_ms * (1.0 - factors.t))
+            prop = solve_optimal_propeller_for_thrust(
+                thrust_required, va_ms, n_rps, series,
+                d_bounds_m=d_bounds_m, n_scan=300)
+            return factors, prop
+        except SpecValidationError as error:
+            last_error = error
+            d_guess *= 0.85
+            if d_guess < d_bounds_m[0]:
+                break
+    assert last_error is not None  # every attempt returned or raised
+    raise last_error
 
 
 @dataclass(frozen=True)

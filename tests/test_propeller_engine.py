@@ -14,6 +14,7 @@ import pytest
 from openhull.propeller import (
     OpenWaterSeries,
     solve_optimal_propeller,
+    solve_optimal_propeller_for_thrust,
     solve_speed_thrust_balance,
     terminal_design,
 )
@@ -182,3 +183,55 @@ def test_diameter_window_is_intersected_not_rejected():
         500.0, va_ms=4.0, n_rps=2.0, series=MOCK, d_bounds_m=(0.5, 60.0))
     assert prop.diameter_m > 0
     assert MOCK.j_domain[0] <= prop.j <= MOCK.j_domain[1]
+
+
+class _SinglePointSeries:
+    """Series feasible at exactly ONE advance coefficient.
+
+    Used to force the optimum engines' fallback path: the golden-section
+    probes both land on infeasible J, the converged midpoint is
+    infeasible too, and the engine must fall back to the best scanned
+    candidate.  Before the round-9 fix (2026-09-30) that fallback
+    unpacked a bare eta_o float and raised TypeError.
+    """
+
+    name = "single-point-stub"
+    j_domain = (0.1, 0.9)
+    pd_domain = (0.5, 1.4)
+    provenance = "test stub (round-9 fallback probe)"
+
+    _J_STAR = 0.1 + (0.9 - 0.1) * 120 / 240  # scan grid point i=120
+
+    def kq(self, j, pd):
+        return 0.9 * pd
+
+    def kt(self, j, pd):
+        return 0.5 if j == self._J_STAR else -1.0
+
+    def eta_o(self, j, pd):
+        return 0.6
+
+
+class _SinglePointSeriesThrust(_SinglePointSeries):
+    def kq(self, j, pd):
+        return 0.09
+
+    def kt(self, j, pd):
+        return 0.8 * pd if j == self._J_STAR else 40.0
+
+
+def test_optimum_engine_falls_back_to_best_candidate():
+    series = _SinglePointSeries()
+    prop = solve_optimal_propeller(
+        144_906.0, va_ms=5.0, n_rps=2.0, series=series)
+    assert prop.eta_o == pytest.approx(0.6)
+    # the candidate's diameter follows the feasible grid point J*, not
+    # the infeasible converged midpoint
+    assert prop.diameter_m == pytest.approx(5.0)
+
+
+def test_thrust_engine_falls_back_to_best_candidate():
+    series = _SinglePointSeriesThrust()
+    prop = solve_optimal_propeller_for_thrust(
+        2_050_000.0, va_ms=5.0, n_rps=2.0, series=series)
+    assert prop.eta_o == pytest.approx(0.6)

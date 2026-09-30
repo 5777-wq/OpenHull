@@ -167,3 +167,16 @@ def test_json_round_trip(at_14):
 def test_determinism(at_14):
     again = ayre_effective_power(speed_kn=14.0, **EXAMPLE)
     assert again.to_dict() == at_14.to_dict()
+
+
+def test_table_7_7a_printed_cell_is_frozen():
+    """Read-through round 9 (2026-09-30): the book itself prints 1.0
+    at row V/sqrt(L) = 0.60, column 1.2 (vol. 1, p.305, rendered-scan
+    re-check) where the 0.50-0.58 plateau rows print 1.6 — a suspected
+    misprint in the source, kept as printed per the charter
+    (AGENTS.md section 5).  The pin freezes the printed cell so no
+    silent 'correction' can drift it in either direction."""
+    from openhull.resistance import _TABLE_7_7A
+
+    assert _TABLE_7_7A[0.60][5] == 1.0
+    assert _TABLE_7_7A[0.58][5] == 1.6

@@ -50,7 +50,7 @@ from .main_dimensions import RatioParameters
 from .propeller import (
     b_series_open_water,
     check_cavitation,
-    solve_optimal_propeller_for_thrust,
+    design_propeller_with_diameter_retry,
 )
 from .propulsion import propulsion_factors, solve_service_speed
 from .resistance import ayre_effective_power
@@ -497,45 +497,24 @@ def _evaluate_point(
     # reporting propellers designed for that speed.  Pinned by
     # test_scan_propeller_advance_speed_is_the_ship_speed.
     v_ms = knots_to_ms(service_kn)
-    d_guess = 0.55 * balance.draft
-    d_bounds = (0.35 * balance.draft,
-                config.max_tip_diameter_draft_ratio * balance.draft)
-    prop = None
-    factors = None
-    last_error: Exception | None = None
-    for _attempt in range(6):
-        try:
-            factors = propulsion_factors(
-                lpp_m=balance.lpp, lwl_m=balance.lpp,
-                beam_m=balance.beam, draft_m=balance.draft,
-                cb=cb, cp=hydro.cp, cm=hydro.cm, cwp=hydro.cw,
-                lcb_pct_fwd=hydro.lcb,
-                propeller_diameter_m=d_guess, speed_ms=v_ms,
-                screw="single", eta_r=config.relative_rotative_eff,
-            )
-            va_ms = v_ms * (1.0 - factors.w)
-            # thrust-led design: the required thrust T = P_E/(V(1-t))
-            # is efficiency-independent, so no eta_o fixed-point is
-            # needed (the power-led iteration diverges near the
-            # series' eta_o pole)
-            thrust_required = pe_kw * 1e3 / (v_ms
-                                             * (1.0 - factors.t))
-            prop = solve_optimal_propeller_for_thrust(
-                thrust_required, va_ms, n_rps, series,
-                d_bounds_m=d_bounds, n_scan=300)
-            break
-        except SpecValidationError as error:
-            # shrink the diameter guess and retry: the Holtrop wake
-            # depends on the guessed diameter and can leave its
-            # physical band at the first guess
-            last_error = error
-            d_guess *= 0.85
-            if d_guess < d_bounds[0]:
-                break
-    if prop is None or factors is None:
+    # the diameter-retry loop is the shared engine (round 9); the scan
+    # calibre: every candidate's own waterline is 1.025*Lpp (= Lpp here,
+    # the one-waterline rule since v1.0.5)
+    try:
+        factors, prop = design_propeller_with_diameter_retry(
+            pe_kw=pe_kw, v_ms=v_ms, n_rps=n_rps, series=series,
+            eta_r=config.relative_rotative_eff,
+            lpp_m=balance.lpp, lwl_m=balance.lpp,
+            beam_m=balance.beam, draft_m=balance.draft,
+            cb=cb, cp=hydro.cp, cm=hydro.cm, cwp=hydro.cw,
+            lcb_pct_fwd=hydro.lcb,
+            d_bounds_m=(0.35 * balance.draft,
+                        config.max_tip_diameter_draft_ratio
+                        * balance.draft),
+            max_attempts=6)
+    except SpecValidationError as error:
         return RejectedPoint(lob, bot, cb, "propeller",
-                             str(last_error)[:200] if last_error
-                             else "no admissible diameter")
+                             str(error)[:200])
     if not within_band(prop.eta_o, *_ETA_SANITY):
         return RejectedPoint(
             lob, bot, cb, "propeller",

@@ -50,7 +50,7 @@ regenerates all of them.
 Install the CLI (pinned to the release tag — reproducible, auditable):
 
 ```bash
-uv tool install "git+https://github.com/5777-wq/OpenHull@v1.4.0"
+uv tool install "git+https://github.com/5777-wq/OpenHull@v1.6.0"
 openhull run examples/taskbook_bulk_carrier.yaml
 # optional seconds-level preflight of all guard bands:
 openhull check examples/taskbook_bulk_carrier.yaml
@@ -114,7 +114,7 @@ SKILL.md can install it from the URL alone.
    the code, transcriptions verified against page images of the
    source.
 2. **Acceptance by numbers.** Book worked examples, independent-path
-   cross-checks and public benchmarks pin every feature — 440 tests
+   cross-checks and public benchmarks pin every feature — 451 tests
    (8 marked skips without the optional extra),
    full record in [VALIDATION.md](VALIDATION.md).
 3. **Declared approximations.** Wall-sided decks, damping ranges,
@@ -165,7 +165,7 @@ If OpenHull contributes to your research, please cite it via
   author       = {5777-wq},
   title        = {OpenHull: agent-orchestrated parametric ship
                   preliminary design},
-  version      = {1.4.0},
+  version      = {1.6.0},
   year         = {2026},
   url          = {https://github.com/5777-wq/OpenHull}
 }

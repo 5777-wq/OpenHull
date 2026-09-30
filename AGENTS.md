@@ -236,6 +236,13 @@ no page numbers from memory).
   (C₀ chart, digitised for L/Δ^(1/3) = 4.88–6.41) and the worked
   example of table 7-8 (acceptance anchor).  Units trap pinned by the
   example: V/√L is knots over √feet, L/Δ^(1/3) and Fr are SI.
+  Printed-source defect (declared 2026-09-30 read-through): table
+  7-7(a) row V/√L = 0.60, column 1.2 prints Kxc = 1.0 where the
+  plateau of the four rows above (0.50–0.58) and the row's own
+  neighbours print 1.6 — suspected misprint in the book itself
+  (re-verified against the rendered scan, book p.305, PDF p.318).
+  Transcribed as printed per the charter; a transcription-fidelity
+  pin in the tests freezes the printed cell.
   Owner approval: task 3.1 implementation plan (2026-09-21).
   Amendment-order note: implemented and whitelisted in the same
   session, whitelist commit immediately following — recorded here
@@ -348,7 +355,14 @@ no page numbers from memory).
   Eqs.(5-48)/(5-49) thrust deduction; Eqs.(5-50)/(5-51)/(5-52)
   relative rotative efficiency (5-50, eta_R = 1.0, the sanctioned
   no-data fallback, is the v1 default).  Every formula visually
-  verified against the scanned original pages (2026-09-21).  The
+  verified against the scanned original pages (2026-09-21).
+  Transcription correction (2026-09-30 read-through): the
+  wetted-surface S formula prints sqrt(Cm) (vol. 2, book p.59,
+  re-verified against the rendered scan, PDF p.68) — the 2026-09-21
+  pass missed the radical and the implementation carried a linear Cm
+  until then; the code now follows the printed form, agreeing with
+  the independent holtrop module (the 1982 paper's own worked
+  example) and the paper.  The
   textbook transcription diverges from other published renderings of
   the Holtrop correlation (reciprocal instead of ratio form of two
   wake terms; twin-screw Cb unsquared; Cb exponent printed as 4 in

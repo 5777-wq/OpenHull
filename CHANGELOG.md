@@ -4,6 +4,50 @@ All notable changes to OpenHull are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/); versioning
 is semantic (MAJOR.MINOR.PATCH).
 
+## [Unreleased]
+
+### Fixed
+
+- **Read-through round 9 (2026-09-30, full-source review)** — six
+  findings from an independent read of all 23 modules, each with a
+  regression test; details in VALIDATION item 33:
+  - **R9-1 (A)** the wetted surface of the Holtrop 5-38 auxiliary
+    chain (propulsion module) was transcribed with a linear Cm; the
+    book prints sqrt(Cm) (vol. 2, p.59, rendered-scan re-check — the
+    2026-09-21 page pass missed the radical), agreeing with the 1982
+    paper and the independent holtrop module.  Corrected to the
+    printed form; a cross-module identity test pins
+    S(propulsion) = S(holtrop); the DTMB 1712 anchors re-measured
+    inside their declared bands (item 14 correction note).
+  - **R9-2 (A)** Ayre table 7-7(a) row 0.60 / column 1.2 = 1.0: the
+    book itself prints 1.0 (vol. 1, p.305, rendered-scan re-check)
+    where the 0.50–0.58 plateau rows print 1.6 — a suspected misprint
+    in the SOURCE, kept as printed per the charter; declared at the
+    table and in AGENTS §5, frozen by a transcription-fidelity pin.
+  - **R9-3 (B)** the optimum-propeller engines' fallback unpacked a
+    bare eta_o float when the converged midpoint is infeasible (a
+    low-probability TypeError crash path); it now falls back to the
+    best feasible candidate tuple, and the dead retry line is gone.
+  - **R9-4 (B)** the `optimize` task-book parsing bypassed the input
+    contract (raw `int()`/`float()`, and `rpm or 127.0` — the OH-04
+    falsy-0 pattern on the scan path); every number now goes through
+    `_number`, blade counts must be integral, and rpm ≤ 0 is refused
+    instead of silently defaulted.
+  - **R9-6 (B)** documentation drift: the cli.py docstring claimed the
+    CLI writes no files (false since the report/chart flags landed);
+    the README (zh+en) install tag was pinned @v1.4.0 with 440 tests
+    and a 1.4.0 citation — synced to v1.6.0 / 451 tests / 1.6.0.
+
+### Changed
+
+- **R9-5 (B)** the propeller diameter-retry loop, previously
+  duplicated between the CLI run and the design-space scan (the
+  two-calibres-of-one-quantity class that produced the v1.0.4/1.0.5
+  scan defects), is extracted to
+  `openhull.propeller.design_propeller_with_diameter_retry`; both call
+  sites are rewired and the waterline calibres stay with their owners
+  (run: declared LWL or 1.025*Lpp; scan: 1.025*Lpp per candidate).
+
 ## [1.6.0] - 2026-09-28
 
 ### Added

@@ -177,3 +177,33 @@ def test_speed_solution_json_round_trip(factors):
     # the solver evaluates the friction coefficient at its declared
     # reference speed: same chain, sub-permille difference in w
     assert payload["factors"]["w"] == pytest.approx(factors.w, abs=1e-2)
+
+
+def test_wetted_surface_matches_holtrop_module():
+    """Read-through round 9 (2026-09-30): the book prints sqrt(Cm) in
+    the S formula (vol. 2, p.59, rendered-scan re-check); the linear
+    Cm carried until then was a transcription slip (AGENTS.md section
+    5 correction note).  The same hull must yield the same S in both
+    whitelisted implementations — and the holtrop module is tied to
+    the 1982 paper's own worked example, so this pins the chain to
+    the paper's calibre."""
+    from openhull.holtrop import holtrop_mennen_power
+
+    speed_kn = 15.0
+    factors = propulsion_factors(**SHIP, speed_ms=speed_kn * 0.5144)
+    result = holtrop_mennen_power(
+        speed_kn=speed_kn,
+        lwl_m=SHIP["lwl_m"],
+        lpp_m=SHIP["lpp_m"],
+        beam_m=SHIP["beam_m"],
+        draft_m=SHIP["draft_m"],
+        displacement_volume_m3=DISPLACEMENT_T * 1.025,
+        cm=SHIP["cm"],
+        cwp=SHIP["cwp"],
+        lcb_pct_lpp=SHIP["lcb_pct_fwd"],
+        cp=SHIP["cp"],
+        cb_waterline=SHIP["cb"],
+    )
+    assert factors.wetted_surface_m2 == pytest.approx(
+        result.wetted_area_m2, rel=1e-12
+    )

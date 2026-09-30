@@ -171,6 +171,11 @@ _TABLE_7_6 = (
 # (0.2-2.0).  OCR transcribed.
 # ---------------------------------------------------------------------------
 _KXC_COLUMNS = (0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0)
+# Table 7-7(a) transcription note (2026-09-30): row 0.60, column 1.2
+# prints 1.0 in the book itself (vol. 1, p.305, re-verified against the
+# rendered scan) where the 0.50-0.58 plateau rows print 1.6 — a
+# suspected misprint in the source, kept as printed per the charter
+# (AGENTS.md section 5); pinned by a transcription-fidelity test.
 _TABLE_7_7A = {
     0.40: (0.4, 0.8, 1.2, 1.6, 2.0, 2.6, 3.2, 3.8, 4.4, 5.0),
     0.42: (0.3, 0.7, 1.0, 1.4, 1.8, 2.4, 3.0, 3.6, 4.2, 4.8),

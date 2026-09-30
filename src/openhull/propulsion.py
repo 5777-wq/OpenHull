@@ -3,7 +3,8 @@
 The interaction between hull and propeller is estimated with the
 Holtrop correlation as transcribed in Ship Theory vol. 2, sections
 5-2/5-3 (book pages 58-61; every formula visually verified against
-the scanned original, 2026-09-21):
+the scanned original, 2026-09-21; the wetted-surface radical
+re-verified 2026-09-30 — the book prints sqrt(Cm), p.59):
 
   wake fraction        w   Eq.(5-38) single screw / (5-39) twin
   thrust deduction     t   Eq.(5-48) single screw / (5-49) twin
@@ -199,9 +200,12 @@ def propulsion_factors(
     )
     c_v = form_factor * cf + c_a
 
+    # S of the 5-38 auxiliary chain: the book prints sqrt(Cm) here
+    # (vol. 2, p.59); the linear Cm carried before 2026-09-30 was a
+    # transcription slip (AGENTS.md section 5, correction note).
     wetted_surface = (
         length * (2.0 * draft_m + beam_m)
-        * cm * (
+        * math.sqrt(cm) * (
             0.453 + 0.4425 * cb - 0.2862 * cm
             - 0.003467 * beam / draft_m + 0.3696 * cwp
         )

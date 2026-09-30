@@ -45,7 +45,7 @@
 安装命令行工具（锁定发布标签，可复现、可审计）：
 
 ```bash
-uv tool install "git+https://github.com/5777-wq/OpenHull@v1.4.0"
+uv tool install "git+https://github.com/5777-wq/OpenHull@v1.6.0"
 ```
 
 跑通仓库自带的旗舰示例（JBC 基准船锚定的 15 万载重吨级 Capesize
@@ -109,7 +109,7 @@ AI 智能体（ZCode、Claude Code 等），它会自己安装工具、写好任
 1. **白名单先行。** 经验公式只有在 [AGENTS.md §5](AGENTS.md) 立账之后
    才能实现——先改章程再改代码，转录对照原书页面核验。
 2. **验收靠数字。** 书内算例、独立路径互检、公开基准船钉住每一个功能——
-   440 项测试（未装可选扩展时个别用例自动跳过），
+   451 项测试（未装可选扩展时个别用例自动跳过），
    逐条记录见 [VALIDATION.md](VALIDATION.md)。
 3. **近似必须声明。** 直壁甲板、阻尼区间、被约束的自由度：假定写在哪里，
    就声明在哪里。
@@ -154,7 +154,7 @@ AI 智能体（ZCode、Claude Code 等），它会自己安装工具、写好任
   author       = {5777-wq},
   title        = {OpenHull: agent-orchestrated parametric ship
                   preliminary design},
-  version      = {1.4.0},
+  version      = {1.6.0},
   year         = {2026},
   url          = {https://github.com/5777-wq/OpenHull}
 }

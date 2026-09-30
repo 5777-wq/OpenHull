@@ -14,8 +14,13 @@ the shell redirection stores the table (``--csv`` output is UTF-8 with
 BOM, ready for Excel).  Results are deterministic: same task book,
 same numbers (AGENTS.md section 8).
 
-The CLI performs no file writes of its own - everything is streamed
-through stdout, and the user decides where results land.
+stdout stays pure for piping: the human summary, ``--csv`` (bare flag)
+and ``--json`` (bare flag) stream through stdout, and artefact
+confirmations go to stderr.  Deliverable flags WRITE files: the paths
+given with ``--report/--json PATH/--csv PATH/--hydro-curve-chart/
+--arrangement-chart/--arrangement-dxf`` land on disk (parent
+directories are created); ``outputs`` in the JSON lists only files
+that really exist.
 """
 
 from __future__ import annotations
@@ -50,9 +55,8 @@ from .propeller import (
     SIGMA_VERIFIED_BAND,
     b_series_open_water,
     check_cavitation,
-    solve_optimal_propeller_for_thrust,
+    design_propeller_with_diameter_retry,
 )
-from .propulsion import propulsion_factors
 from .seakeeping import estimate_seakeeping, kwon_speed_loss_percent
 from .resistance import (AYRE_V_SQRT_L_MAX, AYRE_V_SQRT_L_MIN,
                          C0_FAMILY_BAND, admiralty_corridor,
@@ -178,62 +182,41 @@ def _design_propeller_at_service(data, balance, hydro_design):
             lwl_m=run_lwl),
     }
     # stage 2: thrust-led propeller design (efficiency-independent
-    # thrust, no eta_o fixed point — same route as the scan)
+    # thrust, no eta_o fixed point — same route as the scan); the
+    # diameter-retry loop is the shared engine (round 9)
     try:
-        d_bounds = (0.35 * balance.draft, 0.75 * balance.draft)
-        d_guess = 0.55 * balance.draft
-        prop = None
-        factors = None
-        last_error = None
-        for _ in range(4):
-            try:
-                factors = propulsion_factors(
-                    lpp_m=balance.lpp,
-                    # ONE waterline for the run: the declared value when
-                    # the task book carries one, else Ayre's standard
-                    # 1.025*Lpp - the same value the effective-power
-                    # call above used (Ayre's own default).  Before
-                    # v1.0.5 this stage took Lpp while the PE took the
-                    # standard, i.e. two slightly different ships.
-                    lwl_m=run_lwl,
-                    beam_m=balance.beam,
-                    draft_m=balance.draft,
-                    cb=hydro_design.cb, cp=hydro_design.cp,
-                    cm=hydro_design.cm, cwp=hydro_design.cw,
-                    lcb_pct_fwd=hydro_design.lcb,
-                    propeller_diameter_m=d_guess, speed_ms=v_ms,
-                    screw="single", eta_r=eta_r,
-                )
-                va_ms = v_ms * (1.0 - factors.w)
-                thrust_required = pe_kw * 1e3 / (v_ms * (1.0 - factors.t))
-                prop = solve_optimal_propeller_for_thrust(
-                    thrust_required, va_ms, n_rps, series,
-                    d_bounds_m=d_bounds, n_scan=300)
-                break
-            except SpecValidationError as retry:
-                last_error = retry
-                d_guess *= 0.85
-                if d_guess < d_bounds[0]:
-                    break
-        if prop is None or factors is None:
-            return {"skipped": True, "stage": "propeller",
-                    "reason": str(last_error) if last_error
-                    else "no admissible diameter inside the tip-clearance "
-                         "bounds"}
-        eta_sanity = (0.40, 0.85)
-        if not within_band(prop.eta_o, *eta_sanity):
-            return {"skipped": True, "stage": "propeller",
-                    "reason": (
-                        f"eta_o {prop.eta_o:.3f} outside the sanity band "
-                        f"{eta_sanity}")}
-        if prop.diameter_m > 0.75 * balance.draft:
-            return {"skipped": True, "stage": "propeller",
-                    "reason": (
-                        f"diameter {prop.diameter_m:.2f} m exceeds "
-                        f"0.75 x draft {balance.draft:.2f} m")}
+        factors, prop = design_propeller_with_diameter_retry(
+            pe_kw=pe_kw, v_ms=v_ms, n_rps=n_rps, series=series,
+            eta_r=eta_r,
+            lpp_m=balance.lpp,
+            # ONE waterline for the run: the declared value when
+            # the task book carries one, else Ayre's standard
+            # 1.025*Lpp - the same value the effective-power
+            # call above used (Ayre's own default).  Before
+            # v1.0.5 this stage took Lpp while the PE took the
+            # standard, i.e. two slightly different ships.
+            lwl_m=run_lwl,
+            beam_m=balance.beam,
+            draft_m=balance.draft,
+            cb=hydro_design.cb, cp=hydro_design.cp,
+            cm=hydro_design.cm, cwp=hydro_design.cw,
+            lcb_pct_fwd=hydro_design.lcb,
+            d_bounds_m=(0.35 * balance.draft, 0.75 * balance.draft),
+            max_attempts=4)
     except SpecValidationError as refuse:
         return {"skipped": True, "stage": "propeller",
                 "reason": str(refuse)}
+    eta_sanity = (0.40, 0.85)
+    if not within_band(prop.eta_o, *eta_sanity):
+        return {"skipped": True, "stage": "propeller",
+                "reason": (
+                    f"eta_o {prop.eta_o:.3f} outside the sanity band "
+                    f"{eta_sanity}")}
+    if prop.diameter_m > 0.75 * balance.draft:
+        return {"skipped": True, "stage": "propeller",
+                "reason": (
+                    f"diameter {prop.diameter_m:.2f} m exceeds "
+                    f"0.75 x draft {balance.draft:.2f} m")}
     shaft_power_kw = prop.delivered_power_kw / (
         _efficiency(propeller_block, "shaft_efficiency") * eta_r)
     cav = None
@@ -1707,29 +1690,52 @@ def _run_optimize(args) -> None:
         b_over_t=bt_axis,
         cb=_parse_axis(args.grid_cb),
     )
+    # round-9: the scan parsed the propeller block with raw int()/float()
+    # and `or default` — a bad value surfaced as an "unexpected
+    # ValueError" and a declared 0 silently took the default (the OH-04
+    # pattern).  Same contract as the run path: _number everywhere, an
+    # integral blade count, explicit None handling for the defaults.
+    propeller_block = data.get("propeller") or {}
+    blades_raw = _number("propeller.blades_z",
+                         propeller_block.get("blades_z", 5),
+                         "propeller.blades_z")
+    if blades_raw != int(blades_raw):
+        raise SpecValidationError(
+            "propeller.blades_z", blades_raw, "an integer 2-7",
+            "the blade count is an integer; a fractional blade is not "
+            "a physical propeller.")
+    rpm_raw = propeller_block.get("rpm")
+    shaft_raw = propeller_block.get("shaft_immersion_m")
+    propeller_rpm = (127.0 if rpm_raw is None else _number(
+        "propeller.rpm", rpm_raw, "propeller.rpm"))
+    if propeller_rpm <= 0:
+        raise SpecValidationError(
+            "propeller.rpm", propeller_rpm, "> 0",
+            "a propeller that does not turn produces no thrust; rpm 0 "
+            "used to be silently replaced by the 127 default on the "
+            "scan path (the OH-04 falsy-0 pattern) - refusing instead.")
     config = ScanConfig(
-        kg_m=float(kg_m),
+        kg_m=_number("requirements.kg_m", kg_m, "requirements.kg_m"),
         hard_draft_m=declared_draft if hard_mode else None,
-        flooding_angle_deg=None if flooding is None else float(flooding),
+        flooding_angle_deg=None if flooding is None else _number(
+            "constraints.stability.flooding_angle_deg", flooding,
+            "constraints.stability.flooding_angle_deg"),
         windage_area_m2=weather_block.get("windage_area_m2"),
         windage_lever_z_m=weather_block.get("windage_lever_z_m"),
         bilge_keel_area_m2=float(
             weather_block.get("bilge_keel_area_m2") or 0.0),
         length_waterline_m=weather_block.get("length_waterline_m"),
-        shaft_immersion_m=(
-            float(propeller_block["shaft_immersion_m"])
-            if (propeller_block := (data.get("propeller") or {})).get(
-                "shaft_immersion_m") is not None else None),
-        propeller_blades=int(
-            (data.get("propeller") or {}).get("blades_z", 5)),
-        propeller_aear=float(
-            (data.get("propeller") or {}).get(
-                "expanded_area_ratio", 0.50)),
-        propeller_rpm=float(
-            (data.get("propeller") or {}).get("rpm") or 127.0),
-        relative_rotative_eff=float(
-            (data.get("propeller") or {}).get(
-                "relative_rotative_eff") or 1.0),
+        shaft_immersion_m=None if shaft_raw is None else _number(
+            "propeller.shaft_immersion_m", shaft_raw,
+            "propeller.shaft_immersion_m"),
+        propeller_blades=int(blades_raw),
+        propeller_aear=_number(
+            "propeller.expanded_area_ratio",
+            propeller_block.get("expanded_area_ratio", 0.50),
+            "propeller.expanded_area_ratio"),
+        propeller_rpm=propeller_rpm,
+        relative_rotative_eff=_efficiency(
+            propeller_block, "relative_rotative_eff"),
     )
 
     def progress(done: int, total: int, label: str) -> None:

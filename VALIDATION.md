@@ -361,6 +361,19 @@ These are features of the current stage, not hidden weaknesses:
     correlation do not depend on speed, so ηD is constant along the
     speed solution; the seawater kinematic viscosity is fixed at
     1.18831e-6 m²/s (15 °C).
+    **Correction (2026-09-30 read-through, round 9).** The wetted
+    surface of the 5-38 auxiliary chain had been transcribed with a
+    LINEAR Cm; the book prints sqrt(Cm) (vol. 2, p.59, rendered-scan
+    re-check — the 2026-09-21 page pass missed the radical), agreeing
+    with the 1982 paper and the independent holtrop module.  The code
+    now follows the printed form; a cross-module identity test pins
+    S(propulsion) = S(holtrop) for the same hull.  The DTMB 1712
+    anchors barely move (this ship's Cm 0.994 → S +0.3 %): w 0.3153,
+    t 0.1956, ηh 1.1749; implied ηo 14→17 kn = 0.6664/0.6614/0.6494/
+    0.6324; speed reproduction from the published SHP at the 14 kn
+    ηo calibration: 15 kn −0.06, 16 kn −0.01, 17 kn +0.15 (was
+    −0.03/+0.08/+0.32), 14 kn −0.71 (unchanged, chart-knee
+    declaration stands).  All inside the declared bands.
 15. **Burrill cavitation check (task 3.3, stage 1).** The limit
     line τc(σ) is carried at the book's own four chart-read anchor
     points (tables 6-2 and 8-29; the module refuses σ outside
@@ -818,10 +831,27 @@ These are features of the current stage, not hidden weaknesses:
 | Short-wave amplitudes (lambda/L < 1.0) | recorded as printed diagnostics, NOT gated: measured points 0.04-0.27 scatter around the theory band exactly as in the source's own validation figures (Fig. 16-III) | honest scope declaration |
 | Regression | 448 + 3 tests green; shipped chain and CLI untouched | no numeric drift |
 
+33. **Read-through round 9 (2026-09-30, full-source review): two
+    transcription-fidelity dispositions and four robustness fixes.**
+    An independent full read-through of all 23 modules re-verified
+    the guard/whitelist discipline and found six issues, all
+    dispositioned here.  No acceptance anchor moved outside its
+    declared band.
+
+| ID | Disposition | Check |
+|---|---|---|
+| R9-1 (A) | wetted-surface S of the 5-38 auxiliary chain carried a linear Cm; the book prints sqrt(Cm) (vol. 2, p.59, rendered-scan re-check) — a transcription slip, code corrected to the printed form; AGENTS §5 correction note; cross-module identity test S(propulsion) = S(holtrop) (the holtrop side is anchored to the 1982 paper's own worked example) | test_wetted_surface_matches_holtrop_module; DTMB anchors re-measured inside their bands (item 14 correction note); the TB-001S 192-point acceptance scan re-run: 61 feasible / Pareto 26 / refusal histogram 69-35-18-9 / off-axis 17 ALL unchanged, median reference power 41,336.0 → 41,334.1 kW (−0.005 %) |
+| R9-2 (A) | Ayre table 7-7(a) row 0.60, column 1.2 = 1.0: the BOOK prints 1.0 (vol. 1, p.305, rendered-scan re-check) where the 0.50–0.58 plateau rows print 1.6 — a suspected misprint in the source, kept as printed per the charter; declaration added at the table and in AGENTS §5 | transcription-fidelity pin freezes the printed cell (test_table_7_7a_printed_cell_is_frozen) |
+| R9-3 (B) | the optimum-propeller engines' fallback unpacked a bare eta_o float when the converged midpoint is infeasible (a low-probability TypeError crash); now falls back to the best feasible candidate tuple (scan + golden probes); the dead retry line removed | single-point-series stubs force the fallback in BOTH engines (2 tests) |
+| R9-4 (B) | the optimize task-book parsing bypassed the input contract (raw int()/float(), `rpm or 127.0` — the OH-04 falsy-0 pattern on the scan path); now _number everywhere, integral blades, rpm ≤ 0 refused | 2 contract tests: bad blades readably refused, zero rpm refused not defaulted |
+| R9-5 (B) | the propeller diameter-retry loop existed twice (CLI run / scan) — the two-calibres class that produced the v1.0.4/1.0.5 scan defects; extracted to `propeller.design_propeller_with_diameter_retry`, both call sites rewired (the waterline calibres stay at the callers: run's declared-LWL rule, scan's 1.025·Lpp per candidate) | scan acceptance suites re-run green (test_optimize / test_hard_scan / test_product_review_round6) |
+| R9-6 (B) | documentation drift: the cli.py docstring claimed "no file writes" while --report/--json/--csv write files; README (zh+en) install tag pinned @v1.4.0 with 440 tests and a 1.4.0 citation — synced to v1.6.0 / 451 | grep clean; no numeric change |
+| Regression | full suite green; the committed demo CSV (hydrostatics table) is untouched by R9-1 — the byte-for-byte drift pin passes unchanged | pytest |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 448 tests (440 passed + 8 skipped without the optional extra)
+uv run pytest                        # 457 tests (449 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

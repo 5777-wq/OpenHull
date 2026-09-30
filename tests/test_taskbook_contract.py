@@ -192,3 +192,29 @@ def test_demo_csv_artifact_does_not_drift(tmp_path):
                "--csv", str(fresh)])
     assert rc == 0
     assert fresh.read_bytes() == committed.read_bytes()
+
+
+def test_optimize_bad_blades_refused_readably(tmp_path, capsys):
+    """Round-9 B-2: the optimize path parsed blades_z with raw int() —
+    a bad value surfaced as an "unexpected ValueError".  Same contract
+    as the run path: the field is named, no traceback."""
+    text = BASE.format(tag="BLD").replace("  blades_z: 4",
+                                          "  blades_z: five")
+    path = tmp_path / "BLD.yaml"
+    path.write_text(text, encoding="utf-8")
+    rc = main(["optimize", str(path), "--out", str(tmp_path / "out")])
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "propeller.blades_z" in err and "Traceback" not in err
+
+
+def test_optimize_zero_rpm_refused_not_silently_default(tmp_path, capsys):
+    """Round-9 B-2: `rpm or 127.0` silently replaced a declared 0 rpm
+    with the default — the OH-04 falsy-0 pattern on the scan path."""
+    text = BASE.format(tag="RPM0").replace("  rpm: 100", "  rpm: 0")
+    path = tmp_path / "RPM0.yaml"
+    path.write_text(text, encoding="utf-8")
+    rc = main(["optimize", str(path), "--out", str(tmp_path / "out")])
+    assert rc == 2
+    err = capsys.readouterr().err
+    assert "propeller.rpm" in err and "Traceback" not in err
