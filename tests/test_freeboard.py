@@ -12,7 +12,6 @@ import json
 import pytest
 
 from openhull import (
-    FreeboardResult,
     SpecValidationError,
     TABLE_3_9_BASIC_FREEBOARD,
     minimum_freeboard,

@@ -755,6 +755,26 @@ def _equal_volume_crossing(
     )
 
 
+def _even_keel_draft_of(
+    table: OffsetsTable,
+    displacement_t: float,
+    density: float,
+    top_waterline: float,
+) -> float:
+    """Even-keel draft of a displacement by bisection on the stage-1.4
+    hydrostatics (sec. 5-2 step (2) initial value).  Shared by the GZ
+    curve, the intact criteria and the weather criterion — round 9:
+    the same 60-step bisection used to live three times."""
+    lo_z, hi_z = 0.0, top_waterline
+    for _ in range(60):
+        mid = 0.5 * (lo_z + hi_z)
+        if hydrostatics_at(table, mid, density).displacement < displacement_t:
+            lo_z = mid
+        else:
+            hi_z = mid
+    return 0.5 * (lo_z + hi_z)
+
+
 def gz_curve(
     table: OffsetsTable,
     displacement_t: float,
@@ -906,14 +926,8 @@ def gz_curve(
 
     # initial value per sec. 5-2 step (2): the even-keel draft of the
     # condition, from the stage-1.4 hydrostatics
-    lo_z, hi_z = 0.0, top_waterline
-    for _ in range(60):
-        mid = 0.5 * (lo_z + hi_z)
-        if hydrostatics_at(table, mid, density).displacement < displacement_t:
-            lo_z = mid
-        else:
-            hi_z = mid
-    z_init = 0.5 * (lo_z + hi_z)
+    z_init = _even_keel_draft_of(table, displacement_t, density,
+                                 top_waterline)
 
     arm_by_angle: dict[float, float] = {}
     points: list[GZPoint] = []
@@ -1215,14 +1229,8 @@ def intact_stability_criteria(
     # GM0 at the even-keel draft of the condition (KM from the
     # stage-1.4 hydrostatics; free-surface correction Eq. 4-38)
     top_waterline = float(table.waterlines[-1])
-    lo_z, hi_z = 0.0, top_waterline
-    for _ in range(60):
-        mid = 0.5 * (lo_z + hi_z)
-        if hydrostatics_at(table, mid, density).displacement < displacement_t:
-            lo_z = mid
-        else:
-            hi_z = mid
-    draft = 0.5 * (lo_z + hi_z)
+    draft = _even_keel_draft_of(table, displacement_t, density,
+                                top_waterline)
     km = hydrostatics_at(table, draft, density).km
     fsc = free_surface_correction(tanks, displacement_t)
     gm0 = km - kg_m - fsc
@@ -1615,14 +1623,8 @@ def weather_criterion(
         )
 
     # the condition's even-keel draft and form data
-    lo_z, hi_z = 0.0, top_waterline
-    for _ in range(60):
-        mid = 0.5 * (lo_z + hi_z)
-        if hydrostatics_at(table, mid, density).displacement < displacement_t:
-            lo_z = mid
-        else:
-            hi_z = mid
-    draft = 0.5 * (lo_z + hi_z)
+    draft = _even_keel_draft_of(table, displacement_t, density,
+                                top_waterline)
     hydro = hydrostatics_at(table, draft, density)
     fsc = free_surface_correction(tanks, displacement_t)
     gm0 = hydro.km - kg_m - fsc

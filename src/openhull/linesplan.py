@@ -449,7 +449,7 @@ def lackenby_transform(
     work = table
     new_fore, new_aft = fore, aft
     passes_total = 0
-    for step in range(n_steps):
+    for _step in range(n_steps):
         f_cur, a_cur, cm_cur = area_curve(work)
         goal_cb_s = _table_cb(work) + (cb_goal - cb_parent) / n_steps
         goal_xb_s = 2.0 * _table_lcb_pct(work) / 100.0 \
@@ -459,7 +459,9 @@ def lackenby_transform(
         new_table = work
         dx_last = np.zeros_like(work.stations)
         passes = 0
-        for passes in range(1, min(max_passes, MAX_PASSES) + 1):
+        # `passes` is consumed AFTER the loop (passes_total += passes);
+        # B007 only sees the body, hence the noqa
+        for passes in range(1, min(max_passes, MAX_PASSES) + 1):  # noqa: B007
             new_fore, new_aft = _run_once(f_cur, a_cur, corr_cp, corr_xb,
                                           dl_f, dl_a)
             new_table, dx_last = _carry_table(work, new_fore, new_aft)

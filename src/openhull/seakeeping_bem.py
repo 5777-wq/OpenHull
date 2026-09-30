@@ -323,8 +323,12 @@ def compute_rigid_rao(
     b_extra_roll = 2.0 * roll_mu * inertia_roll * omega_phi
     dissipation = np.diag([0.0, b_extra_roll, 0.0])
     dof_names = [str(d) for d in body.dofs]
-    order = [dof_names.index("Heave"), dof_names.index("Roll"),
-             dof_names.index("Pitch")]
+    # the RAO assembly below indexes these three DOFs by name (round 9:
+    # the dead `order` list that stood here doubled as a hidden check)
+    for required in ("Heave", "Roll", "Pitch"):
+        _require(required in dof_names, "body.dofs", dof_names,
+                 "Heave/Roll/Pitch",
+                 "the rigid-body RAO assembly needs exactly these DOFs")
     solver = cpt.BEMSolver()
     periods = sorted(float(p) for p in periods_s)
     problems = []

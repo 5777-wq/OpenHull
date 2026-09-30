@@ -11,6 +11,7 @@ declared defects — including R_B = 0.049 kN.
 
 import pytest
 
+from openhull.spec import SpecValidationError
 from openhull.holtrop import (holtrop_lcb_from_taskbook,
                               holtrop_mennen_power)
 
@@ -83,12 +84,12 @@ def test_rb_anchor(result):
 
 
 def test_structural_refusals():
-    with pytest.raises(Exception):
+    with pytest.raises(SpecValidationError):
         holtrop_mennen_power(**{**EXAMPLE, "cm": 0.10})
     # derived-Cp refusal: a 30 % displacement drops the waterline-length
     # Cp to 0.17, below the L_R degeneration bound
     slim = {**EXAMPLE}
     slim.pop("cp")
     slim["displacement_volume_m3"] = 37500.0 * 0.3
-    with pytest.raises(Exception):
+    with pytest.raises(SpecValidationError):
         holtrop_mennen_power(**slim)

@@ -147,7 +147,8 @@ openhull rao 任务书.yaml --periods 6,8,12,16,20
 **在 propeller_design 里不在顶层**）；`cavitation_unchecked`（空泡出带
 的结构化说明，此时顶层 `cavitation` 为 null）；`propeller_design.
 feasibility_hint`（可行域提示）；`seakeeping.speed_loss`（Kwon，域外时
-`skipped: true` 带 `reason`）。
+`skipped: true` 带 `reason`）；`freeboard`（载重线干舷校核，
+2026-09-30 起并入 run 链；出 24–365 m 表范围时 `skipped: true` 带 `reason`）。
 
 **可选图表的降级契约**（v1.3.2 起）：静水力曲线图 / 总布置图 / 扫描图
 出不了（绘图依赖残缺）时**链条不中止**——图表路径字段置空或不出现，

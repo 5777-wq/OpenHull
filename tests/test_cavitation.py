@@ -87,7 +87,6 @@ def test_required_area_reproduces_table_6_2_rows_12_to_15():
 
 
 def test_check_cavitation_passes_designed_area():
-    p0_eff = T62["p0_kgf"] * G
     res = check_cavitation(
         T62["thrust_n"], T62["va_ms"], T62["n_rps"], T62["diameter_m"],
         T62["pitch_ratio"], 0.65, hs_m=T62["hs_m"], subtract_vapour=False)
@@ -98,7 +97,6 @@ def test_check_cavitation_passes_designed_area():
 
 
 def test_check_cavitation_reports_shortfall_for_au5_50():
-    p0_eff = T62["p0_kgf"] * G
     res = check_cavitation(
         T62["thrust_n"], T62["va_ms"], T62["n_rps"], T62["diameter_m"],
         T62["pitch_ratio"], 0.50, hs_m=T62["hs_m"], subtract_vapour=False)

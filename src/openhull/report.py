@@ -76,7 +76,7 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
                 f"{_fmt(lo_kn, 2)}–{_fmt(hi_kn, 2)} kn"
                 f"（任务书声明 {_fmt(hint.get('declared_kn'), 2)} kn）；"
                 f"也可用 `openhull optimize` 换主尺度比重扫。")
-        lines.append(f"- 工具原文（保留可溯源）：")
+        lines.append("- 工具原文（保留可溯源）：")
         lines.append("")
         lines.append(f"  > {reason_first}")
         lines.append("")
@@ -108,7 +108,7 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
         ]
         return lines
     lines += [
-        f"- 型号系列：B 系列（Bernitsas 报告 237 转录，三重裁判验证）",
+        "- 型号系列：B 系列（Bernitsas 报告 237 转录，三重裁判验证）",
         f"- 桨径 D = {_fmt(prop.get('diameter_m'), 3)} m，"
         f"螺距比 P/D = {_fmt(prop.get('pitch_ratio'), 4)}，"
         f"叶数 Z = {_fmt(prop.get('blades_z'), 0)}",
@@ -157,9 +157,9 @@ def _section_propeller(prop: dict | None, summary: dict) -> list[str]:
             f"{_fmt(band[1], 3)}] 外（本方案位于{side}），空泡状态"
             f"**未知**。")
         lines.append(
-            f"  - 方向性提示（定性）：把 σ0.7R 拉回带内的常见方向是"
-            f"降低转速 n、加大盘面比 AE/A0、增大轴系浸深 h（三者都使 "
-            f"σ 上升）；请结合总布置与主机选型复核。")
+            "  - 方向性提示（定性）：把 σ0.7R 拉回带内的常见方向是"
+            "降低转速 n、加大盘面比 AE/A0、增大轴系浸深 h（三者都使 "
+            "σ 上升）；请结合总布置与主机选型复核。")
         full_note = " ".join(str(prop["cavitation_note"]).split())
         lines.append(f"  - 工具原文（保留可溯源，不截断）：{full_note}")
     elif prop.get("cavitation_skipped"):
@@ -297,10 +297,10 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
                 f"B/T ≈ {_fmt(required, 3)}"
                 f"（当前 {_fmt(hint['current_b_over_t'], 3)}），{verdict}")
             lines.append(
-                f"  - 口径与限制：保持排水量、Cb 与 L/B 不变（L、B 同步"
-                f"缩放）；一次性估算、未计入重量再平衡（按该值实算的吃水"
-                f"与声明值仍有同量级残差，实测 0.3–1.3%）；B/T 属算法统计"
-                f"参数、任务书无此字段，本工具不自动改动。")
+                "  - 口径与限制：保持排水量、Cb 与 L/B 不变（L、B 同步"
+                "缩放）；一次性估算、未计入重量再平衡（按该值实算的吃水"
+                "与声明值仍有同量级残差，实测 0.3–1.3%）；B/T 属算法统计"
+                "参数、任务书无此字段，本工具不自动改动。")
     if summary.get("draft_is_hard"):
         lines.append(
             f"- 任务书以 `draft_is_hard` 把设计吃水锁定为声明值 "
@@ -311,6 +311,24 @@ def write_report_md(summary: dict, path, chart_path: str | None = None,
     if summary.get("norman_coefficient") is not None:
         lines.append(f"- 诺曼系数 N = {_fmt(summary['norman_coefficient'], 3)}"
                      f"（重量浮力平衡 {summary['iterations']} 次收敛）")
+    fb = summary.get("freeboard")
+    if isinstance(fb, dict) and fb.get("skipped"):
+        # declared skip, per the unchecked-is-not-passed contract
+        lines.append(f"- ⚠ 载重线干舷校核未运行：{fb['reason']}")
+    elif isinstance(fb, dict):
+        verdict_mark = "✅" if fb["verdict"] == "PASS" else "❌"
+        corrections = fb["minimum_freeboard_mm"] - fb["f0"]
+        lines.append(
+            f"- {verdict_mark} 载重线干舷（B 型夏季最小）：规范要求 "
+            f"{fb['minimum_freeboard_mm']:,.0f} mm"
+            f"（基本干舷 F0 {fb['f0']:,.0f} mm + 修正合计 "
+            f"{corrections:,.0f} mm），实际干舷 "
+            f"{fb['actual_freeboard_mm']:,.0f} mm，裕量 "
+            f"{fb['margin_mm']:,.0f} mm → **{fb['verdict']}**")
+        lines.append(
+            "  - 口径注：干舷 = 型深 − 设计吃水；0.85 Ds 处 Cb 按设计吃水 "
+            "Cb 近似（声明近似）；平甲板、标准舷弧、无 Reg.27 折减——"
+            "均偏保守侧。")
     lines.append("")
 
     lines += ["## 2. 静水力表（设计吃水行）", ""]

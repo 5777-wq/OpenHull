@@ -23,7 +23,7 @@ def _summary() -> dict:
             "displacement_t": 6200.0, "waterplane_area_m2": 1720.0,
             "kb_m": 3.1, "bmt_m": 2.4, "km_m": 5.5, "tpc_t_per_cm": 17.6,
             "lcb_pct_lpp": 2.0, "lcf_pct_lpp": 1.0, "cb": 0.7999,
-            "cw": 0.86, "bml_m": 110.0, "lcf_pct_lpp": 1.0,
+            "cw": 0.86, "bml_m": 110.0,
             "cp": 0.86, "cm": 0.93, "mtc_tm_per_cm": 150.0,
         }],
         "stability_criteria": None,

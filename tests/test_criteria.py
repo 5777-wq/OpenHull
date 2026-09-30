@@ -25,7 +25,6 @@ import math
 import pytest
 
 from openhull.cli import main, run_taskbook
-from openhull.hydrostatics import hydrostatics_at
 from openhull.linesplan import parent_to_taskbook
 from openhull.spec import SpecValidationError
 from openhull.stability import (

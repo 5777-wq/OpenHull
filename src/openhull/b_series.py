@@ -6,6 +6,8 @@ the report's own figure 41 and cross-checked it against the NMRI MP687
 measured open-water table and the Ship Theory table 8-12 readings (see
 tests/test_b_series.py and VALIDATION.md).
 """
+from math import log10, pi
+
 # -*- coding: utf-8 -*-
 """
 Wageningen B-series open-water regression (K_T, K_Q, eta_0) — verbatim transcription
@@ -93,9 +95,7 @@ UNREADABLE / UNCERTAIN ITEMS
   property of the published polynomials, not a transcription error.
 """
 
-from math import log10, pi
-
-# ----------------------------------------------------------------------------- 
+# -----------------------------------------------------------------------------
 # Provenance constants
 # -----------------------------------------------------------------------------
 PDF_FILE = "Bernitsas_Ray_Kinley_1981_UM_Report_237.pdf"
@@ -307,8 +307,8 @@ def _poly_base(coeffs, J, PD, AER, Z):
 
 def _poly_delta(coeffs, J, PD, AER, Z, Rn):
     L = log10(Rn) - 0.301  # ASSUMPTION: log10; see module docstring
-    return sum(c * (J ** j) * (PD ** t) * (AER ** u) * (Z ** z) * (L ** l)
-               for c, (j, t, u, z, l), _ in coeffs)
+    return sum(c * (J ** j) * (PD ** t) * (AER ** u) * (Z ** z) * (L ** lg)
+               for c, (j, t, u, z, lg), _ in coeffs)
 
 
 def kt_base(J, PD, AER, Z):

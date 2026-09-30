@@ -197,7 +197,6 @@ def draw_lines_plan(raw: dict, path: str, *,
     z_top = float(heights[i_dwl])        # 1.00 T = design waterline
     z_max = float(heights[-1])           # top drawn waterline
     half = float(np.nanmax(yw[:, i_dwl]))  # max half breadth on the DWL
-    mid = 0.5 * (lpp)                    # midship
     xi = x / lpp
 
     fig = plt.figure(figsize=(15.0, 8.0), dpi=dpi, facecolor="white")

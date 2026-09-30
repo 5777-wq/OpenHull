@@ -75,6 +75,10 @@ the non-circular check**: those drafts never entered any fit.
 
 ### Freeboard (task 1.6)
 
+> Wired into `run` on 2026-09-30 (round-9b): the summary JSON
+> (`freeboard`), the console and report §1 now carry this check on the
+> balance dimensions; see item 34 for the wiring checks.
+
 | Check | Result |
 |---|---|
 | Rule minimum (plain type B, ICLL 1966 as transcribed in Lin Yan Table 3-9) | 6,555.8 mm (F0 4,397 + f2 575.5 + f3 1,583.3) |
@@ -848,10 +852,24 @@ These are features of the current stage, not hidden weaknesses:
 | R9-6 (B) | documentation drift: the cli.py docstring claimed "no file writes" while --report/--json/--csv write files; README (zh+en) install tag pinned @v1.4.0 with 440 tests and a 1.4.0 citation — synced to v1.6.0 / 451 | grep clean; no numeric change |
 | Regression | full suite green; the committed demo CSV (hydrostatics table) is untouched by R9-1 — the byte-for-byte drift pin passes unchanged | pytest |
 
+34. **Round-9b (2026-09-30, same day): the C-level batch — static gate,
+    dedup, and the task-1.6 freeboard wiring.**  All behaviour-
+    preserving except where stated; full suite green and the committed
+    demo CSV byte-pin untouched.
+
+| Item | Disposition | Check |
+|---|---|---|
+| Static-check gate | `[tool.ruff]` (E/F/W/B; E501 long-table lines and B905 zip-strict recorded as policy) + pytest marker registration; the first pass surfaced 89 findings, ALL dispositioned — including one F821 forward-reference in the new shared propeller helper (real slip, caught by the gate on its first run), BEM-layer dead DOF-`order` list replaced by an explicit Heave/Roll/Pitch guard, blind `pytest.raises(Exception)` tightened | `uvx ruff check src tests` clean; suite green after fixes |
+| propeller engine dedup | the scan+golden-section skeleton (with the round-9 candidate-tuple fallback) extracted to `_max_eta_over_j`; both optimum engines are now thin adapters | propeller suites green incl. the two single-point fallback stubs |
+| stability dedup | the three even-keel draft bisections (GZ curve / intact criteria / weather criterion) extracted to `_even_keel_draft_of`, step-identical | gz/criteria/weather suites green (59) |
+| geometry dedup | the three DTMB Table-7 CSV loaders share `_read_dtmb_table` + `_station_xi`; the row-raggedness refusal text preserved | loader/drawing/DXF/linesplan suites green (77) |
+| B007 lesson | renaming a loop variable that is consumed AFTER the loop (`passes_total += passes`) broke 4 chain tests — the noqa now carries the justification comment; recorded so the next lint batch checks post-loop use | the 4 tests re-run green; suite green |
+| freeboard wiring (task 1.6) | `run` computes the type-B summer minimum on the BALANCE dims (one-design-draft rule) → summary JSON `freeboard` (declared `skipped` outside 24–365 m), console block, report §1 entry with the calibre note; scan untouched (declarative check, not a gate) | TB-001 run: F0 4,295.75 (Table 3-9 at the balance 271.63 m), minimum 6,393.5 mm, actual 7,485.5 mm, PASS margin 1,092.0 mm — identities pinned; the module anchor row (280/25/16.5 → 6,555.8 mm, margin 1,944.2 mm) re-pinned; 2 new tests |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 457 tests (449 passed + 8 skipped without the optional extra)
+uv run pytest                        # 459 tests (451 passed + 8 skipped without the optional extra)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

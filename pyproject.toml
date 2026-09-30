@@ -32,3 +32,34 @@ build-backend = "uv_build"
 dev = [
     "pytest>=9.1.1",
 ]
+
+[tool.pytest.ini_options]
+# register the optional-extra marker (v1.0.4 fix: mark, don't
+# importorskip, so "collected" arithmetic stays exact)
+markers = [
+    "seakeeping: needs the optional capytaine extra (deselect with -m 'not seakeeping')",
+]
+
+[tool.ruff]
+# round-9 (2026-09-30): the project's guard/whitelist discipline needed
+# a static-check gate to match.  Pragmatic set: real errors and likely
+# bugs; line length is not enforced (table data and citation blocks
+# carry long lines by design).  Run: `uvx ruff check src tests`
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "B"]
+ignore = [
+    "E501",  # long lines: digitised tables and citation tuples
+    # B905 (zip without strict=): the numeric chains zip grids whose
+    # lengths are fixed by construction; converting 38 sites to
+    # strict=True is a behaviour change (silent truncation -> refusal)
+    # that the no-numeric-drift discipline does not allow in a lint
+    # batch.  Recorded as an open direction.
+    "B905",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# __init__ re-exports names deliberately (public API facade)
+"src/openhull/__init__.py" = ["F401"]

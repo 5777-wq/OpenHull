@@ -170,3 +170,59 @@ def test_report_and_arrangement_flags(tmp_path, capsys):
     assert "design report ->" in captured
     assert "arrangement DXF ->" in captured
     assert "arrangement chart ->" in captured
+
+
+def test_freeboard_wired_into_run(summary):
+    """Round 9: the task-1.6 load-line check has been library-complete
+    and validated since v0.1.0 (VALIDATION, Freeboard section) — the
+    run chain now surfaces it.  The TB-001 numbers are the VALIDATION
+    anchor row: F0 4,397 + f2 575.5 + f3 1,583.3 = 6,556 mm minimum,
+    actual 8,500 mm, PASS with 1,944 mm margin."""
+    fb = summary["freeboard"]
+    assert not fb.get("skipped")
+    assert fb["ship_type"] == "B"
+    # the chain calibre: the check runs on the BALANCE dims (the
+    # one-design-draft rule), not the declared task-book sizes — so
+    # F0 interpolates Table 3-9 at the balance Lpp 271.63 m
+    # (270 -> 280: 4276 + 0.1633 x 121), and the actual freeboard is
+    # balance depth - balance draft
+    assert fb["f0"] == pytest.approx(4295.75, abs=0.5)
+    assert fb["f1"] == fb["f4"] == fb["f5"] == 0.0
+    assert fb["f2"] > 0 and fb["f3"] > 0
+    assert fb["minimum_freeboard_mm"] == pytest.approx(
+        fb["f0"] + fb["f2"] + fb["f3"], abs=1e-9)
+    assert fb["actual_freeboard_mm"] == pytest.approx(
+        (summary["depth_m"] - summary["draft_m"]) * 1000.0, abs=1.0)
+    assert fb["verdict"] == "PASS" and fb["margin_mm"] > 0
+    # the module itself still reproduces the VALIDATION anchor row
+    # (declared task-book sizes: L 280 / Ds 25 / T 16.5)
+    from openhull.freeboard import minimum_freeboard
+    anchor = minimum_freeboard(
+        lpp=280.0, ship_type="B", depth_s=25.0, cb_at_085d=0.858,
+        actual_freeboard_mm=8500.0)
+    assert anchor.f0 == pytest.approx(4397.0, abs=0.5)
+    assert anchor.minimum_freeboard_mm == pytest.approx(6555.8, abs=1.0)
+    assert anchor.verdict == "PASS"
+    assert anchor.margin_mm == pytest.approx(1944.2, abs=2.0)
+
+
+def test_freeboard_report_and_console(tmp_path, capsys):
+    """The report restates the freeboard verdict and the console
+    declares it; a run WITHOUT the section would be the silent-drop
+    pattern the unchecked-is-not-passed contract forbids."""
+    import io
+
+    report = tmp_path / "r.md"
+    rc = main(["run", TASKBOOK, "--report", str(report)])
+    assert rc == 0
+    text = report.read_text(encoding="utf-8")
+    assert "载重线干舷" in text and "PASS" in text
+    out = io.StringIO()
+    saved = __import__("sys").stdout
+    import sys
+    sys.stdout = out
+    try:
+        main(["run", TASKBOOK])
+    finally:
+        sys.stdout = saved
+    assert "load-line freeboard" in out.getvalue()

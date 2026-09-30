@@ -16,7 +16,6 @@ from openhull import b_series
 from openhull.propeller import (
     b_series_open_water,
     check_cavitation,
-    solve_optimal_propeller,
     terminal_design,
 )
 from openhull.spec import SpecValidationError

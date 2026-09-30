@@ -166,8 +166,9 @@ def _half_breadths_at(table: OffsetsTable, draft: float) -> np.ndarray:
     """Half-breadths at an arbitrary draft, linearly interpolated in z.
 
     Between tabulated waterlines this is an O(dz^2) approximation of
-    the true section slope; with 33 waterlines the error is far below
-    the acceptance tolerances (documented stage-1 approximation).
+    the true section slope; with the packaged grid's 27 waterlines the
+    error is far below the acceptance tolerances (documented stage-1
+    approximation).
     """
     return np.array(
         [np.interp(draft, table.waterlines, row) for row in table.half_breadths]

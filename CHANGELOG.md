@@ -6,6 +6,42 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ## [Unreleased]
 
+### Added
+
+- **The load-line freeboard check is wired into `run`** (task 1.6
+  discharge; library-complete and validated since v0.1.0, previously
+  reachable only as a library call): the chain now computes the type-B
+  summer minimum per Lin Yan Table 3-9 + the five corrections on the
+  BALANCE dimensions and reports it in the summary JSON
+  (`freeboard`, with a declared `skipped` state outside the 24–365 m
+  table range), the console, and report section 1.  The report/JSON
+  numbers use the balance calibre (one-design-draft rule); the
+  module-level VALIDATION anchor row (L 280 / Ds 25 / T 16.5 →
+  6,555.8 mm minimum, PASS, 1,944 mm margin) is re-pinned.
+
+### Changed
+
+- **Static-check gate** (round 9 read-through follow-up): `[tool.ruff]`
+  + `[tool.pytest.ini_options]` (marker registration) land in
+  pyproject.toml.  The first pass over src+tests surfaced 89 findings —
+  all dispositioned: 1 forward-reference slip in the new shared
+  propeller helper, 2 except-clause hygiene fixes (`from error`), a
+  dead DOF-order list in the BEM layer replaced by an explicit
+  Heave/Roll/Pitch membership guard, dead stores and unused imports
+  removed, blind `pytest.raises(Exception)` tightened to
+  `SpecValidationError`, and `zip`-without-strict recorded as a policy
+  ignore (converting 38 numeric-chain sites is a behaviour change,
+  not a lint batch).
+- **Duplicate-code extraction** (round 9 follow-up, all behaviour-
+  preserving): the two optimum-propeller engines share one
+  scan+golden-section skeleton (`propeller._max_eta_over_j`); the
+  three even-keel draft bisections of stability.py share
+  `_even_keel_draft_of`; the three DTMB Table-7 CSV loaders of
+  geometry.py share `_read_dtmb_table`/`_station_xi`; magic numbers
+  named (`METRIC_HP_TO_KW` with the book citation, seawater density
+  via `SEAWATER_DENSITY`); trivia (stale "33 waterlines" comment,
+  `Tuple3` used-before-definition, `__import__` leftovers) cleaned.
+
 ### Fixed
 
 - **Read-through round 9 (2026-09-30, full-source review)** — six

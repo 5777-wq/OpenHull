@@ -76,6 +76,9 @@ _AYRE_BAND = (0.50, 1.20)
 _ETA_SANITY = (0.40, 0.85)
 
 
+Tuple3 = tuple[float, float, int]
+
+
 @dataclass(frozen=True)
 class SweepGrid:
     """Three-axis grid of dimension-ratio candidates (lo, hi, steps)."""
@@ -89,9 +92,6 @@ class SweepGrid:
             for bot in _axis(self.b_over_t):
                 for cb in _axis(self.cb):
                     yield round(lob, 6), round(bot, 6), round(cb, 6)
-
-
-Tuple3 = tuple[float, float, int]
 
 
 def _axis(spec: Tuple3) -> list[float]:

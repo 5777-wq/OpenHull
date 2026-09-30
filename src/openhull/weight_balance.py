@@ -87,7 +87,7 @@ from typing import Any
 
 from .main_dimensions import (B_OVER_T_BAND, RatioParameters,
                               _chain_solve)
-from .spec import ShipSpec, SpecValidationError
+from .spec import SEAWATER_DENSITY, ShipSpec, SpecValidationError
 
 # ---------------------------------------------------------------------------
 # Registry metadata
@@ -656,7 +656,7 @@ def solve_weight_balance(
             converged=True, iterations=1, algorithm_id=info.algorithm_id,
             citation=info.citation, deadweight_t=dw,
             displacement_t=displacement,
-            displacement_volume_m3=displacement / 1.025,
+            displacement_volume_m3=displacement / SEAWATER_DENSITY,
             lightship_t=lightship, lightship_with_margin_t=lightship,
             lightship_margin_ratio=0.0, lpp=dims.lpp, beam=dims.beam,
             depth=dims.depth, draft=dims.draft, cb=dims.cb,
@@ -710,7 +710,7 @@ def solve_weight_balance(
     return WeightBalanceResult(
         converged=True, iterations=len(steps), algorithm_id=info.algorithm_id,
         citation=info.citation, deadweight_t=dw, displacement_t=delta,
-        displacement_volume_m3=delta / 1.025,
+        displacement_volume_m3=delta / SEAWATER_DENSITY,
         lightship_t=final_breakdown.total_t,
         lightship_with_margin_t=final_breakdown.total_t * (1.0 + margin),
         lightship_margin_ratio=margin, lpp=final_dims.lpp,

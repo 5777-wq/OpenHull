@@ -6,7 +6,6 @@ cover the chain integrity, the declared refusal gates, determinism and
 the Pareto extraction.
 """
 
-import dataclasses
 import math
 
 import pytest

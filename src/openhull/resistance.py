@@ -62,6 +62,10 @@ AYRE_V_SQRT_L_MAX = 1.20
 #: feasibility hints (review 2026-09-25, P1-2/P1-3)
 C0_FAMILY_BAND = (4.88, 6.41)
 
+#: metric horsepower -> kW, the book's own rounding in Eq. 7-26
+#: (the table 7-8 worked example pins the conversion)
+METRIC_HP_TO_KW = 0.735
+
 
 @dataclass(frozen=True)
 class ResistanceAlgorithmInfo:
@@ -576,7 +580,10 @@ def ayre_effective_power(
         AyreCorrection("Lwl correction", pct, delta4, c_after)
     )
 
-    pe = displacement_t**0.64 * speed_kn**3 / c_after * 0.735
+    # Eq. 7-26 prints x0.735: metric horsepower -> kW as the book
+    # rounds it (the 7-8 worked example pins the conversion)
+    pe = (displacement_t**0.64 * speed_kn**3 / c_after
+          * METRIC_HP_TO_KW)
     return AyreResult(
         displacement_t=displacement_t,
         speed_kn=speed_kn,

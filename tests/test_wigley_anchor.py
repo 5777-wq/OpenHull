@@ -245,8 +245,8 @@ def test_wigley_zero_speed_rao_vs_table10(model, hydro, capsys):
 
     print(f"\nWigley {model} (capytaine {capytaine.__version__}) vs "
           f"Tables 10-{model}:")
-    print(f"  lam/L  heave BEM/exp   pitch BEM/exp   "
-          f"dphi rep/capt [deg]")
+    print("  lam/L  heave BEM/exp   pitch BEM/exp   "
+          "dphi rep/capt [deg]")
     computed = {}
     for lam in sorted(TABLE10[model]):
         rep_z, rep_th, rep_dphi = TABLE10[model][lam]

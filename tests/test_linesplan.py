@@ -167,8 +167,9 @@ def test_loader_matches_report_area_fraction_column():
     section) matches the table's own area_fraction column."""
     import csv
 
-    lines = [l for l in CSV.read_text(encoding="utf-8-sig").splitlines()
-             if l.strip() and not l.startswith("#")]
+    lines = [line for line in
+             CSV.read_text(encoding="utf-8-sig").splitlines()
+             if line.strip() and not line.startswith("#")]
     rows = list(csv.reader(lines))
     col = rows[0].index("area_fraction")
     frac = {r[0]: float(r[col]) for r in rows[1:]
@@ -177,7 +178,7 @@ def test_loader_matches_report_area_fraction_column():
     table = series60()
     fore, aft, _cm = area_curve(table)
     worst = 0.0
-    for i, x in enumerate(table.stations):
+    for _i, x in enumerate(table.stations):
         station = 20.0 * (1.0 - x / table.lpp)
         name = "FP" if station < 1e-6 else (
             "AP" if station > 20 - 1e-6 else
@@ -267,8 +268,7 @@ def test_transformed_table_respects_offsets_invariants():
     assert np.all(new_table.half_breadths >= 0.0)
     assert np.all(new_table.half_breadths <= new_table.beam / 2 + 1e-9)
     # the parallel body (detected length) must not have moved
-    mid = new_table.stations.size // 2
-    n_mid = int(fore_l := 0) or mid  # parallel band around midship
+    mid = new_table.stations.size // 2  # parallel band around midship
     half_span = int(round(0.15 * mid))
     assert np.allclose(
         new_table.half_breadths[mid - half_span:mid + half_span + 1, -1],

@@ -38,7 +38,7 @@ def test_dxf_roundtrips_through_ezdxf(dxf_path):
 
 def test_dxf_has_the_planned_layers(dxf_path):
     doc = ezdxf.readfile(str(dxf_path))
-    names = {l.dxf.name for l in doc.layers}
+    names = {layer.dxf.name for layer in doc.layers}
     assert set(DXF_LAYERS) <= names
 
 

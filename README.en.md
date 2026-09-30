@@ -34,6 +34,7 @@ runs the whole preliminary-design chain and produces:
 | hull form | digitised Series 60 parent + Lackenby transformation, real offsets |
 | hydrostatics | tables, Bonjean, textbook-layout hydrostatic curves chart |
 | stability | large-angle GZ, IMO 2008 IS Code 2.2 criteria, severe wind & rolling (2.3) |
+| freeboard | load-line type-B summer minimum check (ICLL 1966 transcription, in the run chain) |
 | performance | Ayre resistance, Holtrop propulsion factors, B-series propeller design |
 | design space | ratio-grid scan with per-stage refusal records and a Pareto front |
 | seakeeping | textbook natural periods & resonance verdicts; zero-speed RAOs via capytaine (optional) |

@@ -86,7 +86,7 @@ def test_parent_contrast_margin_under_default_floor():
 def test_parent_parallel_middle_body_detected():
     rep = check_fairness(series60(), z_limit=DRAFT)
     assert rep.parallel_segments, "Series 60 has a parallel middle body"
-    for z, x_from, x_to in rep.parallel_segments:
+    for _z, x_from, x_to in rep.parallel_segments:
         assert 0.0 < x_from < x_to < LPP
     widths = [x_to - x_from for _, x_from, x_to in rep.parallel_segments]
     assert min(widths) > 1.5 * _dx(series60().stations)

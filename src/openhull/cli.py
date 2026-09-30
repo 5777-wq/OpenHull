@@ -37,14 +37,15 @@ from pathlib import Path
 
 import yaml
 
+from .freeboard import minimum_freeboard
 from .geometry import jbc_parent_offsets  # noqa: F401  (1.x fitted parent,
 #   kept for the validation tests; the run chain uses real offsets - 2.6)
 from .hydrostatics import hydrostatic_draft_rows, hydrostatics_table
 from .optimize import (
     ScanConfig,
-    ScanResult,
     SweepGrid,
     design_space_scan,
+    pareto_front,
     write_tradeoff_chart,
 )
 from .linesplan import parent_to_taskbook
@@ -61,7 +62,6 @@ from .seakeeping import estimate_seakeeping, kwon_speed_loss_percent
 from .resistance import (AYRE_V_SQRT_L_MAX, AYRE_V_SQRT_L_MIN,
                          C0_FAMILY_BAND, admiralty_corridor,
                          ayre_effective_power)
-from .spec import SEAWATER_DENSITY
 from .spec import (knots_to_ms, within_band, ShipSpec,
                    SpecValidationError)
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
@@ -887,6 +887,23 @@ def run_taskbook(taskbook_path: str,
                 seakeeping_summary["speed_loss"] = {
                     "skipped": True, "reason": str(refused)}
 
+    # task 1.6 wired into the chain (round 9): the load-line freeboard
+    # check has been library-complete and validated since v0.1.0 — the
+    # run now surfaces it.  Bulk carriers are B-type ships; the module's
+    # plain type-B minimum is the conservative side of the verdict.
+    freeboard_summary: dict | None = None
+    try:
+        freeboard_summary = minimum_freeboard(
+            lpp=balance.lpp,
+            ship_type="B",
+            depth_s=balance.depth,
+            cb_at_085d=hydro_design.cb,
+            actual_freeboard_mm=(balance.depth - balance.draft) * 1000.0,
+        ).to_dict()
+    except SpecValidationError as refuse:
+        # declared skip, per the unchecked-is-not-passed contract
+        freeboard_summary = {"skipped": True, "reason": str(refuse)}
+
     hydro_curve_chart_path = None
     chart_notes: list[str] = []
     if hydro_curve_chart:
@@ -965,6 +982,7 @@ def run_taskbook(taskbook_path: str,
         "weather_criterion": weather_summary,
         "propeller_design": propeller_summary,
         "seakeeping": seakeeping_summary,
+        "freeboard": freeboard_summary,
         "hydrostatic_curve_chart": hydro_curve_chart_path,
         "arrangement": arrangement.to_dict(),
         **({"chart_notes": chart_notes} if chart_notes else {}),
@@ -1094,6 +1112,21 @@ def _print_summary(summary: dict) -> None:
             f"{weather['area_b_mrad']:.4f} m*rad; overall: "
             f"{'ALL PASS' if weather['all_passed'] else 'FAILURES PRESENT'}"
         )
+    freeboard = summary.get("freeboard")
+    if freeboard is not None:
+        print("-" * 64)
+        if freeboard.get("skipped"):
+            print(f"load-line freeboard: SKIPPED - {freeboard['reason']}")
+        else:
+            print("load-line freeboard (type B, summer minimum):")
+            print(
+                f"  F0 {freeboard['f0']:,.0f} mm + corrections "
+                f"{freeboard['minimum_freeboard_mm'] - freeboard['f0']:,.0f} "
+                f"mm = minimum {freeboard['minimum_freeboard_mm']:,.0f} mm; "
+                f"actual {freeboard['actual_freeboard_mm']:,.0f} mm -> "
+                f"{freeboard['verdict']} "
+                f"(margin {freeboard['margin_mm']:,.0f} mm)"
+            )
     seakeep = summary.get("seakeeping")
     if seakeep is not None:
         print("-" * 64)
@@ -1458,7 +1491,7 @@ def _run_rao(args) -> None:
         )
     except CapytaineUnavailable as error:
         print(f"error: {error}", file=sys.stderr)
-        raise SystemExit(2)
+        raise SystemExit(2) from error
     if args.json:
         print(json.dumps(result.to_dict(), indent=2, ensure_ascii=False))
         return
@@ -1493,7 +1526,7 @@ def _parse_axis(spec: str) -> tuple[float, float, int]:
     except ValueError as error:
         raise SpecValidationError(
             "grid axis", spec, "lo:hi:steps  (e.g. 5.5:8.0:6)",
-            "all three parts must be numbers.")
+            "all three parts must be numbers.") from error
     if lo > hi or steps < 1:
         raise SpecValidationError(
             "grid axis", spec, "lo <= hi and steps >= 1",
@@ -1756,14 +1789,14 @@ def _run_optimize(args) -> None:
         "l_over_b", "b_over_t", "cb", "lpp_m", "beam_m", "draft_m",
         "depth_m", "displacement_t", "gm_m", "gz_max_m"]
     with csv_path.open("w", encoding="utf-8-sig", newline="") as fh:
-        writer = __import__("csv").DictWriter(fh, fieldnames=keys)
+        writer = csv.DictWriter(fh, fieldnames=keys)
         writer.writeheader()
         writer.writerows(rows)
     # full rejected-point export: the scan's zero-extrapolation promise
     # only reaches the user if the refusals themselves are in the file
     rejected_path = out_dir / "rejected_points.csv"
     with rejected_path.open("w", encoding="utf-8-sig", newline="") as fh:
-        writer = __import__("csv").DictWriter(
+        writer = csv.DictWriter(
             fh, fieldnames=["l_over_b", "b_over_t", "cb", "stage",
                             "reason"])
         writer.writeheader()
@@ -1776,9 +1809,7 @@ def _run_optimize(args) -> None:
     chart_written, chart_note = _write_optional_chart(
         lambda: write_tradeoff_chart(result, chart_path),
         chart_path, "scan chart")
-    front = [c.to_dict() for c in __import__(
-        "openhull.optimize", fromlist=["pareto_front"]).pareto_front(
-        result.feasible)]
+    front = [c.to_dict() for c in pareto_front(result.feasible)]
     # the stage-only histogram hides WHY points were refused: 192
     # refusals can be "3 systematic gaps + 1 physical conclusion".
     # Export a second breakdown by violating field (parsed from the

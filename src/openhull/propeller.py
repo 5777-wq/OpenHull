@@ -44,9 +44,10 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Callable, Sequence, Tuple
+from typing import Callable, Tuple
 
 from . import b_series
+from .propulsion import PropulsionFactors
 from .spec import SpecValidationError
 
 __all__ = [
@@ -382,6 +383,61 @@ def _check_diameter_band(
             "unit) against each other.")
 
 
+def _max_eta_over_j(
+    evaluate: Callable[[float], tuple | None],
+    j_lo: float,
+    j_hi: float,
+    n_scan: int,
+    refuse: Callable[[], Exception],
+) -> tuple[tuple, float]:
+    """Coarse uniform J-scan + golden-section refinement, shared by the
+    two optimum engines (round 9: the scan/best-tracking/golden loop
+    used to live twice, and only the power-led copy carried the fixed
+    fallback).  Returns (best candidate tuple, converged J).
+
+    ``evaluate`` returns None at infeasible J; the winner is the best
+    feasible CANDIDATE TUPLE ever seen (scan + golden probes), falling
+    back to it when the converged midpoint itself is infeasible — the
+    previous code fell back to a bare eta_o float and crashed unpacking.
+    ``refuse`` raises the engine's own SpecValidationError when the
+    scan finds no admissible J at all.
+    """
+    scan = [evaluate(j_lo + (j_hi - j_lo) * i / n_scan)
+            for i in range(n_scan + 1)]
+    best_i, best_cand, best_eta = None, None, -math.inf
+    for i, cand in enumerate(scan):
+        if cand and cand[0] > best_eta:
+            best_i, best_cand, best_eta = i, cand, cand[0]
+    if best_cand is None:
+        raise refuse()
+    golden = (math.sqrt(5.0) - 1.0) / 2.0
+    a = j_lo + (j_hi - j_lo) * max(best_i - 1, 0) / n_scan
+    b = j_lo + (j_hi - j_lo) * min(best_i + 1, n_scan) / n_scan
+    c = b - golden * (b - a)
+    dd = a + golden * (b - a)
+    fc, fd = evaluate(c), evaluate(dd)
+    for _ in range(60):
+        if fc is None:
+            a = c
+        elif fd is None:
+            b = dd
+        elif fc[0] >= fd[0]:
+            b, dd, fd = dd, c, fc
+            c = b - golden * (b - a)
+            fc = evaluate(c)
+        else:
+            a, c, fc = c, dd, fd
+            dd = a + golden * (b - a)
+            fd = evaluate(dd)
+        if b - a < 1e-7:
+            break
+        for cand in (fc, fd):
+            if cand and cand[0] > best_eta:
+                best_cand, best_eta = cand, cand[0]
+    j_best = 0.5 * (a + b)
+    return evaluate(j_best) or best_cand, j_best
+
+
 def solve_optimal_propeller(
     delivered_power_kw: float,
     va_ms: float,
@@ -431,50 +487,17 @@ def solve_optimal_propeller(
             return None
         return (series.eta_o(j, pd), d, pd, kt, kq_required)
 
-    # coarse uniform scan over J, then golden-section refinement
-    scan = [evaluate(j_lo + (j_hi - j_lo) * i / n_scan)
-            for i in range(n_scan + 1)]
-    best_i, best_cand, best_eta = None, None, -math.inf
-    for i, cand in enumerate(scan):
-        if cand and cand[0] > best_eta:
-            best_i, best_cand, best_eta = i, cand, cand[0]
-    if best_cand is None:
-        raise SpecValidationError(
+    def refuse() -> Exception:
+        return SpecValidationError(
             "diameter", d_bounds_m,
             "an admissible advance coefficient inside the series domain",
             "no diameter in the scanned band yields an advance "
             "coefficient inside the series domain while absorbing the "
             "demanded torque - the operating point is outside the "
             "series envelope.")
-    golden = (math.sqrt(5.0) - 1.0) / 2.0
-    a = j_lo + (j_hi - j_lo) * max(best_i - 1, 0) / n_scan
-    b = j_lo + (j_hi - j_lo) * min(best_i + 1, n_scan) / n_scan
-    c = b - golden * (b - a)
-    dd = a + golden * (b - a)
-    fc, fd = evaluate(c), evaluate(dd)
-    for _ in range(60):
-        if fc is None:
-            a = c
-        elif fd is None:
-            b = dd
-        elif fc[0] >= fd[0]:
-            b, dd, fd = dd, c, fc
-            c = b - golden * (b - a)
-            fc = evaluate(c)
-        else:
-            a, c, fc = c, dd, fd
-            dd = a + golden * (b - a)
-            fd = evaluate(dd)
-        if b - a < 1e-7:
-            break
-        for cand in (fc, fd):
-            if cand and cand[0] > best_eta:
-                best_cand, best_eta = cand, cand[0]
-    j_best = 0.5 * (a + b)
-    # round-9 fix: the fallback is the best feasible CANDIDATE TUPLE
-    # (scan + golden probes); the previous code fell back to the bare
-    # best eta_o float and crashed unpacking it
-    result = evaluate(j_best) or best_cand
+
+    result, j_best = _max_eta_over_j(
+        evaluate, j_lo, j_hi, n_scan, refuse)
     eta, d, pd, kt, kq = result
     thrust = rho * n_rps ** 2 * d ** 4 * kt
     return OptimumPropeller(
@@ -568,47 +591,16 @@ def solve_optimal_propeller_for_thrust(
             return None
         return (eta, d, pd, kt_required, kq)
 
-    scan = [evaluate(j_lo + (j_hi - j_lo) * i / n_scan)
-            for i in range(n_scan + 1)]
-    best_i, best_cand, best_eta = None, None, -math.inf
-    for i, cand in enumerate(scan):
-        if cand and cand[0] > best_eta:
-            best_i, best_cand, best_eta = i, cand, cand[0]
-    if best_cand is None:
-        raise SpecValidationError(
+    def refuse() -> Exception:
+        return SpecValidationError(
             "thrust_n", thrust_n,
             "an admissible advance coefficient inside the series domain",
             "no diameter in the scanned band produces the demanded "
             "thrust with a pitch inside the series envelope - the "
             "operating point is outside the series envelope.")
-    golden = (math.sqrt(5.0) - 1.0) / 2.0
-    a = j_lo + (j_hi - j_lo) * max(best_i - 1, 0) / n_scan
-    b = j_lo + (j_hi - j_lo) * min(best_i + 1, n_scan) / n_scan
-    c = b - golden * (b - a)
-    dd = a + golden * (b - a)
-    fc, fd = evaluate(c), evaluate(dd)
-    for _ in range(60):
-        if fc is None:
-            a = c
-        elif fd is None:
-            b = dd
-        elif fc[0] >= fd[0]:
-            b, dd, fd = dd, c, fc
-            c = b - golden * (b - a)
-            fc = evaluate(c)
-        else:
-            a, c, fc = c, dd, fd
-            dd = a + golden * (b - a)
-            fd = evaluate(dd)
-        if b - a < 1e-7:
-            break
-        for cand in (fc, fd):
-            if cand and cand[0] > best_eta:
-                best_cand, best_eta = cand, cand[0]
-    j_best = 0.5 * (a + b)
-    # round-9 fix: fall back to the best feasible candidate tuple, not
-    # the bare best eta_o float (which crashed unpacking)
-    result = evaluate(j_best) or best_cand
+
+    result, j_best = _max_eta_over_j(
+        evaluate, j_lo, j_hi, n_scan, refuse)
     eta, d, pd, kt, kq = result
     thrust = rho * n_rps ** 2 * d ** 4 * kt
     delivered_kw = 2.0 * math.pi * n_rps * (
@@ -647,7 +639,7 @@ def design_propeller_with_diameter_retry(
     lcb_pct_fwd: float,
     d_bounds_m: Tuple[float, float],
     max_attempts: int = 4,
-) -> Tuple["PropulsionFactors", OptimumPropeller]:
+) -> Tuple[PropulsionFactors, OptimumPropeller]:
     """Thrust-led propeller design at one operating point, shared by
     the CLI run and the design-space scan (round 9: the two call sites
     used to carry near-identical copies of this retry loop — the same
@@ -663,7 +655,7 @@ def design_propeller_with_diameter_retry(
     task-book value or 1.025*Lpp; scan: each candidate's own
     1.025*Lpp) and the failure presentation.
     """
-    from .propulsion import PropulsionFactors, propulsion_factors
+    from .propulsion import propulsion_factors
 
     d_guess = 0.55 * draft_m
     last_error: SpecValidationError | None = None

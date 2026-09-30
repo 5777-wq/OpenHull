@@ -11,7 +11,6 @@ Layers:
   fit - recovered by the Eqs.(3-25)/(3-26) iteration within 2.5 %.
 """
 
-import dataclasses
 import json
 
 import numpy as np

@@ -100,14 +100,14 @@ def holtrop_mennen_power(
     transcription.  Raises SpecValidationError outside the structural
     domain (non-positive geometry, Cp where the printed formulae
     degenerate)."""
-    l = lwl_m
+    lwl = lwl_m
     t = draft_m
     tf = draft_fp_m if draft_fp_m is not None else t
     nabla = displacement_volume_m3
     v_ms = speed_kn * 1852.0 / 3600.0
-    if l <= 0 or beam_m <= 0 or t <= 0 or nabla <= 0:
+    if lwl <= 0 or beam_m <= 0 or t <= 0 or nabla <= 0:
         raise SpecValidationError(
-            "holtrop geometry", (l, beam_m, t, nabla),
+            "holtrop geometry", (lwl, beam_m, t, nabla),
             "all positive",
             "the method needs a positive length, breadth, draught and "
             "displacement volume.")
@@ -122,7 +122,7 @@ def holtrop_mennen_power(
     # with nabla/(Lpp·B·T) 0.5859 and nabla/(L·B·T) 0.5716); when
     # undeclared they derive on the waterline length and the calibre is
     # stated in the output
-    cp_derived = nabla / (l * beam_m * t)
+    cp_derived = nabla / (lwl * beam_m * t)
     cp = cp_derived if cp is None else float(cp)
     cb = cp_derived if cb_waterline is None else float(cb_waterline)
     if cp <= 0.25:
@@ -134,7 +134,7 @@ def holtrop_mennen_power(
         raise SpecValidationError(
             "cp", cp, "Cp < 0.95",
             "the form-factor formula divides by (0.95 − Cp)^0.521448.")
-    lcb_h = holtrop_lcb_from_taskbook(lcb_pct_lpp, lpp_m, l)
+    lcb_h = holtrop_lcb_from_taskbook(lcb_pct_lpp, lpp_m, lwl)
     base_term = 1.0 - cp + 0.0225 * lcb_h        # form factor (p. 166)
     i_e_term = 1.0 - cp - 0.0225 * lcb_h         # i_E regression (p. 167)
     if base_term <= 0 or i_e_term <= 0:
@@ -144,8 +144,8 @@ def holtrop_mennen_power(
             "half-angle-of-entrance formulae.")
 
     # run length, c12, c13, form factor 1+k1 (p. 166)
-    lr = l * (1.0 - cp + 0.06 * cp * lcb_h / (4.0 * cp - 1.0))
-    t_over_l = t / l
+    lr = lwl * (1.0 - cp + 0.06 * cp * lcb_h / (4.0 * cp - 1.0))
+    t_over_l = t / lwl
     if t_over_l > 0.05:
         c12 = t_over_l ** 0.2228446
     elif t_over_l > 0.02:
@@ -159,13 +159,13 @@ def holtrop_mennen_power(
                          * base_term ** 0.6906)
 
     # wetted area (p. 166-167)
-    wetted_area = (l * (2.0 * t + beam_m) * math.sqrt(cm)
+    wetted_area = (lwl * (2.0 * t + beam_m) * math.sqrt(cm)
                    * (0.453 + 0.4425 * cb - 0.2862 * cm
                       - 0.003467 * beam_m / t + 0.3696 * cwp)
                    + 2.38 * bulb_area_m2 / cb)
 
     # friction (ITTC-1957)
-    reynolds = v_ms * l / KINEMATIC_VISCOSITY
+    reynolds = v_ms * lwl / KINEMATIC_VISCOSITY
     cf = 0.075 / (math.log10(reynolds) - 2.0) ** 2
     r_friction = 0.5 * density_kg_m3 * v_ms ** 2 * wetted_area * cf
 
@@ -176,11 +176,11 @@ def holtrop_mennen_power(
     # half angle of entrance (p. 167) — the paper's own replacement
     # regression (the [1] original could go negative)
     i_e = 1.0 + 89.0 * math.exp(
-        -(l / beam_m) ** 0.80856
+        -(lwl / beam_m) ** 0.80856
         * (1.0 - cwp) ** 0.30484
         * i_e_term ** 0.6367
         * (lr / beam_m) ** 0.34574
-        * (100.0 * nabla / l ** 3) ** 0.16302)
+        * (100.0 * nabla / lwl ** 3) ** 0.16302)
 
     # bulb coefficients (p. 167-168)
     if bulb_area_m2 > 0:
@@ -194,31 +194,31 @@ def holtrop_mennen_power(
 
     # wave resistance (p. 167): R_W = c1 c2 c5 nabla rho g
     #                                  * exp{m1 Fn^d + m2 cos(lambda Fn^-2)}
-    bl = beam_m / l
+    bl = beam_m / lwl
     if bl < 0.11:
         c7 = 0.229577 * bl ** 0.33333
     elif bl <= 0.25:
         c7 = bl
     else:
-        c7 = 0.5 - 0.0625 * l / beam_m
-    if l / beam_m < 12:
-        lam = 1.446 * cp - 0.03 * l / beam_m
+        c7 = 0.5 - 0.0625 * lwl / beam_m
+    if lwl / beam_m < 12:
+        lam = 1.446 * cp - 0.03 * lwl / beam_m
     else:
         lam = 1.446 * cp - 0.36
     if cp < 0.80:
         c16 = 8.07981 * cp - 13.8673 * cp ** 2 + 6.984388 * cp ** 3
     else:
         c16 = 1.73014 - 0.7067 * cp
-    m1 = (0.0140407 * l / t - 1.75254 * nabla ** (1.0 / 3.0) / l
+    m1 = (0.0140407 * lwl / t - 1.75254 * nabla ** (1.0 / 3.0) / lwl
           - 4.79323 * bl - c16)
-    disp_length = l / nabla ** (1.0 / 3.0)
+    disp_length = lwl / nabla ** (1.0 / 3.0)
     if disp_length < 8.0:
         c15 = -1.69385
     elif disp_length <= 12.0:
         c15 = -1.69385 + (disp_length - 8.0) / 2.36
     else:
         c15 = 0.0
-    fn = v_ms / math.sqrt(GRAVITY * l)
+    fn = v_ms / math.sqrt(GRAVITY * lwl)
     d_exp = -0.9
     m2 = c15 * cp ** 2 * math.exp(-0.1 * fn ** -2)
     exponent = m1 * fn ** d_exp + m2 * math.cos(lam * fn ** -2)
@@ -257,9 +257,9 @@ def holtrop_mennen_power(
         r_transom = 0.0
 
     # model-ship correlation allowance (p. 168)
-    c4 = tf / l if tf / l <= 0.04 else 0.04
-    c_a = (0.006 * (l + 100.0) ** -0.16 - 0.00205
-           + 0.003 * math.sqrt(l / 7.5) * cb ** 4 * c2 * (0.04 - c4))
+    c4 = tf / lwl if tf / lwl <= 0.04 else 0.04
+    c_a = (0.006 * (lwl + 100.0) ** -0.16 - 0.00205
+           + 0.003 * math.sqrt(lwl / 7.5) * cb ** 4 * c2 * (0.04 - c4))
     r_correlation = (0.5 * density_kg_m3 * v_ms ** 2 * wetted_area
                      * c_a)
 

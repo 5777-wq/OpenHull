@@ -82,7 +82,6 @@ def test_transformed_table_round_trips_through_export(tmp_path):
 
 def test_pchip_passes_through_knots_without_overshoot():
     """The faired curve is exact at the offsets and stays in range."""
-    from openhull.drawing import pchip
     u = np.linspace(0.0, 1.0, 21)
     y = 1.0 - u**2
     xq, yq = pchip(u, y, factor=10)

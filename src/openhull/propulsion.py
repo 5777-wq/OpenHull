@@ -35,7 +35,7 @@ Units per AGENTS.md section 1; LCB is %Lpp forward positive.
 from __future__ import annotations
 
 import math
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from typing import Any
 
 from .resistance import ayre_effective_power
@@ -184,7 +184,6 @@ def propulsion_factors(
     ta = draft_aft_m if draft_aft_m is not None else draft_m
     length = lwl_m
     beam = beam_m
-    draft = draft_m
 
     # auxiliary chain of Eq. 5-38
     cf = _ittc1957_cf(

@@ -410,6 +410,37 @@ SERIES60_CP_FORE = 0.861
 SERIES60_CP_AFT = 0.750
 
 
+def _read_dtmb_table(path: str) -> tuple[list[str], dict[str, list[str]]]:
+    """Read a digitised DTMB Table-7 CSV: skip ``#`` comment lines,
+    strip cells, and fail loudly on ragged rows (a missing cell would
+    silently shift every later column of the row).  Shared by the three
+    loaders (round 9: the same 18 lines used to live three times)."""
+    import csv
+
+    rows: list[list[str]] = []
+    with open(path, newline="", encoding="utf-8-sig") as fh:
+        for row in csv.reader(line for line in fh if not line.startswith("#")):
+            if row:
+                rows.append([cell.strip() for cell in row])
+
+    header = rows[0]
+    body = {r[0]: r for r in rows[1:]}
+    for name, row in body.items():
+        if len(row) != len(header):
+            raise ValueError(
+                f"row '{name}' in {path} has {len(row)} fields, "
+                f"expected {len(header)}"
+            )
+    return header, body
+
+
+def _station_xi(name: str) -> float:
+    """Tabulated station label -> abscissa fraction of Lpp from the AP
+    (DTMB Table 7 runs FP..AP in twentieths with half stations)."""
+    return 1.0 if name == "FP" else (0.0 if name == "AP"
+                                     else 1.0 - float(name) / 20.0)
+
+
 def load_offsets_csv(
     path: str,
     *,
@@ -436,22 +467,7 @@ def load_offsets_csv(
     Acceptance anchors (validated in the test suite): the rebuilt table
     reproduces the report's Cp = 0.805 total / 0.861 fore / 0.750 aft.
     """
-    import csv
-
-    rows: list[list[str]] = []
-    with open(path, newline="", encoding="utf-8-sig") as fh:
-        for row in csv.reader(line for line in fh if not line.startswith("#")):
-            if row:
-                rows.append([cell.strip() for cell in row])
-
-    header = rows[0]
-    body = {r[0]: r for r in rows[1:]}
-    for name, row in body.items():  # fail loudly on ragged rows: a
-        if len(row) != len(header):  # missing cell would silently shift
-            raise ValueError(        # every later column of the row
-                f"row '{name}' in {path} has {len(row)} fields, "
-                f"expected {len(header)}"
-            )
+    header, body = _read_dtmb_table(path)
     wl_names = [name for name in header if name.startswith("wl_")]
     wl_fracs = [float(name.removeprefix("wl_")) for name in wl_names]
     wl_cols = [header.index(name) for name in wl_names]
@@ -467,12 +483,10 @@ def load_offsets_csv(
     for name, row in body.items():
         if name == "max_half_beam":
             continue
-        xi = 1.0 if name == "FP" else (0.0 if name == "AP"
-                                       else 1.0 - float(name) / 20.0)
         abs_wl = [float(row[c]) * mh * beam / 2.0
                   for c, mh in zip(wl_cols, wl_max)]
         tan_abs = float(row[tan_col]) * tan_max * beam / 2.0
-        tab_stations.append(xi * lpp)
+        tab_stations.append(_station_xi(name) * lpp)
         # levels: baseline (tan line), then the tabulated waterlines
         tab_y.append([tan_abs] + abs_wl)
 
@@ -510,22 +524,7 @@ def load_raw_offsets(path: str, *, lpp: float, beam: float,
     not.  Returns a dict with 'stations' (m from AP), 'heights' (m),
     'half_breadths' (m, stations x levels).
     """
-    import csv
-
-    rows: list[list[str]] = []
-    with open(path, newline="", encoding="utf-8-sig") as fh:
-        for row in csv.reader(line for line in fh if not line.startswith("#")):
-            if row:
-                rows.append([cell.strip() for cell in row])
-
-    header = rows[0]
-    body = {r[0]: r for r in rows[1:]}
-    for name, row in body.items():
-        if len(row) != len(header):
-            raise ValueError(
-                f"row '{name}' in {path} has {len(row)} fields, "
-                f"expected {len(header)}"
-            )
+    header, body = _read_dtmb_table(path)
     wl_names = [name for name in header if name.startswith("wl_")]
     wl_cols = [header.index(name) for name in wl_names]
     wl_fracs = [float(name.removeprefix("wl_")) for name in wl_names]
@@ -538,12 +537,10 @@ def load_raw_offsets(path: str, *, lpp: float, beam: float,
     for name, row in body.items():
         if name == "max_half_beam":
             continue
-        xi = 1.0 if name == "FP" else (0.0 if name == "AP"
-                                       else 1.0 - float(name) / 20.0)
         abs_wl = [float(row[c]) * mh * beam / 2.0
                   for c, mh in zip(wl_cols, wl_max)]
         tan_abs = float(row[tan_col]) * tan_max * beam / 2.0
-        tab_stations.append(xi * lpp)
+        tab_stations.append(_station_xi(name) * lpp)
         tab_y.append([tan_abs] + abs_wl)
 
     order = sorted(range(len(tab_stations)), key=lambda i: tab_stations[i])
@@ -659,22 +656,7 @@ def load_upper_offsets(
     waterline only), so the upper layers travel separately as an
     (n_stations, len(fractions)) matrix on the same equal station grid.
     """
-    import csv
-
-    rows: list[list[str]] = []
-    with open(path, newline="", encoding="utf-8-sig") as fh:
-        for row in csv.reader(line for line in fh if not line.startswith("#")):
-            if row:
-                rows.append([cell.strip() for cell in row])
-
-    header = rows[0]
-    body = {r[0]: r for r in rows[1:]}
-    for name, row in body.items():
-        if len(row) != len(header):
-            raise ValueError(
-                f"row '{name}' in {path} has {len(row)} fields, "
-                f"expected {len(header)}"
-            )
+    header, body = _read_dtmb_table(path)
     wl_names = [name for name in header if name.startswith("wl_")]
     wl_cols = [header.index(name) for name in wl_names]
     wl_fracs = [float(name.removeprefix("wl_")) for name in wl_names]
@@ -686,13 +668,11 @@ def load_upper_offsets(
     for name, row in body.items():
         if name == "max_half_beam":
             continue
-        xi = 1.0 if name == "FP" else (0.0 if name == "AP"
-                                       else 1.0 - float(name) / 20.0)
         vals = []
         for f in fractions:
             col = wl_fracs.index(f)
             vals.append(float(row[wl_cols[col]]) * wl_max[col] * beam / 2.0)
-        tab_stations.append(xi * lpp)
+        tab_stations.append(_station_xi(name) * lpp)
         tab_cols.append(vals)
 
     order = sorted(range(len(tab_stations)), key=lambda i: tab_stations[i])
