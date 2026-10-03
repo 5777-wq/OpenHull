@@ -108,6 +108,12 @@ The skill ships in [`skills/openhull/`](skills/openhull/SKILL.md)
 with a minimal task-book template; any agent that can read a
 SKILL.md can install it from the URL alone.
 
+Prefer MCP? Since v1.7.0 OpenHull ships an MCP server (`openhull-mcp`,
+stdio): register it once and Codex, ZCode, Claude, DeepSeek or any
+MCP-capable harness can call the same tools (preflight, full design
+chain, dimension scans, RAOs). Install and per-harness snippets:
+[docs/mcp.md](docs/mcp.md).
+
 ## The discipline
 
 1. **Whitelist first.** An empirical formula is implemented only if
@@ -115,8 +121,8 @@ SKILL.md can install it from the URL alone.
    the code, transcriptions verified against page images of the
    source.
 2. **Acceptance by numbers.** Book worked examples, independent-path
-   cross-checks and public benchmarks pin every feature — 459 tests
-   (8 marked skips without the optional extra),
+   cross-checks and public benchmarks pin every feature — 473 tests
+   (marked skips without the optional extras),
    full record in [VALIDATION.md](VALIDATION.md).
 3. **Declared approximations.** Wall-sided decks, damping ranges,
    suppressed degrees of freedom: stated where they live.

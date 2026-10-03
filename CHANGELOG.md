@@ -6,7 +6,28 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-10-03
+
 ### Added
+
+- **MCP server surface (`openhull[mcp]`, optional extra)** — the
+  agent-native invocation path the constitution §8 "agent-facing
+  contract" promised: a stdio MCP server (`openhull-mcp`) whose five
+  tools (`openhull_version` / `openhull_check` / `openhull_run` /
+  `openhull_optimize` / `openhull_rao`) shell out to
+  `python -m openhull.cli` in a child process and return the CLI's
+  JSON stdout contract verbatim — no numerics touched, the SDK is
+  imported lazily (importing the module never requires the extra),
+  and the toolchain disciplines (whitelist provenance, refusal
+  guards, "report, never decide") carry over unchanged.  A resource
+  `openhull://taskbook-template` serves the JBC-anchored task book
+  (byte-pinned to the canonical example).  Registration snippets for
+  Codex, ZCode, Claude Desktop and generic MCP harnesses (DeepSeek
+  et al.): `docs/mcp.md`.  14 new tests (473 total), including the
+  cross-process spawn pin and both refusal paths — a band-edge
+  predicted refusal stays `ok=true` with `refusal_predicted`, a
+  validation refusal (40 kn on a full-form hull) surfaces `ok=false`
+  with the stated reason in `stderr_tail`.
 
 - **The load-line freeboard check is wired into `run`** (task 1.6
   discharge; library-complete and validated since v0.1.0, previously

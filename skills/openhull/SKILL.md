@@ -22,10 +22,17 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 ## 第一步：安装（一条命令）
 
 ```bash
-UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.6.0"
+UV_DEFAULT_INDEX=https://pypi.org/simple   uv tool install "git+https://github.com/5777-wq/OpenHull@v1.7.0"
 # 没有 uv 时：
-pip install "git+https://github.com/5777-wq/OpenHull@v1.6.0"
+pip install "git+https://github.com/5777-wq/OpenHull@v1.7.0"
 ```
+
+**MCP 形态**（v1.7.0 起）：若所在 harness 支持 MCP（Codex、ZCode、
+Claude、DeepSeek 等），可加 `--extra mcp` 安装，再把 `openhull-mcp`
+注册为 stdio 服务器（配置片段见仓库 `docs/mcp.md`）——工具名
+`openhull_check / openhull_run / openhull_optimize / openhull_rao /
+openhull_version`，资源 `openhull://taskbook-template`。注册后本章
+其余内容（任务书格式、纪律、解读规则）同样适用于 MCP 工具的返回值。
 
 **主命令自带官方源覆盖**：`uv tool install` 会按本机配置的镜像源解析
 依赖，而部分国内镜像对个别 wheel 返回 403（已在真机复现）；显式指定

@@ -11,6 +11,7 @@ theme:
 nav:
   - 首页: index.md
   - 快速上手（中文）: quickstart-zh.md
+  - MCP 服务器（中文）: mcp.md
   - 方法与数据来源（中文）: methods-zh.md
   - English:
       - Validation record: validation.md

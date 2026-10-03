@@ -1,6 +1,6 @@
 [project]
 name = "openhull"
-version = "1.6.0"
+version = "1.7.0"
 description = "Agent-orchestrated parametric ship preliminary design toolchain"
 readme = "README.md"
 license = "MIT"
@@ -20,9 +20,15 @@ dependencies = [
 # task 3.8 stage 2 (owner decision 2026-09-23): the seakeeping BEM
 # layer is optional so the core toolchain stays light
 seakeeping = ["capytaine>=3.0"]
+# v1.7.0: MCP server surface (the agent-native invocation path promised
+# by the constitution §8 "agent-facing contract").  Optional for the
+# same reason as seakeeping: the core CLI stays light, the MCP SDK is
+# imported lazily by openhull.mcp_server only.
+mcp = ["mcp>=1.2,<2"]
 
 [project.scripts]
 openhull = "openhull.cli:main"
+openhull-mcp = "openhull.mcp_server:main"
 
 [build-system]
 requires = ["uv_build>=0.11.19,<0.12.0"]

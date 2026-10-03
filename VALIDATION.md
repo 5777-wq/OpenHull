@@ -866,10 +866,20 @@ These are features of the current stage, not hidden weaknesses:
 | B007 lesson | renaming a loop variable that is consumed AFTER the loop (`passes_total += passes`) broke 4 chain tests — the noqa now carries the justification comment; recorded so the next lint batch checks post-loop use | the 4 tests re-run green; suite green |
 | freeboard wiring (task 1.6) | `run` computes the type-B summer minimum on the BALANCE dims (one-design-draft rule) → summary JSON `freeboard` (declared `skipped` outside 24–365 m), console block, report §1 entry with the calibre note; scan untouched (declarative check, not a gate) | TB-001 run: F0 4,295.75 (Table 3-9 at the balance 271.63 m), minimum 6,393.5 mm, actual 7,485.5 mm, PASS margin 1,092.0 mm — identities pinned; the module anchor row (280/25/16.5 → 6,555.8 mm, margin 1,944.2 mm) re-pinned; 2 new tests |
 
+## v1.7.0 — MCP server surface
+
+| Item | Disposition | Check |
+|---|---|---|
+| MCP server (`openhull[mcp]`, optional extra) | stdio server in `src/openhull/mcp_server.py`; every tool shells out to `python -m openhull.cli` in a child process and returns the CLI's JSON stdout contract verbatim — no numerics touched, SDK imported lazily (module import pulls nothing MCP) | subprocess test asserts the SDK is absent from `sys.modules` after import; the exact spawn command pinned cross-process |
+| Tools | `openhull_version` / `openhull_check` / `openhull_run` / `openhull_optimize` / `openhull_rao` (explicit wire names, `openhull_` prefix) + resource `openhull://taskbook-template` (byte-identical to the JBC example — anti-drift pin) | FastMCP wiring tests (list_tools / list_resources / call_tool roundtrip), skip cleanly without the extra |
+| Refusal discipline carried over | predicted-refusal preflights keep `ok=true` with `refusal_predicted`; validation-level refusals (e.g. 40 kn on a full-form hull → "refusing instead of extrapolating", exit 2) surface as `ok=false` with the reason in `stderr_tail`, never a bare traceback | dedicated tests on both paths |
+| Windows stdio deadlock found & fixed | inside an MCP stdio server, a child process inheriting the transport's stdin pipe deadlocks on Windows (minimal-repro variant matrix: baseline / close_fds / no_window all TIMEOUT; `stdin=DEVNULL` is the single unlocking variable). Every `_run_cli`/`_cli_version` spawn now passes `stdin=subprocess.DEVNULL` — the CLI never reads stdin, so detaching costs nothing | end-to-end test: a real MCP stdio client drives the real server process and the tool's CLI probe must answer (before the fix the probe hit its 30 s timeout) |
+| Regression | full suite 473 passed (459 + 14 new), ruff clean | `pytest` 7m22s; `uvx ruff check src tests` |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 459 tests (451 passed + 8 skipped without the optional extra)
+uv run pytest                        # 473 tests (14 MCP-surface tests; optional-extra tests skip when the extra is absent)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

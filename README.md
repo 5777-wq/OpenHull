@@ -105,12 +105,17 @@ AI 智能体（ZCode、Claude Code 等），它会自己安装工具、写好任
 技能文件在 [`skills/openhull/`](skills/openhull/SKILL.md)，内置最小
 任务书模板；任何能读 SKILL.md 的智能体都能凭 URL 自行安装。
 
+不用技能格式？v1.7.0 起还提供 **MCP 服务器**——Codex、ZCode、Claude、
+DeepSeek 等任何支持 MCP 的 harness，把 `openhull-mcp` 注册成 stdio
+服务器即可调用同一套工具（预检、全链设计、扫描、RAO）。安装与各
+harness 的配置片段见 [docs/mcp.md](docs/mcp.md)。
+
 ## 工程纪律
 
 1. **白名单先行。** 经验公式只有在 [AGENTS.md §5](AGENTS.md) 立账之后
    才能实现——先改章程再改代码，转录对照原书页面核验。
 2. **验收靠数字。** 书内算例、独立路径互检、公开基准船钉住每一个功能——
-   459 项测试（未装可选扩展时个别用例自动跳过），
+   473 项测试（未装可选扩展时个别用例自动跳过），
    逐条记录见 [VALIDATION.md](VALIDATION.md)。
 3. **近似必须声明。** 直壁甲板、阻尼区间、被约束的自由度：假定写在哪里，
    就声明在哪里。
