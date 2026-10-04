@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>OpenHull 技术白皮书 — 首个公开版本 v0.2</title>
-<meta name="description" content="OpenHull 技术白皮书（首个公开版本 v0.2）：Agent 编排的参数化船舶初步设计工具链，每一条数值都能追溯到公开文献的公式号。">
+<title>OpenHull 技术白皮书 — v1.6.0</title>
+<meta name="description" content="OpenHull 技术白皮书（v1.6.0）：Agent 编排的参数化船舶初步设计工具链，每一条数值都能追溯到公开文献的公式号。">
 <style>
   :root{
     --paper:#fbf9f5;
@@ -310,6 +310,7 @@
   }
 </style>
 </head>
+
 <body>
 
 <!-- ══════════════════ 封面（独占第 1 页） ══════════════════ -->
@@ -320,7 +321,7 @@
       <span>5777-wq/OpenHull</span>
     </div>
 
-    <p class="series">首个公开版本 · v0.2.0</p>
+    <p class="series">版本 v1.6.0 · 2026-10-02</p>
     <h1>OpenHull</h1>
     <p class="zh">技术白皮书</p>
     <p class="sub">Agent 编排的参数化船舶初步设计工具链</p>
@@ -332,12 +333,12 @@
     </p>
 
     <dl class="meta">
-      <div><dt>版本</dt><dd>v0.2.0</dd></div>
-      <div><dt>文档日期</dt><dd>2026-09-20</dd></div>
+      <div><dt>版本</dt><dd>v1.6.0</dd></div>
+      <div><dt>文档日期</dt><dd>2026-10-02</dd></div>
       <div><dt>许可证</dt><dd>MIT</dd></div>
       <div><dt>运行环境</dt><dd>Python ≥ 3.11</dd></div>
-      <div><dt>测试状态</dt><dd>176 passed</dd></div>
-      <div><dt>依赖上限</dt><dd>5 packages</dd></div>
+      <div><dt>测试状态</dt><dd>459 passed</dd></div>
+      <div><dt>运行依赖</dt><dd>4 项（+1 可选）</dd></div>
     </dl>
   </div>
 </header>
@@ -349,26 +350,28 @@
     <div class="abstract">
       <p>
         OpenHull 是一个开源（MIT）的参数化船舶初步设计工具链。输入一份 YAML
-        设计任务书——船型、载重吨、服务航速、航区、设计吃水——流水线产出
-        主尺度方案、静水力表、型线型值表与分层 DXF 矢量数据。整条链路可由
-        AI 智能体编排，也可以被工程师当作普通 Python 库调用。
+        设计任务书——船型、载重吨、服务航速、航区、吃水——流水线产出主尺度方案、
+        静水力表、型线型值表与分层 DXF、大倾角稳性与 IMO 完整稳性衡准判定、
+        干舷校核、阻力与推进估算、螺旋桨设计、设计空间扫描与帕累托前沿、
+        耐波性与波浪失速估算，以及一份中文设计报告。整条链路可由 AI 智能体编排，
+        也可以被工程师当作普通 Python 库调用。
       </p>
       <p>
-        本项目的核心主张不在于算法本身——所用的经验公式（Watson、Lackenby、
-        Holtrop&ndash;Mennen、ICLL 干舷规则）全部来自公开教材与国际规范，没有一条是自创的。
-        主张在于<strong>工程化的可信度</strong>：每一条公式必须先进入"公式白名单"才能被实现，
-        并附上书名、章节与公式号；每一次验收只认公开基准船的出版数字；
-        每一处近似与循环论证都写在明处，而不是藏进精度表里。
+        本项目的核心主张不在于算法本身——所用的经验公式全部来自公开教材、
+        国际规范与半世纪前的试验报告，没有一条是自创的。主张在于
+        <strong>工程化的可信度</strong>：每一条公式必须先进入"公式白名单"才能被实现，
+        并附上书名、章节与公式号；每一次验收只认公开基准船的出版数字或独立互检；
+        每一处近似与循环论证都写在明处；<strong>超出适用范围的输入一律声明式拒绝，
+        而不是静默外推</strong>。
       </p>
       <p>
-        首个公开版本 v0.2 交付三段链路——任务书驱动的重量浮力平衡、主尺度初估、
-        静水力与初稳性，以及参数化型线生成（数字化母型 → 仿射缩放 → Lackenby 变换
-        → 型值表与分层 DXF）。全部通过日本 NMRI 公开基准船 JBC 的验收锚点：
-        排水体积误差 <strong>+0.21 %</strong>（容差 ±1 %）、
-        KM 误差 <strong>+0.000 %</strong>（容差 ±2 %）、
-        方形系数偏差 <strong>+0.0018</strong>（容差 ±0.005）。
-        母型船变换链路另以 1963 年 DTMB Report 1712 的印刷棱形系数与解析闭式解，
-        完成不依赖任何外部拟合数据的非循环验证。
+        路线图的五个阶段已全部交付（v1.0.0，2026-09-23），当前版本为 v1.6.0，
+        459 项测试全绿。主线以日本 NMRI 公开基准船 JBC 验收：排水体积误差
+        <strong>+0.21 %</strong>（容差 ±1 %）、KM <strong>+0.000 %</strong>（±2 %）、
+        方形系数 <strong>+0.0018</strong>（±0.005）。其余各环节分别钉在
+        DTMB Report 1712 的实测自航数据、NMRI MP687 螺旋桨敞水实测、
+        Holtrop–Mennen (1982) 论文算例、Journée (1992) 耐波性数据表与
+        一系列书内算例上——<strong>Holtrop–Mennen 算例的 20 个印刷量逐位复现</strong>。
       </p>
     </div>
 
@@ -377,12 +380,12 @@
       <li><span class="n">02</span><span class="t">设计立场：四条原则</span><span class="d"></span><span class="p" data-sec="s2">3</span></li>
       <li><span class="n">03</span><span class="t">系统架构</span><span class="d"></span><span class="p" data-sec="s3">4</span></li>
       <li><span class="n">04</span><span class="t">技术路径</span><span class="d"></span><span class="p" data-sec="s4">6</span></li>
-      <li><span class="n">05</span><span class="t">验证体系</span><span class="d"></span><span class="p" data-sec="s5">8</span></li>
-      <li><span class="n">06</span><span class="t">开源生态位</span><span class="d"></span><span class="p" data-sec="s6">11</span></li>
-      <li><span class="n">07</span><span class="t">交付范围</span><span class="d"></span><span class="p" data-sec="s7">12</span></li>
-      <li><span class="n">08</span><span class="t">边界：明确不做的事</span><span class="d"></span><span class="p" data-sec="s8">14</span></li>
-      <li><span class="n">09</span><span class="t">适用范围与已知边界</span><span class="d"></span><span class="p" data-sec="s9">14</span></li>
-      <li><span class="n">10</span><span class="t">复现与参与</span><span class="d"></span><span class="p" data-sec="s10">15</span></li>
+      <li><span class="n">05</span><span class="t">验证体系</span><span class="d"></span><span class="p" data-sec="s5">9</span></li>
+      <li><span class="n">06</span><span class="t">开源生态位</span><span class="d"></span><span class="p" data-sec="s6">14</span></li>
+      <li><span class="n">07</span><span class="t">交付范围与开放项</span><span class="d"></span><span class="p" data-sec="s7">14</span></li>
+      <li><span class="n">08</span><span class="t">边界：明确不做的事</span><span class="d"></span><span class="p" data-sec="s8">16</span></li>
+      <li><span class="n">09</span><span class="t">适用范围与已知边界</span><span class="d"></span><span class="p" data-sec="s9">16</span></li>
+      <li><span class="n">10</span><span class="t">复现与参与</span><span class="d"></span><span class="p" data-sec="s10">17</span></li>
     </ul>
   </div>
 </div>
@@ -405,7 +408,7 @@
   <p>
     商业船舶软件真正垄断的是交付链条——出图、送审、生产文件。
     而初步设计赖以成立的知识内核：母型船统计回归、系列试验图谱、Lackenby 船型变换、
-    Holtrop&ndash;Mennen 阻力估算，全部公开在教材、学位论文与半个世纪前的试验报告里。
+    阻力与推进估算、稳性衡准，全部公开在教材、学位论文与半世纪前的试验报告里。
     换句话说，<strong>被锁住的不是知识，而是知识的工程化载体</strong>。
   </p>
 
@@ -413,13 +416,14 @@
   <p>
     一个典型的初步设计循环是：从任务书读数 → 在 Excel 里估主尺度 →
     手抄进 CAD 建母型 → 导出型值 → 另开一个脚本算静水力 →
-    把结果抄回 Excel 画曲线。每一次人工搬运都是一次精度损失与一次可追溯性的断裂。
+    把结果抄回 Excel 画曲线 → 再手动查图谱选螺旋桨。
+    每一次人工搬运都是一次精度损失与一次可追溯性的断裂。
     本项目要替代的正是这只"在软件之间搬运数据的手"。
   </p>
 
   <h3>1.3 可追溯性缺失</h3>
   <p>
-    开源界并不缺船舶计算代码。生态调研显示，静水力、稳性、Holtrop 阻力都有多个实现，
+    开源界并不缺船舶计算代码。生态调研显示，静水力、稳性、阻力都有多个实现，
     但绝大多数是课程作业级：公式来源不明、适用边界不声明、
     验收标准是"和某个软件对上了"而非"和出版数据对上了"。
     对一个要用于真实产品设计的工具，这不可接受——
@@ -450,11 +454,11 @@
   <div class="principle">
     <div class="pid">P1</div>
     <div>
-      <h4>每一个输出结果都必须可追溯至某条公式或公开文献</h4>
+      <h4>白名单先行：每一个输出结果都必须可追溯至某条公式或公开文献</h4>
       <p>
-        公式必须先被列入宪法第五节的白名单才能实现；每个实现旁附引用注释，
-        写明书名、章节与公式号，且页码必须在实现时对着纸质或 PDF 原文核对——
-        禁止凭记忆写页码。
+        公式必须先被列入宪法第五节的白名单才能实现；修订章程在改代码<em>之前</em>完成。
+        每个实现旁附引用注释，写明书名、章节与公式号，且转录必须对着纸质或 PDF
+        原文逐格核对——禁止凭记忆写页码。
       </p>
     </div>
   </div>
@@ -462,10 +466,11 @@
   <div class="principle">
     <div class="pid">P2</div>
     <div>
-      <h4>与公开基准船数据的验证，优先于新功能开发</h4>
+      <h4>验收靠数字：与公开基准数据的验证，优先于新功能开发</h4>
       <p>
-        任何一条数值若没有出版来源或经业主批准的锚点，就不允许被测试断言。
-        估计值永远不能充当验证目标。这意味着功能进度可以慢，验证不能欠账。
+        任何一条数值若没有出版来源、独立互检或经业主批准的锚点，
+        就不允许被测试断言。估计值永远不能充当验证目标。
+        这意味着功能进度可以慢，验证不能欠账。
       </p>
     </div>
   </div>
@@ -473,11 +478,12 @@
   <div class="principle">
     <div class="pid">P3</div>
     <div>
-      <h4>经验公式必须声明适用范围，超范围的输入一律拒绝</h4>
+      <h4>近似必须声明：超范围的输入一律拒绝，绝不静默外推</h4>
       <p>
         每个经验公式把它适用的 Froude 数、船型系数区间与尺度区间作为<em>数据</em>
-        写在实现旁边。超出范围时模块<strong>抛错并说明违反了哪条边界</strong>，
-        而不是静默外推。静默外推是开源工程代码最危险的失效模式。
+        写在实现旁边。超出范围时模块<strong>抛错并说明违反了哪条边界、当前值是多少</strong>。
+        静默外推是工程计算代码最危险的失效模式——它给出的不是一个错答案，
+        而是一个看起来对的错答案。
       </p>
     </div>
   </div>
@@ -485,21 +491,20 @@
   <div class="principle">
     <div class="pid">P4</div>
     <div>
-      <h4>能写成公式的交给自动化，写不成公式的留给工程师</h4>
+      <h4>工具报告，工程师拍板：能写成公式的交给自动化，写不成公式的留给专业判断</h4>
       <p>
-        这条边界决定了项目范围。船型变换、静水力积分、规则校核可以自动化；
-        舱室划分的合理性、总布置的工艺判断、与船东的权衡，不在此列，
-        也不试图用启发式规则假装解决。
+        这条边界决定了项目范围。船型变换、静水力积分、规则校核、图谱插值可以自动化；
+        谐摇区是否规避、衡准边缘是否否决方案、总布置的工艺判断，
+        不在此列，也不试图用启发式规则假装解决——工具只负责把数字摆清楚。
       </p>
     </div>
   </div>
 
   <p>
     工程上，P3 与 P4 直接塑造了架构：<strong>算法以注册表形式暴露</strong>。
-    每个计算步骤（主尺度初估、重量估算、船型变换……）都是一个可以挂多个
-    <em>具名算法</em>的策略点，每个算法携带稳定的 id、它的白名单引用、
-    以及适用范围数据。任务书因此可以逐步指定算法，未来的图形前端可以据此
-    把超出范围的选项置灰。
+    每个计算步骤都是一个可以挂多个<em>具名算法</em>的策略点，
+    每个算法携带稳定的 id、它的白名单引用、以及适用范围数据。
+    任务书因此可以逐步指定算法，图形前端可以据此把超出范围的选项置灰。
   </p>
   </div>
 </section>
@@ -518,8 +523,8 @@
   </p>
 
   <figure>
-    <svg viewBox="0 0 1000 600" xmlns="http://www.w3.org/2000/svg" role="img"
-         aria-label="OpenHull 系统架构：输入契约、计算链路、成果与 Agent 编排层">
+    <svg viewBox="0 0 1000 790" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="OpenHull 系统架构：输入契约、计算内核、交付物与 Agent 编排层">
       <defs>
         <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5"
                 markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -527,81 +532,104 @@
         </marker>
       </defs>
 
+      <!-- 输入 -->
       <text x="40" y="34" font-family="IBM Plex Mono,monospace" font-size="11"
             letter-spacing="2" fill="#8a6a3b">INPUT</text>
-      <rect x="40" y="48" width="250" height="86" fill="#f4f1ea" stroke="#111418" stroke-width="1.4"/>
+      <rect x="40" y="48" width="230" height="92" fill="#f4f1ea" stroke="#111418" stroke-width="1.4"/>
       <text x="58" y="76" font-family="Noto Serif SC,serif" font-size="15.5" font-weight="600" fill="#111418">设计任务书 YAML</text>
-      <text x="58" y="98" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">TB-001 · schema_version 1</text>
+      <text x="58" y="98" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">TB-001 · schema_version</text>
       <text x="58" y="116" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">[NMRI] [DERIV] [ASSUMED]</text>
+      <text x="58" y="134" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">键白名单 · 类型校验</text>
 
-      <rect x="40" y="150" width="250" height="86" fill="none" stroke="#d3cdc1" stroke-width="1.2"/>
-      <text x="58" y="178" font-family="Noto Serif SC,serif" font-size="15.5" font-weight="600" fill="#111418">算法注册表</text>
-      <text x="58" y="200" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">id · 白名单引用 · 适用域</text>
-      <text x="58" y="218" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">策略模式，逐步可选</text>
+      <rect x="40" y="156" width="230" height="92" fill="none" stroke="#d3cdc1" stroke-width="1.2"/>
+      <text x="58" y="184" font-family="Noto Serif SC,serif" font-size="15.5" font-weight="600" fill="#111418">公式白名单</text>
+      <text x="58" y="206" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">宪法 §5 · 引用与页码</text>
+      <text x="58" y="224" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">算法注册表</text>
+      <text x="58" y="242" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">适用域与守卫</text>
 
-      <line x1="290" y1="196" x2="372" y2="196" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)"/>
+      <line x1="270" y1="196" x2="300" y2="196" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)"/>
 
-      <text x="388" y="34" font-family="IBM Plex Mono,monospace" font-size="11"
+      <!-- 计算内核 -->
+      <text x="310" y="34" font-family="IBM Plex Mono,monospace" font-size="11"
             letter-spacing="2" fill="#8a6a3b">COMPUTE CORE</text>
-      <g font-family="Noto Serif SC,serif" font-size="14" fill="#111418">
-        <rect x="388" y="48" width="286" height="52" fill="#fff" stroke="#111418" stroke-width="1.2"/>
-        <text x="406" y="79">重量—浮力平衡迭代</text>
-
-        <rect x="388" y="112" width="286" height="52" fill="#fff" stroke="#111418" stroke-width="1.2"/>
-        <text x="406" y="143">主尺度初估</text>
-
-        <rect x="388" y="176" width="286" height="52" fill="#fff" stroke="#111418" stroke-width="1.2"/>
-        <text x="406" y="199" font-size="13.5">型线生成</text>
-        <text x="406" y="217" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">母型→仿射→Lackenby</text>
-
-        <rect x="388" y="240" width="286" height="52" fill="#fff" stroke="#111418" stroke-width="1.2"/>
-        <text x="406" y="271">静水力计算</text>
-
-        <rect x="388" y="304" width="286" height="52" fill="#fff" stroke="#111418" stroke-width="1.2"/>
-        <text x="406" y="327" font-size="13.5">初稳性 · 浮态 · 干舷校核</text>
-        <text x="406" y="345" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">GM / trim / ICLL 1966</text>
+      <g font-family="Noto Serif SC,serif" font-size="13" fill="#111418">
+        <rect x="310" y="48" width="330" height="40" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="326" y="73">重量—浮力平衡 · 主尺度</text>
+        <rect x="310" y="96" width="330" height="40" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="326" y="121">型线生成（母型 → Lackenby）</text>
+        <rect x="310" y="144" width="330" height="40" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="326" y="169">静水力 · 邦戎 · 光顺检查</text>
+        <rect x="310" y="192" width="330" height="40" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="326" y="217">大倾角稳性 GZ · IS Code 衡准</text>
+        <rect x="310" y="240" width="330" height="40" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="326" y="265">干舷与载重线（ICLL 1966）</text>
+        <rect x="310" y="288" width="330" height="40" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="326" y="313">阻力 · 推进因子 · 服务航速</text>
+        <rect x="310" y="336" width="330" height="40" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="326" y="361">螺旋桨（B 系列 + 空泡校核）</text>
+        <rect x="310" y="384" width="330" height="40" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="326" y="409">耐波性 · 波浪失速</text>
+        <rect x="310" y="432" width="330" height="40" fill="#fff" stroke="#111418" stroke-width="1.2"/>
+        <text x="326" y="457">设计空间扫描 · 帕累托前沿</text>
       </g>
-      <g stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)">
-        <line x1="531" y1="100" x2="531" y2="110"/>
-        <line x1="531" y1="164" x2="531" y2="174"/>
-        <line x1="531" y1="228" x2="531" y2="238"/>
-        <line x1="531" y1="292" x2="531" y2="302"/>
-      </g>
-
-      <line x1="674" y1="196" x2="742" y2="196" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)"/>
-
-      <text x="752" y="34" font-family="IBM Plex Mono,monospace" font-size="11"
-            letter-spacing="2" fill="#8a6a3b">OUTPUT</text>
-      <g font-size="13">
-        <rect x="752" y="48" width="208" height="46" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
-        <text x="768" y="76" font-family="Noto Serif SC,serif" fill="#111418">主尺度方案</text>
-
-        <rect x="752" y="106" width="208" height="46" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
-        <text x="768" y="134" font-family="Noto Serif SC,serif" fill="#111418">静水力表 CSV / JSON</text>
-
-        <rect x="752" y="164" width="208" height="46" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
-        <text x="768" y="192" font-family="Noto Serif SC,serif" fill="#111418">型值表 · 分层 DXF</text>
-
-        <rect x="752" y="222" width="208" height="46" fill="none" stroke="#d3cdc1" stroke-width="1.2"/>
-        <text x="768" y="250" font-family="Noto Serif SC,serif" fill="#343941">校核结论与声明</text>
+      <g stroke="#6d7280" stroke-width="1.2" marker-end="url(#ar)">
+        <line x1="475" y1="88" x2="475" y2="94"/>
+        <line x1="475" y1="136" x2="475" y2="142"/>
+        <line x1="475" y1="184" x2="475" y2="190"/>
+        <line x1="475" y1="232" x2="475" y2="238"/>
+        <line x1="475" y1="280" x2="475" y2="286"/>
+        <line x1="475" y1="328" x2="475" y2="334"/>
+        <line x1="475" y1="376" x2="475" y2="382"/>
+        <line x1="475" y1="424" x2="475" y2="430"/>
       </g>
 
-      <line x1="40" y1="404" x2="960" y2="404" stroke="#d3cdc1" stroke-width="1"/>
-      <rect x="40" y="428" width="920" height="72" fill="none" stroke="#1e3a5f" stroke-width="1.6"/>
-      <text x="60" y="457" font-family="Noto Serif SC,serif" font-size="15.5"
+      <!-- 交付物 -->
+      <line x1="660" y1="254" x2="690" y2="254" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)"/>
+      <text x="700" y="34" font-family="IBM Plex Mono,monospace" font-size="11"
+            letter-spacing="2" fill="#8a6a3b">DELIVERABLES</text>
+      <g font-size="12.5">
+        <rect x="700" y="48" width="260" height="40" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
+        <text x="714" y="73" font-family="Noto Serif SC,serif" fill="#111418">主尺度 · 静水力表 CSV/JSON</text>
+        <rect x="700" y="96" width="260" height="40" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
+        <text x="714" y="121" font-family="Noto Serif SC,serif" fill="#111418">型值表 · 分层 DXF</text>
+        <rect x="700" y="144" width="260" height="40" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
+        <text x="714" y="169" font-family="Noto Serif SC,serif" fill="#111418">总布置简图 · DXF</text>
+        <rect x="700" y="192" width="260" height="40" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
+        <text x="714" y="217" font-family="Noto Serif SC,serif" fill="#111418">静水力曲线图</text>
+        <rect x="700" y="240" width="260" height="40" fill="#f4f1ea" stroke="#111418" stroke-width="1.2"/>
+        <text x="714" y="265" font-family="Noto Serif SC,serif" fill="#111418">中文设计报告（Markdown）</text>
+        <rect x="700" y="288" width="260" height="40" fill="none" stroke="#d3cdc1" stroke-width="1.2"/>
+        <text x="714" y="313" font-family="Noto Serif SC,serif" fill="#343941">拒绝记录与近似声明</text>
+      </g>
+
+      <!-- 编排层 -->
+      <line x1="40" y1="510" x2="960" y2="510" stroke="#d3cdc1" stroke-width="1"/>
+      <rect x="40" y="534" width="920" height="86" fill="none" stroke="#1e3a5f" stroke-width="1.6"/>
+      <text x="60" y="565" font-family="Noto Serif SC,serif" font-size="15.5"
             font-weight="600" fill="#1e3a5f">Agent 编排层</text>
-      <text x="60" y="481" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">
+      <text x="60" y="590" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">
         CLI + YAML 稳定契约 → 纯函数 · JSON 可序列化 · 算法注册表即枚举参数
       </text>
-      <text x="700" y="457" font-family="Noto Serif SC,serif" font-size="13" fill="#343941">MCP Server</text>
-      <text x="700" y="481" font-family="Noto Serif SC,serif" font-size="13" fill="#343941">Skill · 插件（零侵入）</text>
-      <line x1="640" y1="464" x2="684" y2="464" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)"/>
-
-      <text x="40" y="540" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
-        第三方依赖仅限 numpy · matplotlib · ezdxf · pyyaml · pytest（dev）
+      <text x="60" y="608" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#343941">
+        skills/openhull/SKILL.md：一条 URL 让任意智能体自行安装并跑完整链
       </text>
-      <text x="40" y="560" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
-        积分、变换、求解器全部包内自实现 —— 不引黑箱
+      <text x="716" y="565" font-family="Noto Serif SC,serif" font-size="12.5" fill="#343941">MCP Server</text>
+      <text x="716" y="588" font-family="Noto Serif SC,serif" font-size="12.5" fill="#343941">Skill · 插件</text>
+      <text x="716" y="611" font-family="Noto Serif SC,serif" font-size="12.5" fill="#343941">零侵入包装</text>
+      <line x1="646" y1="578" x2="700" y2="578" stroke="#6d7280" stroke-width="1.3" marker-end="url(#ar)"/>
+
+      <!-- 底部注 -->
+      <text x="40" y="656" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
+        运行依赖仅 numpy · matplotlib · ezdxf · pyyaml（capytaine 为可选扩展，缺失时干净拒绝）
+      </text>
+      <text x="40" y="676" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
+        积分、变换、求解器、图谱回归全部包内自实现 —— 不引黑箱
+      </text>
+      <text x="40" y="704" font-family="Noto Serif SC,serif" font-size="12.5" fill="#343941">
+        每一步计算都携带三件东西：它引用的公式、它的适用域、以及超出适用域时应当给出的拒绝理由。
+      </text>
+      <text x="40" y="728" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
+        459 项测试覆盖正常值、边界值、基准船锚点与拒绝行为；CI 在 GitHub Actions 上全绿。
       </text>
     </svg>
     <figcaption>
@@ -621,31 +649,45 @@
     <li><code>[ASSUMED]</code> —— 工程假设，需业主批准并留痕（如载重吨 149 920 t：JBC 是虚拟基准船，NMRI 不公布载重吨）</li>
   </ul>
   <p>
-    这个设计的直接后果是：<strong>任何一个人拿到仓库，都能区分"这是公开数据"与"这是假设"</strong>，
-    而不必去猜某个数字的出处。载重吨这一处最典型——它由业主批准、
-    取载重吨系数 0.82 的中点值，任务书里连"曾考虑过 0.86 但未采纳"都写了进去。
+    在这个基础上，任务书还有一层<strong>输入契约</strong>：键名走白名单（拼错会给出就近建议）、
+    重复键拒绝、数值类型校验、船型白名单、自由文本兜底——所有这些都在真正开始算之前完成，
+    失败时给出的是可执行的修复指引，而不是一段裸栈。
   </p>
 
   <h3>3.2 算法作为数据</h3>
   <p>
-    重量估算模块同时注册了三种算法：载重吨系数法（迭代起点）、
-    成分立方模数法（默认）、成分指数法。默认算法为
-    <code>component_cubic</code>，其引用字段直接写进每一次运行的输出：
+    以重量估算为例，模块同时注册了三种算法：载重吨系数法（迭代起点）、
+    成分立方模数法（默认）、成分指数法。默认算法的引用字段直接写进每一次运行的输出：
   </p>
   <pre><code>"citation": "Xie Yunping et al., section 2.2.2: Eq.(2-13) steel cubic
 modulus, Eq.(2-42) outfit area modulus, Table 2-3 component shares of
 lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
   <p>
-    这意味着结果本身携带审计路径。更进一步，算法还携带<strong>适用域</strong>——
+    这意味着结果本身携带审计路径。算法还携带<strong>适用域</strong>——
     例如散货船载重吨系数的回归式只认 0.5 万至 6 万吨，TB-001 的 14.99 万吨
     会被<em>正确地拒绝</em>；这个拒绝行为有专门的测试钉死，防止将来有人"顺手放宽"。
   </p>
 
-  <h3>3.3 报错也要讲道理</h3>
+  <h3>3.3 拒绝是一等公民</h3>
   <p>
-    输入校验的失败消息包含四要素：字段、值、允许范围、<strong>以及物理或数学上的原因</strong>。
-    如果给一个方形系数 1.5，返回的不是"值非法"，而是
-    「排水体积塞不进外接矩形框，因此 Cb ≤ 1」并附定义式。
+    这套工具最反直觉的一点：它经常<strong>拒绝给你答案</strong>，而且这是设计目标。
+    TB-001 的 14.5 kn 服务航速落在艾亚法的速度带之外（V/√L = 0.486 &lt; 0.50），
+    于是旗舰示例的功率与螺旋桨段会如实拒绝，同时声明：
+  </p>
+  <pre><code>propeller : REFUSED at ayre - Invalid value for 'speed': 14.5
+            allowed: V/sqrt(L) within 0.5-1.2 (knots/sqrt-ft);
+            this speed gives 0.486</code></pre>
+  <p>
+    而主尺度、静水力、稳性、总布置照常产出。拒绝是<em>结构化的</em>——
+    它给出违反的边界、当前值、以及去哪看细节，而不是一句"计算失败"。
+    一个不肯说"我不知道"的计算工具，给出的会是看起来对的错答案。
+  </p>
+
+  <h3>3.4 报错也要讲道理</h3>
+  <p>
+    输入校验的失败消息包含四要素：字段、值、允许范围、
+    <strong>以及物理或数学上的原因</strong>。如果给一个方形系数 1.5，
+    返回的不是"值非法"，而是「排水体积塞不进外接矩形框，因此 Cb ≤ 1」并附定义式。
     测试直接断言错误文本中含公式，防止将来退化成一句无信息量的报错。
     同时所有错误消息保持纯 ASCII——Windows 的 GBK 控制台不会因此崩溃。
   </p>
@@ -658,28 +700,31 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
   <span class="sec-num">04</span>
   <h2 class="sec">技术路径</h2>
 
-  <h3>4.1 重量—浮力平衡迭代</h3>
+  <h3>4.1 重量—浮力平衡与吃水策略</h3>
   <p>
     主尺度不是一次算出来的，而是"重量等于浮力"这个方程的不动点。
     流水线从载重吨系数法给出迭代起点，再用成分法计算空船重量
-    （钢料立方模数 + 舾装面积模数 + 机电占比），反复逼近。
-    判停准则采用《船体结构强度》§3.2.2 式(3-27) 的下限
-    ——两次迭代之间 |W − B|/W ≤ 0.1 %。
+    （钢料立方模数 + 舾装面积模数 + 机电占比），反复逼近；
+    判停准则是《船体结构强度》§3.2.2 式(3-27) 的下限 |W − B|/W ≤ 0.1 %。
+    迭代同时输出<em>诺曼系数</em>作为物理诊断——它应当大于 1，
+    因为它描述"增加一吨载重会导致排水量增长多少"（增量还包括为此增加的船体本身）。
+    TB-001 实测 1.160。
   </p>
   <p>
-    迭代同时输出<em>诺曼系数</em>作为物理诊断：它应当大于 1，
-    因为它描述的是"增加一吨载重会导致排水量增长多少"（增量还包括为此增加的船体本身）。
-    TB-001 的实测值为 <strong>1.160</strong>，量级合理。
-    超过 30 轮未收敛则拒绝返回——避免用无限迭代掩盖一个本就不自洽的输入。
+    一个容易被忽略的工程分歧在这里被显式处理：<strong>任务书声明的吃水与
+    平衡后得到的吃水往往不是同一个数</strong>。TB-001 声明 16.500 m，
+    平衡后是 16.767 m——差 0.267 m。工具不会偷偷用其中一个：
+    它把差异打印出来、说明结果采用哪一个，并给出声明吃水下 B/T 的档位；
+    若要反过来把吃水当作硬约束、去求解能实现它的主尺度，则用
+    <code>draft_is_hard: true</code> 让扫描按候选逐个解 B/T。
   </p>
 
   <h3>4.2 型线生成：从母型船变换，而不是从零生成</h3>
   <p>
-    这是型线生成的技术核心，也是本项目的差异化所在。
     船体型线是一个光顺性约束极强的连续曲面，从零生成一条可用的型线
     是数学上的硬骨头。项目的选择是<strong>只做母型船变换</strong>：
     以一条已知光顺的真实母型为基础，通过仿射缩放改尺度，
-    再通过 Lackenby 变换调整棱形系数与浮心纵向位置。这条路径的可控性远高于生成式方法。
+    再通过 Lackenby 变换调整棱形系数与浮心纵向位置。
   </p>
   <p>完整链路共四步：</p>
   <ol>
@@ -687,12 +732,11 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
       <strong>母型数字化</strong>。包内携带的是 1963 年 DTMB Report 1712 表 7 的
       25 站型值表（Model 4214W-B4，总棱形系数 0.805），逐格对着 300 dpi 渲染页核对过。
       附带一条纪律上的收获：报告按<em>棱形系数</em>命名系列母型，
-      文献里常说的 "Series 60, Cb = 0.80" 指的其实是 Cp = 0.805 的这条母型——
-      这个术语陷阱已写进数据源文档。
+      文献里常说的 "Series 60, Cb = 0.80" 指的其实是 Cp = 0.805 的这条母型。
     </li>
     <li>
-      <strong>仿射缩放</strong>。把母型缩放到平衡后的主尺度上。船型系数是仿射不变量，
-      因此这一步有精确的验收标准：半尺度的船排水量必须恰好是全尺度的 1/8（测试断言 rel 1e-9）。
+      <strong>仿射缩放</strong>。船型系数是仿射不变量，因此这一步有精确的验收标准：
+      半尺度的船排水量必须恰好是全尺度的 1/8（测试断言 rel 1e-9）。
     </li>
     <li>
       <strong>Lackenby 变换</strong>。按二次变换函数 <code>dx = c(1−x)(x+d)</code>
@@ -776,34 +820,123 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
   </figure>
 
   <p>
-    还有一个细节值得单独记录：教科书中该变换的公式在直读时<strong>不闭合</strong>。
+    一个细节值得单独记录：教科书中该变换的公式在直读时<strong>不闭合</strong>。
     项目引入了抛物线闭合检验——用一条解析上完全已知的抛物线型线
     反推公式中各系数的取值，结果应当精确等于 2/3、3/8、1/5、3/5。
-    正是这个检验定位到公式转录的口径问题，从而避免了整条链路建立在错误解读上。
+    正是这个检验定位到公式转录的口径问题。
     <em>解析闭式自证的价值就在这里：它不需要任何外部数据，就能证伪一个实现。</em>
   </p>
 
-  <h3>4.3 静水力内核自实现，不用黑箱积分器</h3>
+  <h3>4.3 静水力与稳性：内核自实现，不用黑箱</h3>
   <p>
     辛普森第一/第二法则与梯形法都在包内手写实现。这不是重复造轮子，而是
     <strong>可追溯性的要求</strong>——积分口径直接决定 Cb、LCB、KM 的取值，
-    而不同积分实现的插值约定差异会悄悄改变结果。
-    内核提供三向积分：沿水线的纵向要素积分（水线面积、LCF）、
-    沿垂向的体积与浮心积分、以及沿吃水的邦戎曲线积分。
+    而不同积分实现的插值约定差异会悄悄改变结果。内核提供三向积分：
+    沿水线的纵向要素积分、沿垂向的体积与浮心积分、以及沿吃水的邦戎曲线积分。
   </p>
-  <p>积分器本身有独立的验收：</p>
+  <p>
+    大倾角稳性走<strong>等体积倾斜水线</strong>法：对每一个横倾角迭代求等体积水线，
+    再用表格化剖面的精确多边形裁剪算出各站的浸水面积与矩——
+    没有沿吃水方向做数值积分，避免了薄壁剖面处的精度损失。
+    静稳性臂曲线之外，还实现了 IMO 2008 完整稳性规则的
+    <strong>通用衡准 2.2</strong>（六项）与<strong>恶劣风浪衡准 2.3</strong>，
+    含自由液面修正的 50 % 装载率规则、横摇阻尼的消减系数与谱式有效波倾角。
+  </p>
+  <p>积分器与稳性内核各有独立的验收：</p>
   <ul>
-    <li>箱形船与抛物线型线对闭式解精确到 <code>1e-9</code></li>
-    <li>抛物线型线的 Cb 必须等于解析值 2/3</li>
+    <li>箱形船与抛物线型线对闭式解精确到 <code>1e-9</code>；箱形船的 GZ 对解析式精确到 <code>1e-8</code></li>
     <li><strong>交叉通量检验</strong>：邦戎曲线的纵向积分与静水力模块的垂向积分，
       两条完全独立的路径必须给出同一个排水体积（实测相对偏差 <code>1e-4</code>）</li>
+    <li><strong>原点斜率恒等式</strong>：GZ(5°)/sin 5° 必须等于 GM（实测偏差 0.04 %）</li>
+    <li>等体积倾斜的体积守恒：每一角度最坏残差 ≤ 0.05 %（书内要求 ≤ 0.1 %）</li>
+    <li>从型值表面放样出的面板网格，与站面积分互检排水体积（互差 0.1 %）</li>
   </ul>
   <p>
     第三条尤其重要。一个积分实现即使内部约定写错，也可能在单一方向自洽；
-    只有两条独立路径互相校对，才能真正排除口径错误。
+    只有独立的解析恒等式与互相校对的路径，才能真正排除口径错误。
   </p>
 
-  <h3>4.4 数值光顺检查</h3>
+  <h3>4.4 阻力与推进：两条方法线，各自守边界</h3>
+  <p>
+    阻力估算是本项目<strong>守边界纪律最严格</strong>的一环。白名单里有两条方法线：
+  </p>
+  <ul>
+    <li>
+      <strong>艾亚法</strong>（《船舶原理》上册 §7-1）——主线方法。它的 C₀ 图谱
+      被程序化数字化（中族曲线 L/Δ<sup>1/3</sup> = 4.88–6.41，V/√L 站点 0.50–1.30，
+      读数容差 ±4 单位），并且把自己的适用速度带写进守卫：
+      V/√L 必须落在 0.50–1.20 之内。TB-001 的 14.5 kn 得 0.486，落在带外——
+      于是被拒绝，而不是外推到带外去凑一个数字。
+    </li>
+    <li>
+      <strong>Holtrop–Mennen (1982)</strong>——完整的有效功率链（形状因子、
+      湿表面积、ITTC-1957 摩擦、附体、含波峰项的兴波阻力、球艏与艉封板压力阻力、
+      相关系数补偿），实现为<em>库层模块</em>，用于验证与互检，
+      按 Kwon 先例有意暂不接入默认主链。
+    </li>
+  </ul>
+  <p>
+    推进因子走 Holtrop 的伴流与推力减额相关式（《船舶原理》下册 §5-2/§5-3，
+    对扫描原页逐式核对），服务航速则由有效功率曲线反解。
+    这条线的验收锚很硬：DTMB Report 1712 表 39 给出 600 ft 母型船的实船参数，
+    表 31 给出它的实测自航结果——按公开轴功率复算航速，15/16/17 kn 三点误差
+    分别为 −0.03 / +0.08 / +0.32 节，全部落在 ±0.5 节容差内。
+  </p>
+
+  <h3>4.5 螺旋桨：图谱回归与空泡校核</h3>
+  <p>
+    螺旋桨模块实现了瓦根宁根 B 系列敞水性能的回归多项式、图谱设计法
+    （B-δ 图，含公制图谱定义 B<sub>P</sub> 与 δ）、
+    以及 Burrill 空泡限界线校核。选用 B 系列回归而非教材的 AU5-50 图谱，
+    是权衡后的决定：回归式有系数、可复现、可测试，而图谱读数依赖人眼。
+    两条路线的交叉检查给出了支持——同一工况下 AU5-50 图谱读数与
+    B5-50 回归的效率差在 1 % 以内。
+  </p>
+  <p>
+    这一环的独立锚是 NMRI 公开的 MP687 模型桨实测敞水数据（JBC 配套桨）：
+    按 B 系列回归算出的敞水效率与实测相比平均偏差 <strong>2.8 %</strong>。
+    另有教材螺旋桨设计算例的终局校核，设计航速差 0.07 节。
+  </p>
+
+  <h3>4.6 设计空间：扫描、逐级拒绝与帕累托前沿</h3>
+  <p>
+    <code>openhull optimize</code> 在主尺度比网格上扫描设计空间，
+    对每一个候选跑完整链，记录<strong>每一级拒绝的理由</strong>，
+    最后给出可行方案集与权衡前沿（航速—排水量—GM 的帕累托散点）。
+    硬吃水模式下，网格的 L/B × Cb 逐候选解 B/T（±1 cm 二分），
+    扫描与单点 <code>run</code> 因此活在同一个设计空间里。
+  </p>
+  <p>
+    拒绝是这一环的主要输出。不可达候选被记为 <code>hard_draft</code> 拒绝
+    并附端点数字；多值 B/T 轴被显式拒绝而不是取平均。
+    换句话说，扫描给出的不是"最好的一条船"，而是
+    <em>可行域的边界在哪里、边界之外为什么不可行</em>。
+  </p>
+
+  <h3>4.7 耐波性与波浪失速</h3>
+  <p>
+    耐波性分两级。<strong>一级是书内公式</strong>：横摇、纵摇、垂荡的固有周期，
+    有效波倾角，以及共振横摇放大系数 1/(2μ) 的估算——
+    其中横摇阻尼不是拍的，而是从白名单文献的消减系数表与
+    能量等效二次阻尼链一路上量化出来的。给出的是"当前船型在各个遭遇周期上
+    处在共振带的什么位置"的判断，是否规避留给工程师。
+  </p>
+  <p>
+    <strong>二级是可选的势流 BEM 层</strong>（capytaine，Apache-2.0）：
+    把型值表放样成闭合面板网格，由 capytaine 提供水动力系数，
+    而 RAO 的质量、惯性与刚度矩阵来自白名单文献——
+    <em>求解器只借它的水动力，不借它的物理</em>。该层是可选依赖，
+    未安装时干净拒绝并给出安装指引。
+  </p>
+  <p>
+    波浪失速采用 Kwon 方法（白名单取自开放获取的转录文献，
+    已对归档 PDF 页核）：按方形系数、Froude 数、蒲福风级、排水量、
+    浪向与装载状态给出速度损失百分比与天气/静水速比；
+    非正的修正量被拒绝而不是伪造。公开对比锚为 KCS 船：
+    本实现给出 f<sub>w</sub> = 0.929，文献值 0.932。
+  </p>
+
+  <h3>4.8 数值光顺检查</h3>
   <p>
     型值表的微小凹凸在 CAD 里会被放大成难看的鼓包，但肉眼在数值表上发现不了。
     模块 <code>fairness</code> 用二阶差分的<strong>局部对比度</strong>做检测：
@@ -813,15 +946,10 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
   <p>
     绝对下限的标定方式值得一提：拿已知光顺的数字化 Series 60 母型实测其最大曲率对比度
     （27 条水线 × 21 站，得 <strong>12.2</strong>），把报警下限设在它的约两倍
-    （<strong>25</strong>），并留出"最大对比度 < 0.7 × 下限"的裕量测试。
-    这样既有明确的物理依据，又不会在将来微调数据时立刻失效。
-  </p>
-  <p>
-    除了曲率检测，还有两项几何检查：单瓣单调性（仅对 0.5 吃水以上的水线，
-    球鼻艏区豁免）、以及平行中体的恒定性与摆动判别。
+    （<strong>25</strong>），并留出"最大对比度 &lt; 0.7 × 下限"的裕量测试。
     验收是双向的：真实母型<strong>零报警</strong>，
     而人工种植的单点尖峰、斜率折角、破瓣、平行段凹陷<strong>全部被检出</strong>。
-    只做前者会把门槛设得过宽，只做后者会误报连连，两个方向必须同时成立。
+    只做前者会把门槛设得过宽，只做后者会误报连连。
   </p>
   </div>
 </section>
@@ -851,34 +979,34 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
             letter-spacing="2" fill="#8a6a3b">ANCHOR STRATA</text>
 
       <g font-family="Noto Serif SC,serif" font-size="13.5">
-        <rect x="40" y="48" width="640" height="52" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <rect x="40" y="48" width="700" height="52" fill="#1e3a5f" stroke="#1e3a5f"/>
         <text x="58" y="72" fill="#fbf9f5" font-weight="600">① 出版值锚 —— 最硬</text>
         <text x="58" y="91" font-family="IBM Plex Mono,monospace" font-size="10" fill="#c8d3e0">
-          JBC [NMRI] 官方条件表 · DTMB 1712 表 7 印刷棱形系数 · 教材算例原始数字
+          JBC [NMRI] 条件表 · DTMB 1712 自航数据 · MP687 敞水实测 · Holtrop-Mennen 论文算例
         </text>
 
-        <rect x="40" y="110" width="700" height="52" fill="#fff" stroke="#111418" stroke-width="1.3"/>
+        <rect x="40" y="110" width="760" height="52" fill="#fff" stroke="#111418" stroke-width="1.3"/>
         <text x="58" y="134" font-weight="600">② 非循环锚 —— 从未参与任何拟合</text>
         <text x="58" y="153" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">
           JBC 压载工况 ∇ 89 185.9 m³ / 首尾吃水 10.015 / 7.215 m —— 独立复现，误差 −0.7 % / −1.0 %
         </text>
 
-        <rect x="40" y="172" width="760" height="52" fill="#f4f1ea" stroke="#111418" stroke-width="1.3"/>
+        <rect x="40" y="172" width="820" height="52" fill="#f4f1ea" stroke="#111418" stroke-width="1.3"/>
         <text x="58" y="196" font-weight="600">③ 解析闭式自证 —— 不需要外部数据即可证伪</text>
         <text x="58" y="215" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">
-          箱形船 / 抛物线型线对闭式解精确 ≤ 1e-9 · 抛物线闭合校验 Cp = 2/3 · 半尺度船体积恰 1/8
+          箱形船 GZ 闭式解 ≤ 1e-8 · 抛物线闭合校验 · 原点斜率 GZ(5°)/sin5° ≡ GM · 体积守恒
         </text>
 
-        <rect x="40" y="234" width="820" height="52" fill="#f4f1ea" stroke="#d3cdc1" stroke-width="1.3"/>
+        <rect x="40" y="234" width="880" height="52" fill="#f4f1ea" stroke="#d3cdc1" stroke-width="1.3"/>
         <text x="58" y="258" font-weight="600">④ 定义恒等 —— 与构造方式的一致性</text>
         <text x="58" y="277" font-family="IBM Plex Mono,monospace" font-size="10" fill="#343941">
-          TPC ≡ 1.025 · Aw / 100 · KM ≡ KB + BMT（属性派生，防不一致）· 仿射不变量
+          TPC ≡ 1.025·Aw/100 · KM ≡ KB + BMT · lw2 ≡ 1.5·lw1 · 横摇周期恒等式 · 仿射不变量
         </text>
 
-        <rect x="40" y="296" width="880" height="52" fill="none" stroke="#d3cdc1" stroke-width="1.3"/>
-        <text x="58" y="320" font-weight="600" fill="#343941">⑤ 交叉通量 —— 两条独立路径必须给出同一答案</text>
+        <rect x="40" y="296" width="940" height="52" fill="none" stroke="#d3cdc1" stroke-width="1.3"/>
+        <text x="58" y="320" font-weight="600" fill="#343941">⑤ 交叉通路 —— 两条独立实现必须给出同一答案</text>
         <text x="58" y="339" font-family="IBM Plex Mono,monospace" font-size="10" fill="#6b7079">
-          邦戎纵向积分 vs 水线垂向积分体积 —— 相对偏差 1e-4
+          邦戎纵向积分 vs 水线垂向积分 · 面板网格放样 vs 站面积分 · AU5-50 图谱 vs B 系列回归
         </text>
       </g>
     </svg>
@@ -890,13 +1018,13 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
 
   <p>
     分层的直接应用例证：静水力表里的 <code>TPC</code>、<code>Aw</code>、
-    <code>KB</code>、<code>LCF</code> 这几项，NMRI 并没有公布 JBC 的对应值。
-    项目的处理不是"拿一个估计值凑上"，而是明确写出这几个量
-    <strong>无出版锚</strong>，改用定义恒等与交叉通量验证，
-    并给出可执行的替代方案（在真实型值表链路上补做基准核对）。
+    <code>KB</code>、<code>LCF</code> 这几项，NMRI 并没有公布 JBC 的对应值；
+    大倾角稳性与恶劣风浪衡准也没有公开的 JBC 判定可对。
+    项目的处理不是"拿一个估计值凑上"，而是明确写出这些量<strong>无出版锚</strong>，
+    改用解析闭环、独立手算与定义恒等验证，并在验证文档里逐条注明。
   </p>
 
-  <h3>5.2 JBC 基准验证结果</h3>
+  <h3>5.2 主尺度与静水力（阶段 1–2）</h3>
 
   <div class="tbl">
     <table>
@@ -906,183 +1034,238 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
         <th class="num">误差</th><th class="num">容差</th>
       </tr></thead>
       <tbody>
-        <tr><td>Lpp</td><td class="num">280.000 m</td><td class="num">272.375 m</td><td class="num">−2.72 %</td><td class="num">±5 %</td></tr>
-        <tr><td>B</td><td class="num">45.000 m</td><td class="num">45.396 m</td><td class="num">+0.88 %</td><td class="num">±5 %</td></tr>
-        <tr><td>T</td><td class="num">16.500 m</td><td class="num">16.813 m</td><td class="num">+1.90 %</td><td class="num">±5 %</td></tr>
-        <tr><td>D</td><td class="num">25.000 m</td><td class="num">24.319 m</td><td class="num">−2.72 %</td><td class="num">±5 %</td></tr>
+        <tr><td>Lpp</td><td class="num">280.0 m</td><td class="num">272.4 m</td><td class="num">−2.7 %</td><td class="num">±5 %</td></tr>
+        <tr><td>B</td><td class="num">45.0 m</td><td class="num">45.40 m</td><td class="num">+0.9 %</td><td class="num">±5 %</td></tr>
+        <tr><td>T</td><td class="num">16.5 m</td><td class="num">16.81 m</td><td class="num">+1.9 %</td><td class="num">±5 %</td></tr>
+        <tr><td>D</td><td class="num">25.0 m</td><td class="num">24.32 m</td><td class="num">−2.7 %</td><td class="num">±5 %</td></tr>
         <tr><td>Cb</td><td class="num">0.8580</td><td class="num">任务书钉定</td><td class="num">—</td><td class="num">±0.02</td></tr>
       </tbody>
     </table>
   </div>
   <p class="note">
     表 1 为主尺度<strong>独立估算</strong>口径的结果。端到端链路在重量平衡之后会得到
-    略窄的尺度（Lpp 271.633 m，误差 −2.99 %），同样落在 ±5 % 内。
-    两者口径不同，不可混引——详见 5.3 节口径说明。
+    略窄的尺度（Lpp 271.63 m），同样落在 ±5 % 内。两者口径不同，不可混引——
+    详见 5.6 节口径说明。
   </p>
 
   <div class="tbl">
     <table>
-      <caption>表 2 重量—浮力平衡</caption>
-      <thead><tr><th>检查项</th><th class="num">结果</th><th>准则</th></tr></thead>
+      <caption>表 2 重量—浮力平衡 · 静水力 · 型线变换</caption>
+      <thead><tr><th>环节</th><th>检查项</th><th class="num">结果</th></tr></thead>
       <tbody>
-        <tr><td>平衡收敛</td><td class="num">3 轮，终值 0.018 %</td><td>|W − B|/W ≤ 0.1 %（式 3-27）</td></tr>
-        <tr><td>排水量复现</td><td class="num">181 306 t vs 锚 182 829.1 t → <span class="ok">−0.83 %</span></td><td>&lt; 1 %</td></tr>
-        <tr><td>诺曼系数</td><td class="num">1.160</td><td>&gt; 1（物理必需）</td></tr>
-        <tr><td>零循环锚</td><td class="num">教材算例：钢料 7 384 t（立方模数）/ 7 378 t（指数法）</td><td>逐位复现出版数字</td></tr>
-      </tbody>
-    </table>
-  </div>
+        <tr><td rowspan="3">重量—浮力平衡</td>
+          <td>平衡收敛</td><td class="num">3 轮，终值 0.018 %（判据 ≤ 0.1 %）</td></tr>
+        <tr><td>排水量复现</td><td class="num">181 306 t vs 锚 182 829.1 t → <span class="ok">−0.83 %</span></td></tr>
+        <tr><td>零循环锚（教材算例）</td><td class="num">钢料 7 384 t / 7 378 t，逐位复现</td></tr>
 
-  <div class="tbl">
-    <table>
-      <caption>表 3 静水力</caption>
-      <thead><tr>
-        <th>量</th><th class="num">基准</th><th class="num">计算</th>
-        <th class="num">误差</th><th class="num">容差</th>
-      </tr></thead>
-      <tbody>
-        <tr><td>设计吃水排水体积</td><td class="num">178 369.9 m³ [NMRI]</td><td class="num">178 741.5 m³</td><td class="num ok">+0.21 %</td><td class="num">±1 %</td></tr>
-        <tr><td>KM = KB + BMT</td><td class="num">18.59 m [NMRI]</td><td class="num">18.590 m</td><td class="num ok">+0.000 %</td><td class="num">±2 %</td></tr>
-        <tr><td>方形系数 Cb</td><td class="num">0.8580 [NMRI]</td><td class="num">0.85975</td><td class="num ok">+0.0018</td><td class="num">±0.005</td></tr>
-        <tr><td>LCB</td><td class="num">+2.5475 %Lpp [NMRI]</td><td class="num">+2.5397 %Lpp</td><td class="num">−0.008 %Lpp</td><td class="num">声明项</td></tr>
-        <tr><td>积分器自证</td><td class="num">箱形 / 抛物线闭式解</td><td class="num">精确</td><td class="num">&lt; 1e-9</td><td class="num">—</td></tr>
-        <tr><td>交叉通量</td><td class="num">邦戎 vs 水线路径</td><td class="num">—</td><td class="num ok">−0.001 %</td><td class="num">声明项</td></tr>
-      </tbody>
-    </table>
-  </div>
+        <tr><td rowspan="4">静水力</td>
+          <td>排水体积 @ 设计吃水</td><td class="num">178 741.5 vs 178 369.9 m³ → <span class="ok">+0.21 %</span>（±1 %）</td></tr>
+        <tr><td>KM = KB + BMT</td><td class="num">18.590 vs 18.59 m → <span class="ok">+0.000 %</span>（±2 %）</td></tr>
+        <tr><td>Cb</td><td class="num">0.85975 vs 0.8580 → <span class="ok">+0.0018</span>（±0.005）</td></tr>
+        <tr><td>交叉通路（邦戎 vs 水线）</td><td class="num">−0.001 %</td></tr>
 
-  <div class="tbl">
-    <table>
-      <caption>表 4 初稳性、浮态、干舷、母型变换与光顺检查</caption>
-      <thead><tr><th>模块</th><th>检查项</th><th class="num">结果</th></tr></thead>
-      <tbody>
-        <tr><td rowspan="3">初稳性与浮态</td>
-          <td>满载 GM（KG 13.29 m）</td>
-          <td class="num">5.300 m vs 5.30 m [NMRI] <span class="ok">✓</span></td></tr>
-        <tr><td>压载工况（<strong>非循环锚</strong>，从未参与拟合）</td><td class="num">吃水 −0.7 % / −1.0 %</td></tr>
-        <tr><td>箱形船纵倾对闭式解</td><td class="num">精确 1e-3</td></tr>
-
-        <tr><td rowspan="3">干舷校核</td>
-          <td>规则最小干舷（ICLL 1966 B 型）</td>
-          <td class="num">6 555.8 mm</td></tr>
-        <tr><td>实舷（D − T）</td><td class="num">8 500 mm</td></tr>
-        <tr><td>判定</td><td class="num"><span class="ok">PASS</span>，裕量 1 944 mm</td></tr>
-
-        <tr><td rowspan="4">Lackenby 变换</td>
-          <td>装载母型棱形系数 Cp 总/前/后</td>
-          <td class="num">0.8033 / 0.8564 / 0.7501 vs 印刷 0.805 / 0.861 / 0.750</td></tr>
+        <tr><td rowspan="4">型线变换</td>
+          <td>装载母型 Cp 总 / 前 / 后</td><td class="num">0.8033 / 0.8564 / 0.7501 vs 印刷 0.805 / 0.861 / 0.750</td></tr>
         <tr><td>恒等请求</td><td class="num">逐位返回母型，diff = 0</td></tr>
         <tr><td>ΔCb = +0.02</td><td class="num">实测 +0.0200，LCB 漂移 0.0017 %L</td></tr>
-        <tr><td>Series 60 → JBC 演示</td><td class="num">两步 14 轮落 0.8579 / +2.5429 %L</td></tr>
+        <tr><td>Series 60 → JBC</td><td class="num">两步 14 轮落 0.8579 / +2.5429 %L</td></tr>
 
         <tr><td rowspan="3">光顺检查</td>
-          <td>Series 60 母型（27 水线 × 21 站）</td>
-          <td class="num"><span class="ok">零报警</span></td></tr>
+          <td>Series 60 母型（27 水线 × 21 站）</td><td class="num"><span class="ok">零报警</span></td></tr>
         <tr><td>种植尖峰 / 折角 / 破瓣 / 平行段摆动</td><td class="num">全部检出</td></tr>
         <tr><td>93 m 实船型值表</td><td class="num">273 格逐格核对印刷表</td></tr>
-
-        <tr><td rowspan="2">分层 DXF</td>
-          <td>图层 / 标题栏 / 曲线</td>
-          <td class="num">8 层 A3 图框，PCHIP 密集折线</td></tr>
-        <tr><td>编码安全</td><td class="num">全部文字 ASCII，任意 locale 无乱码</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h3>5.3 端到端链路与 CLI</h3>
+  <h3>5.3 稳性与衡准（阶段 3）</h3>
+
+  <div class="tbl">
+    <table>
+      <caption>表 3 大倾角稳性与 IMO 完整稳性衡准</caption>
+      <thead><tr><th>检查项</th><th class="num">结果</th><th>判据</th></tr></thead>
+      <tbody>
+        <tr><td>箱形船 GZ 对解析式</td><td class="num">精确 ≤ 1e-8（10/20/30/40°）</td><td>闭式解</td></tr>
+        <tr><td><strong>原点斜率恒等式</strong> GZ(5°)/sin5°</td><td class="num"><span class="ok">与 GM 差 0.04 %</span></td><td>§5-5 式(5-15)(5-16)</td></tr>
+        <tr><td>等体积倾斜的体积守恒</td><td class="num">最坏残差 ≤ 0.05 %</td><td>书内要求 ≤ 0.1 %</td></tr>
+        <tr><td>IS Code 2.2 六项衡准（TB-001）</td><td class="num">0.718 / 1.074 / 0.356 m·rad；2.197 m；27.5°；GM₀ 5.400 m</td><td>全部 <span class="ok">PASS</span></td></tr>
+        <tr><td>2.3 恶劣风浪衡准（TB-001）</td><td class="num">面积 a 0.3518 vs b 1.3299 m·rad</td><td>全部 <span class="ok">PASS</span></td></tr>
+        <tr><td>矩形舱自由液面臂对闭式解</td><td class="num">精确 1e-12（5/10/20/30°）</td><td>解析</td></tr>
+        <tr><td>2.3.4 链对独立手算（X1/X2/k/r/s/C/T/φ₁）</td><td class="num">φ₁ 20.33° 等全部吻合</td><td>手算复核</td></tr>
+        <tr><td>横摇周期（含阻尼链）</td><td class="num">恒等式精确</td><td>解析</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">
+    恶劣风浪衡准<strong>没有公开的 JBC 判定可对</strong>，因此其约束性验收是
+    整条 2.3.4 / 2.3.2 链的独立手算复核，加上精确恒等式（lw2 = 1.5·lw1、
+    φ₀ 截距、θ₂ 的 50° 上限）。受风面积是这里最主要的声明假设。
+  </p>
+
+  <h3>5.4 阻力、推进与螺旋桨（阶段 3）</h3>
+
+  <div class="tbl">
+    <table>
+      <caption>表 4 阻力 · 推进 · 螺旋桨</caption>
+      <thead><tr><th>环节</th><th>锚点</th><th class="num">结果</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="2">艾亚法</td>
+          <td>表 7-8 算例有效功率（出版 1860 / 2521 kW）</td>
+          <td class="num">1862 / 2522 kW → <span class="ok">+0.1 % / +0.0 %</span></td></tr>
+        <tr><td>表 7-8 系数 C₄（出版 441 / 401）</td><td class="num">441.3 / 400.7</td></tr>
+
+        <tr><td>Holtrop–Mennen (1982)</td>
+          <td>论文 §5 算例的 20 个印刷量</td>
+          <td class="num"><span class="ok">逐位复现</span>（R<sub>total</sub> 1793.26 kN、P<sub>E</sub> 23063 kW）</td></tr>
+
+        <tr><td rowspan="3">推进与服务航速</td>
+          <td>DTMB 1712 表 31 实测自航（15 / 16 / 17 kn）</td>
+          <td class="num">−0.03 / +0.08 / +0.32 kn（容差 ±0.5 kn）</td></tr>
+        <tr><td>推进因子（600 ft 母型船）</td><td class="num">w 0.315，t 0.196，η<sub>h</sub> 1.175</td></tr>
+        <tr><td>隐含敞水效率的一致性漂移</td><td class="num">&lt; 6 %</td></tr>
+
+        <tr><td rowspan="2">螺旋桨</td>
+          <td>NMRI MP687 模型桨实测敞水数据（JBC 配套桨）</td>
+          <td class="num">B 系列 η<sub>o</sub> 平均偏差 <span class="ok">2.8 %</span></td></tr>
+        <tr><td>教材螺旋桨设计算例终局</td><td class="num">设计航速差 0.07 kn</td></tr>
+
+        <tr><td>交叉检查</td>
+          <td>AU5-50 图谱读数 vs B5-50 回归（同工况）</td>
+          <td class="num">η<sub>o</sub> 差 &lt; 1 %</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">
+    Holtrop–Mennen 的 <strong>JBC 速度带外锚定仍处开放状态</strong>——
+    东京 2015 工作坊的 EFD 阻力表在实现时未取得，计划中的 ±10–15 % 验收行
+    待其到手后落地。论文算例锚已先行钉死，缺的是基准船工况的独立对照。
+  </p>
+
+  <h3>5.5 耐波性与失速（阶段 3.8）</h3>
+
+  <div class="tbl">
+    <table>
+      <caption>表 5 耐波性与波浪失速</caption>
+      <thead><tr><th>检查项</th><th>锚点</th><th class="num">结果</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="3">零航速 RAO（势流 BEM）</td>
+          <td>Journée (1992) 报告 0909 表 10-III / 10-IV，Wigley 解析船型</td>
+          <td class="num">λ/L ≥ 1.0 门内：垂荡 −3…+10 %，纵摇 −22…−2 %</td></tr>
+        <tr><td>相位差</td><td class="num">≤ 44°（共振带上沿；λ/L ≥ 1.25 时 ≤ 22°）</td></tr>
+        <tr><td>λ/L = 0.75 垂荡谷</td><td class="num">复现</td></tr>
+
+        <tr><td>面板网格 vs 站面积分</td>
+          <td>同一型值表的两种独立体积算法</td>
+          <td class="num">互差 0.1 %</td></tr>
+
+        <tr><td>波浪失速（Kwon 法）</td>
+          <td>KCS 公开对比</td>
+          <td class="num">f<sub>w</sub> 0.929 vs 文献 0.932</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="note">
+    短波区（λ/L &lt; 0.75）只记录诊断，不作验收断言——来源数据自身在该区同样散布。
+    验收门槛的定标依据取自源报告 Figure 16-III。
+  </p>
+
+  <h3>5.6 端到端链路与 CLI</h3>
   <p>
-    端到端链路的船体不是解析构造，而是<strong>真实型值表</strong>：
-    包内数字化的 Series 60 母型（与仓库内 CSV 逐字节一致，有专测钉死，
-    且已验证随 wheel 一起打包）→ 仿射缩放到平衡后的尺度 →
-    Lackenby 变换到任务书钉定的方形系数。
+    CLI 跑的是<strong>完整链路</strong>：任务书 → 输入契约校验 → 重量浮力平衡 →
+    主尺度 → 真实型值表型线（数字化 Series 60 母型，与仓库内 CSV 逐字节一致，
+    有专测钉死且随 wheel 打包）→ 静水力 → 大倾角稳性 → IS Code 衡准 →
+    干舷 → 耐波性 → 阻力与螺旋桨。下面是 TB-001 的一次实跑输出。
   </p>
 
   <div class="tbl">
     <table>
-      <caption>表 5 CLI 实跑结果（TB-001）</caption>
-      <thead><tr><th>量</th><th class="num">数值</th><th>说明</th></tr></thead>
+      <caption>表 6 CLI 实跑结果（TB-001 / v1.6.0）</caption>
+      <thead><tr><th>环节</th><th class="num">数值</th><th>说明</th></tr></thead>
       <tbody>
         <tr><td>载重吨 → 排水量</td><td class="num">149 920 t → 181 306.2 t</td><td>vs JBC 锚 182 829.1 t，−0.83 %</td></tr>
-        <tr><td>空船重量</td><td class="num">31 386.2 t</td><td>成分立方模数法</td></tr>
-        <tr><td>平衡轮数 / 诺曼系数</td><td class="num">3 / 1.1599</td><td>判停 |W−B|/W ≤ 0.1 %</td></tr>
-        <tr><td>Lpp / B / D / T</td><td class="num">271.633 / 45.272 / 24.253 / 16.767 m</td><td>误差 −2.99 % / +0.60 % / −2.99 % / +1.62 %</td></tr>
-        <tr><td>达成载重吨系数</td><td class="num">0.8269</td><td>任务书设定 0.82 邻域</td></tr>
-        <tr><td>型线变换轮数</td><td class="num">13 passes</td><td>Cb 目标 0.8580 → 达成 0.8578</td></tr>
-        <tr><td>16.50 m 处排水体积</td><td class="num">173 874.7 m³</td><td><strong>估算尺度上积分</strong>，见下方口径说明</td></tr>
-        <tr><td>Cb / Cm / Cw</td><td class="num">0.85692 / 0.99045 / 0.91449</td><td>Cb 与目标偏差 &lt; 0.005</td></tr>
-        <tr><td>KB + BMT = KM</td><td class="num">8.492 + 10.205 = 18.6978 m</td><td>vs 锚 18.59 m，+0.58 %（容差 ±2 %）</td></tr>
-        <tr><td>TPC / MTC</td><td class="num">115.27 t/cm / 2 234.86 t·m/cm</td><td>Aw 11 245.83 m²</td></tr>
-        <tr><td>LCB</td><td class="num">+2.5250 %Lpp</td><td>vs 锚 +2.5475 %Lpp</td></tr>
+        <tr><td>空船重量 / 诺曼系数</td><td class="num">31 386.2 t / 1.160</td><td>平衡 3 轮</td></tr>
+        <tr><td>Lpp / B / D / T</td><td class="num">271.63 / 45.27 / 24.25 / 16.77 m</td><td>误差 −2.7…+1.9 %</td></tr>
+        <tr><td>吃水策略</td><td class="num">声明 16.500 vs 平衡 16.767 m</td><td>差 −0.267 m；结果使用平衡吃水，差异显式打印</td></tr>
+        <tr><td>静水力 @ 16.77 m</td><td class="num">∇ 176 881.9 m³ · Cb 0.8578 · KM 18.690 m</td><td>变换 13 轮；TPC 115.47 t/cm</td></tr>
+        <tr><td>GZ 曲线</td><td class="num">最大 2.227 m @ 27.5°，消失角 64.6°</td><td>KG 13.29 m</td></tr>
+        <tr><td>IS Code 2.2 六项</td><td class="num">0.718 / 1.074 / 0.356 m·rad；2.197 m；27.5°；GM₀ 5.400 m</td><td>全部 <span class="ok">PASS</span></td></tr>
+        <tr><td>2.3 恶劣风浪</td><td class="num">a 0.3518 vs b 1.3299 m·rad（φ₁ 20.37°）</td><td>全部 <span class="ok">PASS</span></td></tr>
+        <tr><td>干舷（B 型夏季）</td><td class="num">最小 6 393 mm vs 实舷 7 485 mm</td><td><span class="ok">PASS</span>，裕量 1 092 mm</td></tr>
+        <tr><td>耐波性一级估算</td><td class="num">横摇固有周期 13.10 s；纵摇 / 垂荡 11.10 / 11.02 s</td><td>共振放大 1/(2μ) = 8.3 @ μ 0.06</td></tr>
+        <tr><td>功率与螺旋桨</td><td class="num"><strong>声明式拒绝</strong></td><td>V/√L = 0.486 &lt; 0.50，落在艾亚速度带外</td></tr>
       </tbody>
     </table>
   </div>
 
   <div class="callout warn">
-    <h4>口径说明：估算尺度 ≠ JBC 尺度</h4>
+    <h4>口径说明：估算尺度 ≠ JBC 尺度；声明吃水 ≠ 平衡吃水</h4>
     <p>
       CLI 端到端跑的是<strong>完整估算链路</strong>——从载重吨出发估主尺度，
-      再在<em>估算出来的尺度</em>（Lpp 271.633 m）上积分静水力。
+      再在<em>估算出来的尺度</em>（Lpp 271.63 m）上积分静水力。
       而 JBC 的排水体积锚（178 369.9 m³）对应的是 Lpp 280 m 的船。
       两者相差 3 % 的船长，排水体积自然不能直接相比。
     </p>
     <p>
-      因此链路验收（±1 %）是在 <strong>JBC 尺度与目标上</strong>进行的；
-      而 CLI 端到端只断言 Cb ≤ ±0.005 与 KM ≤ ±2 %。若把 CLI 输出的 ∇
-      直接和 JBC 锚并列，得出的"−2.5 %"是一个<em>尺度差异</em>，不是静水力误差。
-      <strong>把这两件事分开报，是本项目验证纪律的一部分。</strong>
+      同理，主尺度表里的 T 是独立估算值（16.81 m），而链路的平衡吃水是 16.767 m；
+      任务书声明的 16.500 m 只是设计意图。三个数各有出处，
+      <strong>把不同口径的数字并列比较是本项目最常被误读的地方</strong>，
+      因此每一处都在输出里标了口径。
     </p>
   </div>
 
-  <h3>5.4 把弱点写在明处：循环性与近似清单</h3>
+  <h3>5.7 把弱点写在明处：声明清单</h3>
   <p>
-    很少有技术文档会主动列出自己的循环论证。本项目的立场是：
-    隐藏的循环性是缺陷，<strong>声明过的循环性只是设计选择的结果</strong>。
-    <code>VALIDATION.md</code> 中专门有一节列出全部九条，择要如下：
+    很少有技术文档会主动列出自己的循环论证与近似。本项目的立场是：
+    隐藏的循环性是缺陷，<strong>声明过的近似只是设计选择的结果</strong>。
+    <code>VALIDATION.md</code> 中专门有一节列出全部条目，择要如下：
   </p>
 
   <div class="tbl">
     <table>
-      <caption>表 6 声明清单（节选）</caption>
+      <caption>表 7 声明清单（节选）</caption>
       <thead><tr><th>#</th><th>声明内容</th><th>影响与处置</th></tr></thead>
       <tbody>
         <tr><td class="num">1</td>
-          <td>载重吨 149 920 t 与 η_dw = 0.82 为业主批准的假设</td>
+          <td>载重吨 149 920 t 与 η<sub>dw</sub> = 0.82 为业主批准的假设</td>
           <td>JBC 是虚拟基准船，NMRI 不公布载重吨；已在任务书留痕</td></tr>
         <tr><td class="num">2</td>
           <td>重量系数按 JBC 邻域标定</td>
           <td>标准母型船做法，已在模块内声明</td></tr>
         <tr><td class="num">3</td>
           <td>KM 锚：拟合母型以 GM + KG 为目标，故 GM 校验属一致性校验</td>
-          <td>非循环验证改由压载工况（从未参与拟合）与教材钢料算例承担</td></tr>
+          <td>非循环验证由压载工况与教材钢料算例承担</td></tr>
         <tr><td class="num">4</td>
-          <td>统计比例 L/B = 6.0、B/T = 2.7、L/D = 11.2 为标定值</td>
-          <td>落在双壳散货船统计带内；Watson 1977 已注册为可选算法，系数须以原文为准填入</td></tr>
+          <td>GZ 对比取自公开 JBC 分析（MAXSURF），但其船体模型与本项目不同</td>
+          <td>仅作宽演示带（25–45° / 2.2–3.4 m）；约束性验收是箱形船闭式解与斜率恒等式</td></tr>
         <tr><td class="num">5</td>
-          <td>解析拟合母型：水线族几何相似、球鼻艏外伸（285 m &gt; Lpp 280 m）未建模，Cw 为拟合产物</td>
-          <td>该母型保留在测试中作交叉校验；交付链路使用真实数字化型值表</td></tr>
+          <td>恶劣风浪衡准的受风面积是任务书声明值，驾驶室忽略（不保守方向）</td>
+          <td>总布置确定后必须重算；判定裕量宽（b ≈ 4.4 × a）</td></tr>
         <tr><td class="num">6</td>
           <td>干舷按平甲板、标准舷弧、不做规则减免计算</td>
           <td>偏保守侧；国内法规版本不在本版本范围</td></tr>
         <tr><td class="num">7</td>
           <td>Lackenby 一阶代数忽略二阶项</td>
-          <td>由表格层迭代收敛吸收，残差 ≤ 1e-4；大扰动自动拆分为串联子变换</td></tr>
+          <td>由表格层迭代收敛吸收，残差 ≤ 1e-4；大扰动自动拆分</td></tr>
         <tr><td class="num">8</td>
           <td>承载剖面采用线性插值</td>
-          <td>数字化网格与出版表的站位约定不同；误差体现在装载锚 −0.0017 Cp 内，接受带 ±0.005</td></tr>
+          <td>误差体现在装载锚 −0.0017 Cp 内，接受带 ±0.005</td></tr>
         <tr><td class="num">9</td>
-          <td>平行中体检测用面积曲线峰值 0.05 % 带</td>
-          <td>可由显式 dl 目标覆盖</td></tr>
+          <td>艾亚 C₀ 图谱为程序化数字化，读数容差 ±4 单位</td>
+          <td>中族曲线已覆盖；余下曲线列为未来数据录入，带外一律拒绝</td></tr>
+        <tr><td class="num">10</td>
+          <td>波浪失速方法取自开放获取转录文献，非原始学位论文</td>
+          <td>转录页已对归档 PDF 页核；原始文献已归档备查</td></tr>
       </tbody>
     </table>
   </div>
 
   <p>
-    这套纪律带来一个不太常见的结果：项目的 <code>CHANGELOG</code> 里有一条
-    <strong>更正记录</strong>，主动撤回了一项此前的对外声明——
-    早期曾称光顺检查器在 94 m 实船的艉部船底标出三处异常，
-    后续查明那是演示网格构造的产物（底端高于基线的站被左填充），
-    并非型值表缺陷。业主随后提供印刷型值表逐格复核，
-    273 格全部吻合，另有 4 格在 CAD 文字图层与印刷表之间有差异、以印刷表为准更正。
+    这套纪律带来一个不太常见的结果：项目的 <code>CHANGELOG</code> 里保留着
+    <strong>自我更正记录</strong>——例如一处早期对外声明被主动撤回
+    （光顺检查器"在 94 m 实船艉部标出三处异常"实为演示网格构造的产物，
+    业主提供印刷型值表逐格复核后 273 格全部吻合），
+    以及一次过程边界的回归（一次编辑把模块级打印留在了 <code>--json</code>
+    输出里，进程内测试看不见，被冷装验收抓到，随后用子进程级纯度假测试钉死）。
     这类记录留在公开变更日志里，本身就是项目可信度的一部分。
   </p>
   </div>
@@ -1103,17 +1286,17 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
   <h3>6.1 空白在哪里</h3>
   <div class="cards">
     <div class="card">
-      <h4>Lackenby 变换：全网无可用实现</h4>
+      <h4>船型变换：全网无可用实现</h4>
       <p>
-        关键词检索零命中。唯一声称实现该方法的仓库，翻开源码只有 IGES 导入测试脚本，
-        README 第五步是愿望而非代码。这既是空白，也是本项目选择自研的原因——
+        Lackenby 变换的关键词检索零命中。唯一声称实现该方法的仓库，
+        翻开源码只有 IGES 导入测试脚本。这既是空白，也是本项目选择自研的原因——
         公式源取自教材白名单并做了 300 dpi 视觉核对。
       </p>
     </div>
     <div class="card">
       <h4>Agent 编排层：没有人做成</h4>
       <p>
-        静水力、稳性、Holtrop 阻力都有小型开源实现，但绝大多数是课程级：
+        静水力、稳性、阻力都有小型开源实现，但绝大多数是课程级：
         无出处、无适用边界、验收靠"和某软件对上"。把整套链路做成
         <em>可被 AI 直接调用的稳定契约</em>，目前没有直接竞品。
       </p>
@@ -1122,16 +1305,15 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
       <h4>与 ML 生成线互补而非竞争</h4>
       <p>
         MIT 实验室的 ShipD（30 000 条参数化船体）与 ShipGen（扩散模型生成船体）
-        在机器学习生成路线上领先。OpenHull 走工程验证路线，
-        与它们是对话关系——ShipD 的十吃水几何量恰好可作为静水力引擎的
-        大规模回归语料。
+        在机器学习生成路线上领先。ShipD 已确认 MIT 许可、与本项目兼容，
+        其十吃水几何量可作为静水力引擎的大规模回归语料。
       </p>
     </div>
     <div class="card">
       <h4>可依赖的成熟基础件</h4>
       <p>
-        capytaine（线性势流 BEM，Apache-2.0，Nemoh 后继）是水动力模块的
-        求解器级依赖候选；vesseljs（NTNU，MIT）可作为静水力的第三方交叉验证锚。
+        capytaine（线性势流 BEM，Apache-2.0，Nemoh 后继）作为可选扩展承担
+        耐波性求解器角色；vesseljs（NTNU，MIT）可作为静水力的第三方交叉验证锚。
       </p>
     </div>
   </div>
@@ -1156,7 +1338,7 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
 <section id="s7">
   <div class="wrap">
   <span class="sec-num">07</span>
-  <h2 class="sec">交付范围</h2>
+  <h2 class="sec">交付范围与开放项</h2>
 
   <p>
     一个容易混淆的点：本项目不是一个"部分实现的船舶设计软件"，
@@ -1167,65 +1349,71 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
   </p>
 
   <figure>
-    <svg viewBox="0 0 1000 300" xmlns="http://www.w3.org/2000/svg" role="img"
-         aria-label="设计链路交付范围：本版本已验收的步骤与后续版本覆盖的步骤">
+    <svg viewBox="0 0 1000 322" xmlns="http://www.w3.org/2000/svg" role="img"
+         aria-label="设计链路的交付范围与开放项">
       <text x="40" y="32" font-family="IBM Plex Mono,monospace" font-size="11"
             letter-spacing="2" fill="#8a6a3b">DESIGN CHAIN — DELIVERY SCOPE</text>
 
       <text x="40" y="74" font-family="Noto Serif SC,serif" font-size="12.5" fill="#1e3a5f">
-        本版本交付 · 已通过 JBC 基准验收
-      </text>
-      <g font-family="Noto Serif SC,serif" font-size="11.5" text-anchor="middle">
-        <rect x="40" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
-        <text x="112" y="114" fill="#fbf9f5">重量—浮力平衡</text>
-
-        <rect x="195" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
-        <text x="267" y="114" fill="#fbf9f5">主尺度初估</text>
-
-        <rect x="350" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
-        <text x="422" y="114" fill="#fbf9f5">型线生成</text>
-
-        <rect x="505" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
-        <text x="577" y="114" fill="#fbf9f5">静水力计算</text>
-
-        <rect x="660" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
-        <text x="732" y="114" fill="#fbf9f5">初稳性与浮态</text>
-
-        <rect x="815" y="86" width="145" height="46" fill="#1e3a5f" stroke="#1e3a5f"/>
-        <text x="887" y="114" fill="#fbf9f5">干舷校核</text>
-      </g>
-
-      <text x="40" y="172" font-family="Noto Serif SC,serif" font-size="12.5" fill="#8a6a3b">
-        后续版本覆盖 · 验收准则已在宪法容差表中先行确定
+        已交付并通过验收（v1.0.0 起全链贯通）
       </text>
       <g font-family="Noto Serif SC,serif" font-size="10.5" text-anchor="middle">
-        <rect x="40" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
-        <text x="102" y="212" fill="#343941">阻力估算</text>
-
-        <rect x="172" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
-        <text x="234" y="212" fill="#343941">推进与航速</text>
-
-        <rect x="304" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
-        <text x="366" y="212" fill="#343941">螺旋桨初步设计</text>
-
-        <rect x="436" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
-        <text x="498" y="212" fill="#343941">大倾角稳性</text>
-
-        <rect x="568" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
-        <text x="630" y="212" fill="#343941">稳性衡准</text>
-
-        <rect x="700" y="184" width="124" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
-        <text x="762" y="212" fill="#343941">设计循环寻优</text>
-
-        <rect x="832" y="184" width="128" height="46" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
-        <text x="896" y="212" fill="#343941">报告与图纸</text>
+        <rect x="40" y="86" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="96" y="113" fill="#fbf9f5">重量—浮力平衡</text>
+        <rect x="160" y="86" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="216" y="113" fill="#fbf9f5">主尺度</text>
+        <rect x="280" y="86" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="336" y="113" fill="#fbf9f5">型线生成</text>
+        <rect x="400" y="86" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="456" y="113" fill="#fbf9f5">静水力</text>
+        <rect x="520" y="86" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="576" y="113" fill="#fbf9f5">大倾角稳性</text>
+        <rect x="640" y="86" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="696" y="113" fill="#fbf9f5">IS Code 衡准</text>
+        <rect x="760" y="86" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="816" y="113" fill="#fbf9f5">干舷校核</text>
+        <rect x="880" y="86" width="80" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="920" y="113" fill="#fbf9f5">报告</text>
       </g>
 
-      <text x="40" y="266" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
-        深色 = 本版本交付并已通过容差验收；描边 = 准则已定，按同一纪律继续交付
+      <g font-family="Noto Serif SC,serif" font-size="10.5" text-anchor="middle">
+        <rect x="40" y="138" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="96" y="165" fill="#fbf9f5">阻力估算</text>
+        <rect x="160" y="138" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="216" y="165" fill="#fbf9f5">推进与服务航速</text>
+        <rect x="280" y="138" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="336" y="165" fill="#fbf9f5">螺旋桨设计</text>
+        <rect x="400" y="138" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="456" y="165" fill="#fbf9f5">设计空间寻优</text>
+        <rect x="520" y="138" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="576" y="165" fill="#fbf9f5">耐波性 RAO</text>
+        <rect x="640" y="138" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="696" y="165" fill="#fbf9f5">波浪失速</text>
+        <rect x="760" y="138" width="112" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="816" y="165" fill="#fbf9f5">总布置简图</text>
+        <rect x="880" y="138" width="80" height="44" fill="#1e3a5f" stroke="#1e3a5f"/>
+        <text x="920" y="165" fill="#fbf9f5">分层 DXF</text>
+      </g>
+
+      <text x="40" y="218" font-family="Noto Serif SC,serif" font-size="12.5" fill="#8a6a3b">
+        开放项（已声明，不影响已交付环节的可用性）
       </text>
-      <text x="40" y="286" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
-        判断一个步骤是否可用，只看它是否通过了宪法容差表里那一行 —— 而不是看代码写了多少
+      <g font-family="Noto Serif SC,serif" font-size="10.5" text-anchor="middle">
+        <rect x="40" y="230" width="218" height="42" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="149" y="256" fill="#343941">JBC 速度带外阻力锚定</text>
+        <rect x="270" y="230" width="218" height="42" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="379" y="256" fill="#343941">艾亚 C₀ 图谱下沿谱系</text>
+        <rect x="500" y="230" width="218" height="42" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="609" y="256" fill="#343941">Holtrop 接入默认主链</text>
+        <rect x="730" y="230" width="230" height="42" fill="none" stroke="#8a6a3b" stroke-width="1.3"/>
+        <text x="845" y="256" fill="#343941">PyPI 发布 · 许可复核</text>
+      </g>
+
+      <text x="40" y="300" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
+        深色 = 已交付并已通过容差验收；描边 = 已声明开放，逐项写明缺什么
+      </text>
+      <text x="40" y="318" font-family="IBM Plex Mono,monospace" font-size="10.5" fill="#6b7079">
+        判断一个步骤是否可用，只看它是否通过了宪法容差表里那一行
       </text>
     </svg>
     <figcaption>
@@ -1234,44 +1422,43 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
     </figcaption>
   </figure>
 
-  <h3>7.1 本版本交付内容</h3>
+  <h3>7.1 已交付模块与验收状态</h3>
   <div class="tbl">
     <table>
-      <caption>表 7 v0.2 交付模块与验收状态</caption>
+      <caption>表 8 交付模块 · 方法来源 · 验收</caption>
       <thead><tr><th>模块</th><th>方法来源（白名单）</th><th class="num">验收</th></tr></thead>
       <tbody>
-        <tr><td>重量—浮力平衡</td><td>谢云平《船舶设计原理》§2.2.2；林焰《船舶设计原理》§2.1.3；《船体结构强度》§3.2.2 式(3-27)</td><td class="num ok">通过</td></tr>
-        <tr><td>主尺度初估</td><td>两本教材的载重吨系数法；母型船比例法</td><td class="num ok">通过</td></tr>
-        <tr><td>型线生成</td><td>DTMB Report 1712 表 7 数字化母型；林焰 §5 Lackenby 法</td><td class="num ok">通过</td></tr>
-        <tr><td>静水力计算</td><td>盛振邦《船舶原理》上册 ch.2/3、§4-2、§4-4</td><td class="num ok">通过</td></tr>
-        <tr><td>初稳性与浮态</td><td>《船舶原理》上册 §4-3、§4-7；《船体结构强度》§3.2.2 式(3-25)(3-26)</td><td class="num ok">通过</td></tr>
+        <tr><td>重量—浮力平衡 · 主尺度</td><td>谢云平 §2.2.2；林焰 §2.1.3；《船体结构强度》§3.2.2 式(3-27)</td><td class="num ok">通过</td></tr>
+        <tr><td>型线生成 · 光顺检查</td><td>DTMB 1712 表 7 数字化母型；林焰 §5 Lackenby 法；包内自实现</td><td class="num ok">通过</td></tr>
+        <tr><td>静水力 · 邦戎</td><td>盛振邦《船舶原理》上册 ch.2/3、§4-2、§4-4</td><td class="num ok">通过</td></tr>
+        <tr><td>大倾角稳性</td><td>《船舶原理》上册 §5-2 等体积倾斜法、式(3-41) Vlasov 积分</td><td class="num ok">通过</td></tr>
+        <tr><td>完整稳性衡准</td><td>IMO MSC.267(85) IS Code 2008 Part A 2.2 / 2.3</td><td class="num ok">通过</td></tr>
         <tr><td>干舷校核</td><td>ICLL 1966（经 1988 议定书修正）；林焰 §3.4.2 表 3-9 与式(3-15)–(3-20)</td><td class="num ok">通过</td></tr>
-        <tr><td>光顺性数值检查</td><td>包内自实现（局部对比度 + 单瓣单调性 + 平行中体）</td><td class="num ok">通过</td></tr>
-        <tr><td>分层 DXF 导出</td><td>ezdxf R2018，A3 图框，8 图层</td><td class="num ok">通过</td></tr>
+        <tr><td>阻力估算</td><td>《船舶原理》上册 §7-1 艾亚法；Holtrop &amp; Mennen (1982) 库层</td><td class="num ok">通过</td></tr>
+        <tr><td>推进与服务航速</td><td>《船舶原理》下册 §5-2/§5-3 Holtrop 伴流与推力减额</td><td class="num ok">通过</td></tr>
+        <tr><td>螺旋桨设计</td><td>瓦根宁根 B 系列回归；B-δ 图谱法（下册 §8-2）；Burrill 空泡限界线</td><td class="num ok">通过</td></tr>
+        <tr><td>设计空间寻优</td><td>包内自实现（网格扫描 + 逐级拒绝 + 帕累托）</td><td class="num ok">通过</td></tr>
+        <tr><td>耐波性</td><td>《船舶原理》下册横摇/纵摇/垂荡与阻尼链；capytaine 势流 BEM（可选）</td><td class="num ok">通过</td></tr>
+        <tr><td>波浪失速</td><td>Kwon 方法（开放获取转录，页核）</td><td class="num ok">通过</td></tr>
+        <tr><td>总布置 · 曲线图 · 报告</td><td>包内自实现（声明式布局、教材版式曲线图、中文 Markdown 报告）</td><td class="num ok">通过</td></tr>
       </tbody>
     </table>
   </div>
 
-  <h3>7.2 后续步骤的验收准则（先行确定）</h3>
+  <h3>7.2 开放项</h3>
   <p>
-    链路尚未交付的部分，其方法来源与验收准则同样已经先行写入。
-    这是项目宪法"验证优先于功能开发"的直接体现——
-    <strong>标准先定，实现后追；不达标就不交付</strong>。
+    四项开放项全部<strong>已声明其缺口内容</strong>，而不是含糊地写"未来工作"：
   </p>
-  <div class="tbl">
-    <table>
-      <caption>表 8 设计链路后续步骤的方法与准则</caption>
-      <thead><tr><th>步骤</th><th>方法与来源</th><th>验收准则</th></tr></thead>
-      <tbody>
-        <tr><td>阻力估算</td><td>Holtrop &amp; Mennen (1982)；ITTC 1957 相关线</td><td>有效功率误差 ±10&ndash;15 %</td></tr>
-        <tr><td>推进与航速</td><td>伴流分数与推力减额经验公式</td><td>服务航速复现 ±0.5 kn</td></tr>
-        <tr><td>螺旋桨初步设计</td><td>AU 系列设计图谱</td><td>桨叶要素与手册图谱吻合</td></tr>
-        <tr><td>大倾角稳性</td><td>《船舶原理》上册 ch.5 静稳性臂积分</td><td>最大静稳性角 ±5°</td></tr>
-        <tr><td>稳性衡准</td><td>IMO MSC.267(85) IS Code 2008</td><td>逐条判定与资料一致</td></tr>
-        <tr><td>设计循环寻优</td><td>约束内参数空间扫描</td><td>单次产出 ≥50 个通过全部衡准的可行方案</td></tr>
-      </tbody>
-    </table>
-  </div>
+  <ul>
+    <li><strong>JBC 速度带外阻力锚定</strong>——需要东京 2015 工作坊的 EFD 阻力表；
+      缺的是基准船工况的独立对照，Holtrop–Mennen 论文算例锚已钉死</li>
+    <li><strong>艾亚 C₀ 图谱下沿谱系</strong>——图内曲线比标签密（约 0.15 间隔，
+      标签只覆盖一半），读数歧义超出容差，因此如实挂起而非凑数</li>
+    <li><strong>Holtrop–Mennen 接入默认主链</strong>——当前以库层存在，
+      按 Kwon 先例先在库层验证；接入主链需业主拍板</li>
+    <li><strong>PyPI 发布与许可复核</strong>——目前通过 git 标签安装；
+      正式上 PyPI 前需完成依赖许可与打包复核</li>
+  </ul>
   </div>
 </section>
 
@@ -1298,22 +1485,26 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
         <tr><td><strong>详细设计</strong></td>
           <td>不做结构构件尺寸、不做船级社送审流程、不做舾装。
             输出明确限定在<strong>初步设计级别</strong></td></tr>
-        <tr><td><strong>出品图纸</strong></td>
-          <td>几何成果以<em>型值表 + 分层 DXF 矢量数据</em>交付，图纸由 CAD 端生成。
-            PNG/SVG 渲染仅为开发辅助，不是交付物。（此决策由项目所有者拍板，宪法红线已双语更新）</td></tr>
+        <tr><td><strong>型线图渲染</strong></td>
+          <td>船体型线以<em>型值表 + 分层 DXF 矢量数据</em>交付，图面由 CAD 端生成。
+            注意此处不包含静水力曲线图与总布置简图——那两类是工程图表与声明式布局示意图，
+            已作为交付物提供；受限的是<em>船体型线图的图面渲染</em></td></tr>
         <tr><td><strong>估计值冒充出版值</strong></td>
           <td>出处标签是强制项。没有来源的数字必须显式标为假设</td></tr>
+        <tr><td><strong>代替工程师拍板</strong></td>
+          <td>谐摇区是否规避、衡准边缘是否否决方案——工具只报告数字与判定，
+            不给推荐结论</td></tr>
       </tbody>
     </table>
   </div>
 
   <p>
-    最后一条值得多解释一句，因为它看起来像是能力上的退让，实际上是判断力的体现。
-    项目一度探索过用 FreeCAD TechDraw 的纯 OCC HLR 投影出图，技术路线已经打通
-    （93 m 实船三视图 SVG/PDF 实际产出过）。
-    但结论是：<strong>几何数据链是精确可靠且有锚验证的，而图面渲染的精度与美感不是 AI 的强项</strong>。
+    第四条值得多解释一句，因为它看起来像是能力上的退让，实际上是判断力的体现。
+    项目一度探索过用 FreeCAD TechDraw 的纯 OCC HLR 投影出型线图，技术路线已经打通
+    （93 m 实船三视图 SVG/PDF 实际产出过）。但结论是：
+    <strong>几何数据链是精确可靠且有锚验证的，而船体图面的渲染精度与美感不是 AI 的强项</strong>。
     与其交付一批"看起来像图纸"但需要工程师逐项返修的东西，
-    不如把精确的矢量数据和型值表交出去，让 CAD 端做它擅长的事。
+    不如把精确的矢量数据交出去，让 CAD 端做它擅长的事。
   </p>
   </div>
 </section>
@@ -1326,20 +1517,23 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
 
   <p>
     以下边界不影响已验证结论的成立，但决定了这套工具当前适用的场景。
-    它们同时也是使用者判断"这个结果能不能用"的依据。
+    它们同时也是使用者判断"这个结果能不能用"的依据——
+    而这些边界中的大部分，工具自己会在运行时主动检查并拒绝越界输入。
   </p>
 
   <ul>
     <li>
       <strong>主尺度统计比例为标定值。</strong>
-      L/B、B/T、L/D 三个比例取自《船舶设计原理》双壳散货船统计带内的合理值；
-      Watson &amp; Gilfillan (1977) 已注册为可选算法，其系数按宪法要求必须以原文为准填入，
-      不得凭记忆写入。这意味着主尺度反推的 −2.7 % 量级误差是<em>可解释且可改进</em>的。
+      L/B、B/T、L/D 取自《船舶设计原理》双壳散货船统计带内的合理值；
+      Watson &amp; Gilfillan (1977) 已注册为可选算法，其系数按宪法要求
+      必须以原文为准填入，不得凭记忆写入。主尺度反推的 −2.7 % 量级误差
+      是<em>可解释且可改进</em>的。
     </li>
     <li>
-      <strong>重量系数为母型船标定。</strong>
-      钢料立方模数、舾装面积模数与机电占比按 TB-001 母型拆分标定，
-      并显式声明其循环性；零循环验证由教材算例承担。
+      <strong>速度带是最常触发的边界。</strong>
+      艾亚法只认 V/√L ∈ 0.50–1.20（节 / √英尺），且 L/Δ<sup>1/3</sup> ∈ 4.88–6.41。
+      TB-001 的 14.5 kn 落在带外，功率与螺旋桨段因此拒绝——
+      这不是缺陷，是工具在告诉你"这个工况超出我手上方法的适用域"。
     </li>
     <li>
       <strong>解析拟合母型仅作交叉校验。</strong>
@@ -1347,19 +1541,23 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
       交付链路使用真实数字化型值表；该拟合母型保留在测试套件中。
     </li>
     <li>
-      <strong>承载剖面采用线性插值。</strong>
-      数字化网格是 21 等距站，而出版表按 20 站加半站给出，
-      艉部横梁剖面在水线间非线性，线性插值会低估其积分。
-      该影响体现在装载锚的 −0.0017 棱形系数偏差内，在 ±0.005 的接受带中。
-    </li>
-    <li>
-      <strong>干舷校核偏保守。</strong> 按平甲板、标准舷弧、不做规则减免计算，
-      且 Cb(0.85D) 以设计吃水的 Cb 替代（水线表只到设计吃水）。
+      <strong>干舷校核偏保守。</strong> 按平甲板、标准舷弧、不做规则减免计算。
       国内法规版本因长度上限 230 m 够不到基准船，不在本版本范围内。
     </li>
     <li>
+      <strong>耐波性短波区不作断言。</strong>
+      λ/L &lt; 0.75 只记录诊断，因为源数据自身在该区同样散布；
+      验收门槛取自源报告 Figure 16-III。
+    </li>
+    <li>
+      <strong>总布置是声明式示意。</strong>
+      默认散货船舱室方案是声明的约定，任务书可覆盖；它不参与任何计算，
+      也不含工艺判断。
+    </li>
+    <li>
       <strong>完整验收在散货船船型上完成。</strong>
-      主验收船为 JBC（Capesize 散货船），Series 60 母型承担型线变换与光顺检查的验证。
+      主验收船为 JBC（Capesize 散货船），Series 60 母型承担型线变换与光顺检查，
+      DTMB 1712 的 600 ft 船承担推进验证，Wigley 解析船型承担耐波性验证。
       其他船型在经验公式适用域内的使用，需自行核对边界守卫的返回结果。
     </li>
   </ul>
@@ -1373,44 +1571,62 @@ lightweight; Lin Yan, section 2.1.3 Eqs.(2-11)(2-29)"</code></pre>
   <h2 class="sec">复现与参与</h2>
 
   <h3>10.1 三步复现</h3>
-  <pre><code># 1. 环境（uv 管理，Python ≥ 3.11）
-git clone https://github.com/5777-wq/OpenHull.git
-cd OpenHull &amp;&amp; uv sync
+  <pre><code># 1. 安装命令行工具（锁定发布标签，可复现、可审计）
+uv tool install "git+https://github.com/5777-wq/OpenHull@v1.6.0"
 
-# 2. 跑一遍完整测试套件（176 条，含全部基准锚点断言）
-uv run pytest
+# 2. 秒级预检 8 道适用域关卡
+openhull check examples/taskbook_bulk_carrier.yaml
 
-# 3. 一条命令跑通设计链路
-uv run openhull run examples/taskbook_bulk_carrier.yaml
+# 3. 跑完整条设计链（图纸与报告可选）
+openhull run examples/taskbook_bulk_carrier.yaml \
+  --report design_report.md \
+  --hydro-curve-chart curves.png \
+  --arrangement-chart ga.png \
+  --arrangement-dxf ga.dxf
 </code></pre>
   <p>
-    CLI 只向标准输出流式写结果、不自行落盘——<code>--csv</code> 重定向得到
-    带 BOM 的表格（Excel 可直接打开，GBK 管道不会崩），
-    <code>--json</code> 得到完整可序列化结果。同一份任务书两次运行结果逐位相同。
+    从源码复现 459 项测试：<code>git clone</code> → <code>uv sync</code> →
+    <code>uv run pytest</code>。CLI 只向标准输出流式写结果、不自行落盘；
+    <code>--csv</code> 得到带 BOM 的表格（Excel 直接打开，GBK 管道不会崩），
+    <code>--json</code> 得到完整可序列化结果。同一份任务书两次运行逐位相同。
   </p>
 
-  <h3>10.2 什么样的贡献最有价值</h3>
+  <h3>10.2 交给 AI 智能体</h3>
+  <p>
+    OpenHull 就是为智能体编排设计的。技能文件在
+    <code>skills/openhull/SKILL.md</code>，内置最小任务书模板；
+    任何能读 SKILL.md 的智能体都能凭 URL 自行安装。下面这句话可以直接发给
+    支持技能的 AI 智能体：
+  </p>
+  <pre><code>请安装并使用 OpenHull 技能
+（https://github.com/5777-wq/OpenHull/tree/main/skills/openhull），
+然后帮我设计一条 5 万吨散货船，服务航速 14.5 节，
+出设计报告和总布置简图。</code></pre>
+
+  <h3>10.3 什么样的贡献最有价值</h3>
   <div class="cards">
     <div class="card">
       <h4>文献与公式源</h4>
       <p>
         项目最大的瓶颈不是编码能力，而是<strong>公式原文的获取与核对</strong>。
-        Watson &amp; Gilfillan (1977)、Holtrop &amp; Mennen (1982) 原文、
-        B 系列螺旋桨回归多项式系数表，都是当前明确挂账的缺口。
+        当前最具体的缺口是东京 2015 工作坊的 JBC EFD 阻力表——
+        它一来，阻力环节的基准船锚定就能闭合。
       </p>
     </div>
     <div class="card">
       <h4>独立交叉验证</h4>
       <p>
         用一个完全独立的实现（异构语言、异构算法）复算本项目的输出，
-        是最有价值的贡献形式。项目已把第三方交叉验证列为挂账项。
+        是最有价值的贡献形式。项目已有多条交叉通路，
+        但第三方实现复算仍是挂账项。
       </p>
     </div>
     <div class="card">
       <h4>新的基准船与工况</h4>
       <p>
-        更多带公开数据的船型（不同船种、不同尺度）能同时检验算法与适用边界，
-        也是 v1.0 发布门槛的直接支撑。
+        更多带公开数据的船型（不同船种、不同尺度）能同时检验算法与适用边界。
+        尤其欢迎能落在艾亚速度带<em>以内</em>的散货船工况，
+        让功率段能跑通全链。
       </p>
     </div>
     <div class="card">
@@ -1422,22 +1638,24 @@ uv run openhull run examples/taskbook_bulk_carrier.yaml
     </div>
   </div>
 
-  <h3>10.3 项目宪法与协作规范</h3>
+  <h3>10.4 项目宪法与协作规范</h3>
   <p>
     仓库根目录的 <code>AGENTS.md</code>（中文版 <code>AGENTS_zh.md</code>）
     是项目的宪章：单位制与符号表、验证基准与容差总表、公式白名单、
-    适用边界守卫、禁区清单、代码规范与仓库纪律，共九节。
+    适用边界守卫、禁区清单、代码规范与仓库纪律。
     它同时约束人类与 AI 贡献者——<strong>任何与之冲突的代码、测试或文档，
     按定义就是错的</strong>。修改该文件需要项目所有者明确批准并记录在案。
+    提 PR 前请先读 <code>CONTRIBUTING.md</code>：公式来源走白名单流程、
+    转录对照原书页核验、验收必须带数字。
   </p>
 
   <div class="callout">
-    <h4>引用</h4>
+    <h4>文档与引用</h4>
     <p>
-      仓库内提供 <code>CITATION.cff</code>，支持学术引用格式。
-      许可为 MIT。基准数据来源与链接记录在
-      <code>examples/data/DATA_SOURCES.md</code>，完整验证表在
-      <code>VALIDATION.md</code>。
+      完整验收记录逐条含数字，见 <code>VALIDATION.md</code>；版本历史见
+      <code>CHANGELOG.md</code>；文档站
+      <code>5777-wq.github.io/OpenHull</code>（快速上手与方法说明）。
+      仓库内提供 <code>CITATION.cff</code> 支持学术引用。许可为 MIT。
     </p>
   </div>
   </div>
@@ -1448,17 +1666,18 @@ uv run openhull run examples/taskbook_bulk_carrier.yaml
     <div class="fl">
       <div>
         <strong>OpenHull 技术白皮书</strong><br>
-        首个公开版本 v0.2.0 &nbsp;·&nbsp; 2026-09-20 &nbsp;·&nbsp; MIT License
+        v1.6.0 &nbsp;·&nbsp; 2026-10-02 &nbsp;·&nbsp; MIT License
       </div>
       <div style="text-align:right">
         github.com/5777-wq/OpenHull<br>
-        5777-wq.github.io/openhull-site
+        5777-wq.github.io/OpenHull
       </div>
     </div>
     <p style="margin-top:20px;max-width:600px">
-      本白皮书中的全部数值来自仓库的实际运行与测试输出，未经估算或修饰。
-      基准船数据来源：日本 NMRI 公开的 JBC 条件表，
-      以及美国 DTMB Report 1712（1963，公有领域）。
+      本白皮书中的全部数值来自仓库 v1.6.0 的实际运行与测试输出，未经估算或修饰。
+      基准数据来源：日本 NMRI 公开的 JBC 条件表与 MP687 螺旋桨实测数据、
+      美国 DTMB Report 1712（1963，公有领域）、
+      Holtrop &amp; Mennen (1982) 与 Journée (1992) 公开报告。
     </p>
   </div>
 </footer>
