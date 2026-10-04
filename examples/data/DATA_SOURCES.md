@@ -64,6 +64,22 @@ container fields.
 > only (`vendor/` is git-ignored). The repository carries download links and
 > extracted parameters, not the vendor data itself.
 
+## Selectable parent hulls (v1.8.0)
+
+The task book's `hull_form.parent` selects the mother hull the design
+chain transforms (registry `PARENT_HULL_ALGORITHMS` in
+`openhull.geometry`; provenance declared per entry):
+
+- `series60_digitised` — the packaged digitisation
+  `openhull/data/parent_hull_offsets.csv` (byte-identical to the
+  Series 60 table below; DTMB Report 1712, 1963).
+- `jbc_analytic` — an ANALYTIC CONSTRUCTION fitted to the JBC anchors
+  above (Cb 0.8580 / Cm 0.9981 / LCB +2.5475 %Lpp / KM 18.59 m), NOT a
+  published hull: the taper-form build and its declared-defaults rule
+  are in AGENTS.md §5 (Lines plan, 2026-10-04 owner-approved
+  multi-parent task).  The anchors come from this JBC section; no new
+  external data is introduced.
+
 ## Secondary validation ship — Series 60, total prismatic coefficient = 0.805
 
 Classic systematic series parent form — Model 4214W-B4 — from

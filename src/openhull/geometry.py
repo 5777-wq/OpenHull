@@ -42,6 +42,7 @@ tabulated offsets — the analytic form only generates the table.
 from __future__ import annotations
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -281,7 +282,7 @@ def jbc_parent_offsets(
     cb: float = 0.8580,
     cm: float = 0.9981,
     lcb_fwd_pct: float = 2.5475,
-    km_target: float = JBC_KM_TARGET_M,
+    km_target: float | None = JBC_KM_TARGET_M,
     n_stations: int = 21,
     n_waterlines: int = 33,
 ) -> OffsetsTable:
@@ -298,7 +299,11 @@ def jbc_parent_offsets(
         lpp / beam / draft: moulded dimensions, m.
         cb / cm / lcb_fwd_pct: form-coefficient targets (-, -, % Lpp).
         km_target: transverse metacentre above keel, m, fitted via the
-            vertical-exponent parameter k.
+            vertical-exponent parameter k.  ``None`` skips the fit: the
+            wall-sided base form (k = 0) is built with the Cb/LCB fit
+            still on target and the metacentre is simply measured and
+            reported — no silent tuning (AGENTS.md §5, `jbc_analytic`
+            declaration).
         n_stations / n_waterlines: grid sizes (both odd, see
             OffsetsTable; defaults 21 x 33 per the classic 20-station
             hull splitting).
@@ -367,7 +372,12 @@ def jbc_parent_offsets(
                 n_stations=n_stations, n_waterlines=n_waterlines,
             )
 
-        # bisection: KM rises with k (volume shifts upwards)
+        # bisection: KM rises with k (volume shifts upwards).
+        # km_target=None (no anchor in the task book) skips the fit:
+        # the wall-sided base form k = 0, Cb/LCB still on target, the
+        # metacentre measured and reported — never silently tuned.
+        if km_target is None:
+            return build(0.0)
         k_lo, k_hi = 0.0, 12.0
         for _ in range(32):
             k_mid = 0.5 * (k_lo + k_hi)
@@ -636,6 +646,172 @@ def load_parent_offsets(
             str(path), lpp=280.0, beam=45.0, draft=16.5,
             n_stations=n_stations, n_waterlines=n_waterlines,
         )
+
+
+# ---------------------------------------------------------------------------
+# Selectable parent hulls (v1.8.0, AGENTS.md §8 registry pattern)
+# ---------------------------------------------------------------------------
+
+#: JBC-anchor defaults the analytic parent falls back to when the task
+#: book does not pin the coefficient — ALWAYS surfaced in the run
+#: summary (`parent_hull.defaults_applied`), never applied silently.
+JBC_PARENT_CM_DEFAULT = 0.9981
+JBC_PARENT_LCB_FWD_PCT_DEFAULT = 2.5475
+
+
+def _build_series60_parent(
+    *, lpp: float, beam: float, draft: float, **_ignored: object
+) -> OffsetsTable:
+    """The digitised Series 60 mother, affine-scaled to the given dims.
+
+    Form coefficients are invariant under the affine scale, so no form
+    target is consumed — Cb is reached downstream by the Lackenby
+    transform (the v1.7 behaviour, byte-identical default).
+    """
+    return scale_offsets(
+        load_parent_offsets(), lpp=lpp, beam=beam, draft=draft
+    )
+
+
+def _build_jbc_parent(
+    *,
+    lpp: float,
+    beam: float,
+    draft: float,
+    cb: float,
+    cm: float | None,
+    lcb_fwd_pct: float | None,
+    km_target: float | None,
+) -> OffsetsTable:
+    """The analytic JBC-family parent at the task-book dimensions."""
+    return jbc_parent_offsets(
+        lpp=lpp, beam=beam, draft=draft, cb=float(cb),
+        cm=JBC_PARENT_CM_DEFAULT if cm is None else float(cm),
+        lcb_fwd_pct=(JBC_PARENT_LCB_FWD_PCT_DEFAULT
+                     if lcb_fwd_pct is None else float(lcb_fwd_pct)),
+        km_target=km_target,
+    )
+
+
+@dataclass(frozen=True)
+class ParentHullSpec:
+    """One selectable mother hull: stable id + provenance as data.
+
+    Constitution §8: every computational step exposes named algorithms
+    behind a registry; each carries its whitelist citation and its
+    applicability range as data, so task books and frontends select
+    per design step and out-of-range choices grey out.
+    """
+
+    algorithm: str
+    kind: str  # "digitised" | "analytic"
+    citation: str
+    applicability: str
+    build: Callable[..., OffsetsTable]
+
+
+PARENT_HULL_ALGORITHMS: dict[str, ParentHullSpec] = {
+    "series60_digitised": ParentHullSpec(
+        algorithm="series60_digitised",
+        kind="digitised",
+        citation=(
+            "the digitised Series 60 parent — Todd & Frick, "
+            "DTMB Report 1712 (1963), Table 7; provenance "
+            "examples/data/DATA_SOURCES.md; Lackenby transform per "
+            "AGENTS.md §5 (Lin Yan ch. 5)"
+        ),
+        applicability=(
+            "the Series 60 form family, Cb ≈ 0.60–0.80 "
+            "(reference model Cb = 0.80)"
+        ),
+        build=_build_series60_parent,
+    ),
+    "jbc_analytic": ParentHullSpec(
+        algorithm="jbc_analytic",
+        kind="analytic",
+        citation=(
+            "analytic fitted parent, declared in AGENTS.md §5 "
+            "(2026-10-04, owner-approved multi-parent task); anchors "
+            "= NMRI JBC (Cb 0.8580, Cm 0.9981, LCB +2.5475 %Lpp, "
+            "KM 18.59 m)"
+        ),
+        applicability="full forms, Cb ≈ 0.80–0.87",
+        build=_build_jbc_parent,
+    ),
+}
+
+
+def build_parent_hull(
+    algorithm: str,
+    *,
+    lpp: float,
+    beam: float,
+    draft: float,
+    cb: float | None = None,
+    cm: float | None = None,
+    lcb_fwd_pct: float | None = None,
+    km_target: float | None = None,
+) -> tuple[OffsetsTable, ParentHullSpec]:
+    """Resolve a registry id and build the parent at the given dims.
+
+    Returns ``(table, spec)``.  ``cb`` is required only by the analytic
+    parent (the chain's task-book Cb); the digitised Series 60 build
+    ignores it (coefficients are reached by the Lackenby transform
+    downstream).  Unknown ids are refused naming the registry.
+    """
+    meta = PARENT_HULL_ALGORITHMS.get(algorithm)
+    if meta is None:
+        known = ", ".join(sorted(PARENT_HULL_ALGORITHMS))
+        raise SpecValidationError(
+            "hull_form.parent", algorithm, f"one of: {known}",
+            "unknown parent-hull id; the registry lists every "
+            "selectable mother hull with its provenance.",
+        )
+    if algorithm == "jbc_analytic" and cb is None:
+        raise SpecValidationError(
+            "constraints.block_coefficient_design", None,
+            "a pinned Cb (required by the analytic parent)",
+            "jbc_analytic builds the hull AT the block-coefficient "
+            "target, so the task book must pin "
+            "constraints.block_coefficient_design.",
+        )
+    table = meta.build(
+        lpp=lpp, beam=beam, draft=draft, cb=cb, cm=cm,
+        lcb_fwd_pct=lcb_fwd_pct, km_target=km_target,
+    )
+    return table, meta
+
+
+def parent_hull_defaults_applied(
+    algorithm: str,
+    *,
+    cm: float | None,
+    lcb_fwd_pct: float | None,
+    km_target: float | None,
+) -> list[str]:
+    """Which JBC-anchor defaults were substituted (declared, not hidden).
+
+    Empty for the digitised Series 60 parent (it consumes no form
+    targets).  Each entry names the quantity, the substituted value and
+    its provenance, for the run summary's `parent_hull` block.
+    """
+    if algorithm != "jbc_analytic":
+        return []
+    applied: list[str] = []
+    if cm is None:
+        applied.append(
+            f"cm={JBC_PARENT_CM_DEFAULT} (JBC anchor default; pin "
+            "hull_form.midship_coefficient_design to override)")
+    if lcb_fwd_pct is None:
+        applied.append(
+            f"lcb=+{JBC_PARENT_LCB_FWD_PCT_DEFAULT} %Lpp (JBC anchor "
+            "default; pin hull_form.lcb_percent_lpp_design to override)")
+    if km_target is None:
+        applied.append(
+            "km: no anchor (needs requirements.kg_m AND "
+            "constraints.stability.gm_reference_m) — wall-sided base "
+            "form, k = 0, KM measured and reported, not tuned")
+    return applied
 
 
 def load_upper_offsets(

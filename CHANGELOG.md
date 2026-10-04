@@ -6,6 +6,42 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-10-04
+
+### Added
+
+- **Selectable parent hulls (`hull_form.parent`)** — the constitution
+  §8 registry pattern realised for the mother hull: the task book
+  selects between `series60_digitised` (the packaged DTMB 1712 Table 7
+  digitisation — the default, byte-identical to the pre-1.8 chain) and
+  the analytic JBC-family parent `jbc_analytic` (declared in §5 as a
+  CONSTRUCTION, not a book formula: taper-form build with the (p_a,
+  p_f) Simpson fit pinned to the task-book Cb, plus declared JBC
+  anchor defaults).  Applicability travels with the registry as data
+  (Series 60 Cb ≈ 0.60–0.80; JBC family Cb ≈ 0.80–0.87); unknown ids
+  are refused naming the registry.  The analytic parent's Cm/LCB take
+  new optional `hull_form` keys and its KM target is the task book's
+  OWN KG + GM when both are present — anything not pinned falls back
+  to a JBC anchor default that is SURFACED in
+  `parent_hull.defaults_applied`, never applied silently; without a KM
+  anchor the wall-sided base form (k = 0) is built and KM is measured,
+  not tuned.  All three hull-building call sites (run / rao /
+  design_space_scan) pass the selection through; the run summary
+  carries a `parent_hull` provenance block and `hull_source` is now
+  registry-driven.  Example task book
+  `examples/taskbook_bulk_carrier_jbcparent.yaml` (TB-001J).
+- 12 new tests (`tests/test_parent_hull.py`): registry provenance,
+  both refusal paths, Cb/LCB/KM anchors on the analytic parent
+  (KM 18.57 m vs the 18.59 m anchor, ±2 % gate), the JBC-anchored
+  chain run (volume −0.80 % vs the NMRI 178,369.9 m³, Cb +0.0001),
+  scan-path integration, and default-path identity.
+
+### Fixed
+
+- docs/quickstart-zh.md: the Kwon speed-loss entry still said "CLI
+  integration on the roadmap" — wired since v1.3.0; rewritten and a
+  hull-form selection section added.
+
 ## [1.7.0] - 2026-10-03
 
 ### Added

@@ -21,9 +21,13 @@ from .fairness import (
 from .geometry import (
     JBC_KM_TARGET_M,
     OffsetsTable,
+    PARENT_HULL_ALGORITHMS,
+    ParentHullSpec,
+    build_parent_hull,
     jbc_parent_offsets,
     load_offsets_csv,
     load_parent_offsets,
+    parent_hull_defaults_applied,
     scale_offsets,
 )
 from .linesplan import (
@@ -202,7 +206,11 @@ __all__ = [
     "knots_to_ms",
     "lackenby_transform",
     "load_parent_offsets",
+    "parent_hull_defaults_applied",
     "parent_to_taskbook",
+    "build_parent_hull",
+    "PARENT_HULL_ALGORITHMS",
+    "ParentHullSpec",
     "scale_offsets",
     "area_curve",
     "draw_lines_plan",

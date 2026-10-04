@@ -72,14 +72,36 @@ capytaine 势流求解器 + 白名单质量/刚度链：顶浪/横浪的垂荡�
 
 ### 6. 速度损失估算
 
+CLI 已接入（v1.3.0 起）：任务书写
+`seakeeping: { speed_loss: { beaufort: 6, direction: head } }`，
+`run` 的汇总/报告即给失速比与实际航速。Python 直调：
+
 ```bash
-# 在 Python 里调用（CLI 集成在路线图上）：
 from openhull.seakeeping import kwon_speed_loss_percent
 pct, ratio = kwon_speed_loss_percent(
     cb=0.65, fr=0.26, bn=6.0, nabla_m3=52030.0,
     direction="head", ship_type="container", loading="normal")
 # pct = 4.32 (%), ratio = 0.957 —— Kwon 方法（出处见"方法与数据来源"）
 ```
+
+### 7. 选母型（v1.8.0）
+
+任务书 `hull_form.parent` 可选母型船，默认 `series60_digitised`
+（DTMB 1712 数字化 Series 60 母型，Cb≈0.60–0.80 族）。满肥船
+（Cb≈0.80–0.87）选解析 JBC 母型：
+
+```yaml
+hull_form:
+  parent: jbc_analytic                 # 解析 JBC 母型（出处见章程 §5）
+  midship_coefficient_design: 0.9981   # 缺省=JBC 锚值，会写进汇总声明
+  lcb_percent_lpp_design: 2.5475       # 同上
+```
+
+KM 目标由任务书自带数推出（kg_m + gm_reference_m）；二者缺一则用
+直壁基形（k=0），KM 只测不调。所有缺省项都列进运行汇总
+`parent_hull.defaults_applied`，绝不悄悄代入。示例任务书：
+`examples/taskbook_bulk_carrier_jbcparent.yaml`；注册表全貌：
+`openhull.geometry.PARENT_HULL_ALGORITHMS`。
 
 ## 成果示例
 

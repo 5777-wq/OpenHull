@@ -38,8 +38,13 @@ from pathlib import Path
 import yaml
 
 from .freeboard import minimum_freeboard
-from .geometry import jbc_parent_offsets  # noqa: F401  (1.x fitted parent,
-#   kept for the validation tests; the run chain uses real offsets - 2.6)
+from .geometry import (
+    PARENT_HULL_ALGORITHMS,
+    ParentHullSpec,
+    jbc_parent_offsets,  # noqa: F401  (1.x fitted parent, kept for the
+    #   validation tests; the run chain builds hulls via the registry)
+    parent_hull_defaults_applied,
+)
 from .hydrostatics import hydrostatic_draft_rows, hydrostatics_table
 from .optimize import (
     ScanConfig,
@@ -313,6 +318,9 @@ _HYDRO_COLUMNS = [
 _TASKBOOK_SCHEMA = {
     "schema_version": None, "taskbook_id": None, "title": None,
     "status": None, "ship_type": None,
+    "hull_form": {"parent": None,
+                  "midship_coefficient_design": None,
+                  "lcb_percent_lpp_design": None},
     "units": {"length": None, "volume": None, "mass": None,
               "speed": None, "power": None, "angle": None},
     "requirements": {
@@ -589,6 +597,50 @@ def _ship_spec_from_taskbook(data: dict) -> tuple[ShipSpec, float]:
     return spec, float(values["requirements.drafts.design_draft_m"])
 
 
+def _parent_hull_selection(
+    data: dict,
+) -> tuple[str, dict, ParentHullSpec, list[str]]:
+    """Resolve the `hull_form` block -> (id, builder kwargs, meta, notes).
+
+    The analytic parent's form targets come from the task book when
+    pinned (``hull_form.midship_coefficient_design`` /
+    ``hull_form.lcb_percent_lpp_design``); absent keys take the JBC
+    anchor defaults, which ``parent_hull_defaults_applied`` surfaces for
+    the run summary — declared, never silent.  The KM target is the
+    task book's OWN numbers when both ``requirements.kg_m`` and
+    ``constraints.stability.gm_reference_m`` are present (KM = KG + GM,
+    the NMRI reference reading); otherwise None (wall-sided base form).
+    """
+    block = data.get("hull_form") or {}
+    algorithm = str(block.get("parent", "series60_digitised"))
+    if algorithm not in PARENT_HULL_ALGORITHMS:
+        known = ", ".join(sorted(PARENT_HULL_ALGORITHMS))
+        raise SpecValidationError(
+            "hull_form.parent", algorithm, f"one of: {known}",
+            "unknown parent-hull id; the registry lists every "
+            "selectable mother hull with its provenance.")
+    cm_raw = block.get("midship_coefficient_design")
+    lcb_raw = block.get("lcb_percent_lpp_design")
+    cm = (None if cm_raw is None else _number(
+        "hull_form.midship_coefficient_design", cm_raw,
+        "hull_form.midship_coefficient_design"))
+    lcb = (None if lcb_raw is None else _number(
+        "hull_form.lcb_percent_lpp_design", lcb_raw,
+        "hull_form.lcb_percent_lpp_design"))
+    kg_raw = (data.get("requirements") or {}).get("kg_m")
+    gm_raw = (((data.get("constraints") or {}).get("stability") or {})
+              .get("gm_reference_m"))
+    km: float | None = None
+    if kg_raw is not None and gm_raw is not None:
+        km = (_number("requirements.kg_m", kg_raw, "requirements.kg_m")
+              + _number("constraints.stability.gm_reference_m", gm_raw,
+                        "constraints.stability.gm_reference_m"))
+    kwargs = {"cm": cm, "lcb_fwd_pct": lcb, "km_target": km}
+    defaults = parent_hull_defaults_applied(algorithm, **kwargs)
+    meta = PARENT_HULL_ALGORITHMS[algorithm]
+    return algorithm, kwargs, meta, defaults
+
+
 def _table_fractions(step: float) -> tuple[float, ...]:
     """Draft fractions of the hydrostatics table for a requested step.
 
@@ -635,6 +687,8 @@ def run_taskbook(taskbook_path: str,
     """
     data = _load_taskbook(Path(taskbook_path))
     spec, design_draft_declared = _ship_spec_from_taskbook(data)
+    parent_algorithm, parent_kwargs, parent_meta, parent_defaults = (
+        _parent_hull_selection(data))
     draft_is_hard = _draft_is_hard(data)
 
     # TWO contract modes for the declared draft (R2-A, owner-approved
@@ -696,14 +750,17 @@ def run_taskbook(taskbook_path: str,
             ),
         }
 
-    # stage-2 chain (task 2.6): REAL offsets — the packaged digitised
-    # Series 60 parent, affine-scaled onto the balanced dimensions and
-    # Lackenby-transformed onto the task-book block coefficient
+    # stage-2 chain (task 2.6): REAL offsets — the selected parent hull
+    # (registry; default = packaged digitised Series 60, affine-scaled
+    # onto the balanced dimensions and Lackenby-transformed onto the
+    # task-book block coefficient
     hull, transform = parent_to_taskbook(
         lpp=balance.lpp,
         beam=balance.beam,
         draft=balance.draft,
         target_cb=spec.cb,
+        parent_hull=parent_algorithm,
+        **parent_kwargs,
     )
     drafts = hydrostatic_draft_rows(hull, design_draft,
                                     _table_fractions(hydro_step))
@@ -948,9 +1005,16 @@ def run_taskbook(taskbook_path: str,
         "taskbook_id": data.get("taskbook_id", ""),
         "ship_type": spec.ship_type,
         "hull_source": (
-            "digitised Series 60 parent (DTMB 1712 Table 7) affine-scaled "
-            "+ Lackenby"
+            f"{parent_meta.algorithm} ({parent_meta.kind}) + Lackenby: "
+            f"{parent_meta.citation}"
         ),
+        "parent_hull": {
+            "algorithm": parent_meta.algorithm,
+            "kind": parent_meta.kind,
+            "citation": parent_meta.citation,
+            "applicability": parent_meta.applicability,
+            "defaults_applied": parent_defaults,
+        },
         "transform_passes": transform.iterations,
         "cb_target": spec.cb,
         "cb_achieved": round(transform.achieved.get("cb", float("nan")), 4),
@@ -1461,6 +1525,8 @@ def _run_rao(args) -> None:
 
     data = _load_taskbook(Path(args.taskbook))
     spec, declared = _ship_spec_from_taskbook(data)
+    parent_algorithm, parent_kwargs, _pmeta, _pdef = _parent_hull_selection(
+        data)
     kg_value = (data.get("requirements") or {}).get("kg_m")
     if kg_value is None:
         raise SpecValidationError(
@@ -1473,6 +1539,8 @@ def _run_rao(args) -> None:
         beam=balance.beam,
         draft=balance.draft,
         target_cb=spec.cb,
+        parent_hull=parent_algorithm,
+        **parent_kwargs,
     )
     design_draft = balance.draft
     rao_drafts = hydrostatic_draft_rows(hull, design_draft, (0.9, 1.0))
@@ -1679,6 +1747,8 @@ def _service_kn(spec) -> float:
 def _run_optimize(args) -> None:
     data = _load_taskbook(Path(args.taskbook))
     spec, declared_draft = _ship_spec_from_taskbook(data)
+    parent_algorithm, parent_kwargs, parent_meta, _pdef = (
+        _parent_hull_selection(data))
     hard_mode = _draft_is_hard(data)
     bt_axis = _parse_axis(args.grid_bt)
     if hard_mode and bt_axis[0] != bt_axis[1]:
@@ -1777,6 +1847,7 @@ def _run_optimize(args) -> None:
 
     result = design_space_scan(
         spec, kg_m=float(kg_m), grid=grid, config=config,
+        parent_hull=parent_algorithm, parent_form=parent_kwargs,
         progress=None if args.json else progress)
     print()
     out_dir = Path(args.out)
@@ -1837,6 +1908,9 @@ def _run_optimize(args) -> None:
         "taskbook_id": data.get("taskbook_id", ""),
         "grid": {"l_over_b": args.grid_lob, "b_over_t": args.grid_bt,
                  "cb": args.grid_cb},
+        "hull_source": (
+            f"{parent_meta.algorithm} ({parent_meta.kind}) + Lackenby: "
+            f"{parent_meta.citation}"),
         "scan_mode": ("hard draft - B/T solved per candidate to the "
                       "declared %.3f m" % declared_draft
                       if hard_mode else

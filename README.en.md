@@ -121,7 +121,7 @@ chain, dimension scans, RAOs). Install and per-harness snippets:
    the code, transcriptions verified against page images of the
    source.
 2. **Acceptance by numbers.** Book worked examples, independent-path
-   cross-checks and public benchmarks pin every feature — 473 tests
+   cross-checks and public benchmarks pin every feature — 485 tests
    (marked skips without the optional extras),
    full record in [VALIDATION.md](VALIDATION.md).
 3. **Declared approximations.** Wall-sided decks, damping ranges,

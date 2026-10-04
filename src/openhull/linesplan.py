@@ -46,7 +46,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
-from .geometry import OffsetsTable, load_parent_offsets, scale_offsets
+from .geometry import OffsetsTable, build_parent_hull
 from .hydrostatics import simpson
 from .spec import SpecValidationError
 
@@ -600,20 +600,27 @@ def parent_to_taskbook(
     target_cb: float,
     target_lcb_pct: float | None = None,
     max_passes: int = MAX_PASSES,
+    parent_hull: str = "series60_digitised",
+    cm: float | None = None,
+    lcb_fwd_pct: float | None = None,
+    km_target: float | None = None,
 ) -> tuple:
-    """Mother-ship chain from the PACKAGED digitised parent (task 2.6).
+    """Mother-ship chain from a SELECTABLE parent hull (task 2.6, v1.8).
 
     The full geometry path of the stage-2 chain in one call:
 
-      1. load the packaged digitised Series 60 parent (DTMB 1712
-         Table 7, provenance in ``examples/data/DATA_SOURCES.md``);
-      2. affine-scale it onto the task-book dimensions ``(lpp, beam,
-         draft)`` — all form coefficients are invariant;
-      3. Lackenby-transform the scaled table onto ``target_cb`` (and
-         optionally ``target_lcb_pct``).
+      1. build the selected parent AT the task-book dimensions
+         (registry ``PARENT_HULL_ALGORITHMS`` in geometry.py; default
+         ``series60_digitised`` = the packaged DTMB 1712 Table 7
+         digitisation, affine-scaled — provenance in
+         ``examples/data/DATA_SOURCES.md``);
+      2. Lackenby-transform it onto ``target_cb`` (and optionally
+         ``target_lcb_pct``) — the parent coefficients ride the
+         transform.
 
-    This replaces the stage-1 analytic fitted parent: the hull the
-    hydrostatics see is now built from REAL tabulated offsets.
+    The hull the hydrostatics see is always REAL tabulated offsets;
+    ``jbc_analytic`` is a fitted construction whose targets must be
+    pinned by the task book or are declared in the run summary.
 
     Args:
         lpp / beam / draft: task-book dimensions, m (all > 0).  draft
@@ -622,15 +629,23 @@ def parent_to_taskbook(
         target_lcb_pct: desired LCB, % Lpp (fwd+); None keeps the
             parent's longitudinal distribution.
         max_passes: ceiling for the Lackenby convergence loop.
+        parent_hull: registry id (default ``series60_digitised`` —
+            the pre-v1.8 behaviour, byte-identical).
+        cm / lcb_fwd_pct / km_target: analytic-parent form targets
+            (``jbc_analytic`` only); None applies the declared JBC
+            anchor defaults (surfaced in the run summary).
 
     Returns:
         ``(table, report)`` — the transformed :class:`OffsetsTable`
         and the :class:`LackenbyReport` audit trail.
     """
-    parent = load_parent_offsets()
-    scaled = scale_offsets(parent, lpp=lpp, beam=beam, draft=draft)
+    parent, _meta = build_parent_hull(
+        parent_hull,
+        lpp=lpp, beam=beam, draft=draft, cb=target_cb,
+        cm=cm, lcb_fwd_pct=lcb_fwd_pct, km_target=km_target,
+    )
     return lackenby_transform(
-        scaled,
+        parent,
         target_cb=target_cb,
         target_lcb_pct=target_lcb_pct,
         max_passes=max_passes,

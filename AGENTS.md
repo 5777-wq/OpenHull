@@ -227,6 +227,20 @@ no page numbers from memory).
 - Todd, F.H. & Frick, C.A., DTMB Report 1712, "Series 60 — Methodical
   Experiments with Models of Single-Screw Merchant Ships" — offsets and
   form coefficients of the mother hull.
+- Analytic fitted parent, JBC family (registry id `jbc_analytic`,
+  declared 2026-10-04, owner-approved multi-parent task): **a declared
+  CONSTRUCTION, not a book formula** — the plan-form taper
+  y = (B/2)·g(x)^u(z) with u = 1 + k(1−ζ) over a circular-bilge
+  half-breadth base (bilge radius back-solved from the Cm deficit:
+  2r²(1 − π/4) section-area loss), the (p_a, p_f) taper parameters
+  Simpson-fitted to the Cb and LCB targets, and an optional KM fit by
+  bisection on k.  It carries no statistical regression: every target
+  number it hits must be pinned by the task book or declared as a
+  default in the run summary (`parent_hull.defaults_applied`).
+  Acceptance anchors: the NMRI JBC values (Cb 0.8580, Cm 0.9981,
+  LCB +2.5475 %Lpp, KM 18.59 m = KG 13.29 + GM 5.30).  Applicability:
+  full forms, Cb ≈ 0.80–0.87 — beyond the digitised Series 60
+  mother's family.
 
 **Resistance**
 - Ayre method as transcribed in Ship Theory vol. 1 (Sheng Zhenbang &

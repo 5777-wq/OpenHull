@@ -244,13 +244,17 @@ def design_space_scan(
     grid: SweepGrid | None = None,
     config: ScanConfig | None = None,
     progress: Callable[[int, int, str], None] | None = None,
+    parent_hull: str = "series60_digitised",
+    parent_form: dict | None = None,
 ) -> ScanResult:
     """Sweep the dimension-ratio grid and evaluate every candidate.
 
     base_spec carries the task-book requirements (deadweight, service
     speed, design draft); the grid varies the dimension ratios and the
     target block coefficient.  Every refusal is recorded, nothing is
-    silently dropped.
+    silently dropped.  ``parent_hull``/``parent_form`` select the
+    mother hull (registry in geometry.py; default = pre-v1.8
+    behaviour).
     """
     grid = grid or SweepGrid()
     config = config or ScanConfig(kg_m=kg_m)
@@ -278,7 +282,8 @@ def design_space_scan(
             progress(index, len(points),
                      f"{mode} {lob:.2f} B/T {bot:.2f} Cb {cb:.3f}")
         outcome = _evaluate_point(
-            base_spec, lob, bot, cb, service_kn, n_rps, series, config)
+            base_spec, lob, bot, cb, service_kn, n_rps, series, config,
+            parent_hull, parent_form)
         if isinstance(outcome, RejectedPoint):
             result.rejected.append(outcome)
         else:
@@ -428,6 +433,8 @@ def _evaluate_point(
     n_rps: float,
     series,
     config: ScanConfig,
+    parent_hull: str = "series60_digitised",
+    parent_form: dict | None = None,
 ):
     spec = replace(base_spec, cb=cb)
     if config.hard_draft_m is not None:
@@ -468,7 +475,8 @@ def _evaluate_point(
     try:
         hull, _transform = parent_to_taskbook(
             lpp=balance.lpp, beam=balance.beam, draft=balance.draft,
-            target_cb=cb)
+            target_cb=cb, parent_hull=parent_hull,
+            **(parent_form or {}))
     except (SpecValidationError, RuntimeError) as error:
         return RejectedPoint(lob, bot, cb, "hull", str(error)[:200])
 

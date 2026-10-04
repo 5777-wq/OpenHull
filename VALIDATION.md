@@ -876,10 +876,21 @@ These are features of the current stage, not hidden weaknesses:
 | Windows stdio deadlock found & fixed | inside an MCP stdio server, a child process inheriting the transport's stdin pipe deadlocks on Windows (minimal-repro variant matrix: baseline / close_fds / no_window all TIMEOUT; `stdin=DEVNULL` is the single unlocking variable). Every `_run_cli`/`_cli_version` spawn now passes `stdin=subprocess.DEVNULL` — the CLI never reads stdin, so detaching costs nothing | end-to-end test: a real MCP stdio client drives the real server process and the tool's CLI probe must answer (before the fix the probe hit its 30 s timeout) |
 | Regression | full suite 473 passed (459 + 14 new), ruff clean | `pytest` 7m22s; `uvx ruff check src tests` |
 
+## v1.8.0 — selectable parent hulls
+
+| Item | Disposition | Check |
+|---|---|---|
+| Registry (`hull_form.parent`) | `PARENT_HULL_ALGORITHMS` in geometry.py: `series60_digitised` (default, byte-identical chain) + `jbc_analytic` (§5-declared construction). Unknown ids refuse naming the registry; the analytic parent refuses without a pinned Cb | registry/refusal unit tests |
+| Analytic-parent anchors | Cb 0.8579–0.8581 vs 0.8580; LCB 2.5462 vs +2.5475 %Lpp; KM 18.574 m vs 18.59 m (k-fit path) — all inside the §4 gates | unit + chain tests |
+| Chain on TB-001J (`examples/taskbook_bulk_carrier_jbcparent.yaml`) | design-draft volume 176,933.9 m³ vs the NMRI 178,369.9 (−0.80 %, ±1 % gate); Cb +0.0001; `parent_hull.defaults_applied` empty (task book pins Cm/LCB and carries KG+GM) | `tests/test_parent_hull.py` chain fixture |
+| Default-path identity | TB-001 unchanged: `parent_hull.algorithm == series60_digitised`, no defaults; the rest of the suite (473 tests) green on the same commit | full suite |
+| Scan path | `design_space_scan(..., parent_hull=..., parent_form=...)` threaded through `_evaluate_point`; small-grid jbc scan feasible | scan integration test |
+| Regression | full suite 485 passed (473 + 12 new), ruff clean | `pytest`; `uvx ruff check src tests` |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 473 tests (14 MCP-surface tests; optional-extra tests skip when the extra is absent)
+uv run pytest                        # 485 tests (optional-extra tests skip when the extra is absent)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 
