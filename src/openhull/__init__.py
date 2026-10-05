@@ -79,6 +79,14 @@ from .main_dimensions import (
     estimate_main_dimensions,
     required_b_over_t_at_draft,
 )
+from .surface import (
+    SURFACE_DEGREE,
+    OffsetSurface,
+    curvature_report,
+    dense_offsets_table,
+    fit_offsets_surface,
+    raw_offsets_for_drawing,
+)
 from .spec import (
     BAND_REL_TOL,
     SEAWATER_DENSITY,
@@ -145,6 +153,12 @@ __all__ = [
     "AlgorithmInfo",
     "B_OVER_T_BAND",
     "required_b_over_t_at_draft",
+    "SURFACE_DEGREE",
+    "OffsetSurface",
+    "curvature_report",
+    "dense_offsets_table",
+    "fit_offsets_surface",
+    "raw_offsets_for_drawing",
     "AYRE_V_SQRT_L_MAX",
     "AYRE_V_SQRT_L_MIN",
     "HOLTROP_MAX_FROUDE",

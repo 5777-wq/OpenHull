@@ -6,6 +6,47 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ## [Unreleased]
 
+## [1.10.0] - 2026-10-05
+
+### Added
+
+- **Lines-plan surface skin (`openhull.surface`, the lines-plan quick
+  win)** — the drawing-grade route to fair lines plans: fit a bicubic
+  (degree 3x3) interpolating B-spline surface through the tabulated
+  offsets grid, then RE-CUT the dense stations and waterlines from
+  that skin — the lines plan becomes a projection of a smooth surface
+  instead of PCHIP-connected sparse points (the way commercial tools
+  draw them).  The engine is geomdl (MIT, NURBS-Python), added as a
+  core dependency under the capytaine/ezdxf precedent — it supplies
+  geometry only and replaces no whitelisted formula (AGENTS.md §5
+  entry, 2026-10-05; the hand-transcribed NURBS Book route stays
+  deferred until the book is legally obtained).  Physical-coordinate
+  re-sampling goes by bisection on the surface's own x(u)/z(v)
+  (geomdl parameterises non-uniformly; x depends only on u, z only on
+  v — probe-verified to 1e-15).  Anchors: knot reproduction (5e-14 m
+  on the packaged Series 60 parent, gate 1e-6·B/2) and the
+  hydrostatics round-trip (the dense re-cut at x2/x4 grids keeps
+  displacement volume within +0.003 %/+0.015 %, Cb ±0.005, LCB
+  ±0.05 %Lpp, KM within 1 % — the skin does not change the ship).
+  Simpson parity survives densification (odd in, odd out); negative
+  cubic undershoots at the zero rows are clipped and declared.  New
+  `curvature_report()` adds sampled plane-curve curvature diagnostics
+  per waterline (classical κ = |y''|/(1+y'²)^{3/2}, declared in the
+  same §5 entry) — a diagnostic only; the task-2.6 difference-based
+  `check_fairness` remains the acceptance gate.
+- Drawing: dense skins feed `draw_lines_plan` /
+  `save_lines_plan_dxf` unchanged through
+  `raw_offsets_for_drawing()` (the `fractions` key the drawing layer
+  already documented); waterline labels are THINNED to at most nine
+  on dense grids and moved to the waterlines' bow ends so they fan
+  out instead of stacking at the deck edge (visual-judge verified).
+- Example: `examples/lines_plan_series60_dense.png/.dxf` — the same
+  Series 60 parent, tabulated (25x8) next to skinned-and-re-cut
+  (41x53).
+- 9 new tests (`tests/test_surface.py`): both anchors, sparse-grid
+  and interval guards, Simpson parity, dead-row skip, injected
+  unfairness detection, drawing-chain integration.
+
 ## [1.9.0] - 2026-10-05
 
 ### Added

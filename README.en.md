@@ -39,7 +39,7 @@ runs the whole preliminary-design chain and produces:
 | design space | ratio-grid scan with per-stage refusal records and a Pareto front |
 | seakeeping | textbook natural periods & resonance verdicts; zero-speed RAOs via capytaine (optional) |
 | speed loss | Kwon's method (Beaufort, wave direction, loading condition) |
-| deliverables | layered DXF, charts, Chinese Markdown design report |
+| deliverables | lines plans (optional dense surface re-cut), layered DXF, charts, Chinese Markdown design report |
 
 Sample outputs (report, curves chart, GA schematic, DXF, CSV) are
 committed under
@@ -121,7 +121,7 @@ chain, dimension scans, RAOs). Install and per-harness snippets:
    the code, transcriptions verified against page images of the
    source.
 2. **Acceptance by numbers.** Book worked examples, independent-path
-   cross-checks and public benchmarks pin every feature — 496 tests
+   cross-checks and public benchmarks pin every feature — 505 tests
    (marked skips without the optional extras),
    full record in [VALIDATION.md](VALIDATION.md).
 3. **Declared approximations.** Wall-sided decks, damping ranges,

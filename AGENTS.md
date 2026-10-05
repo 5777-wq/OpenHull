@@ -671,6 +671,41 @@ resonance check)**
   anchor material for future resistance / added-resistance work
   (owner-gated as before).
 
+**Lines-plan surface skin via geomdl (external geometry engine,
+core dependency — plan task "lines-plan quick win", owner-approved
+2026-10-05, route A)**
+- Route decision recorded: the fitting/evaluation engine is geomdl
+  (MIT, https://github.com/orbingol/NURBS-Python), pinned `>=5` —
+  the capytaine/ezdxf dependency precedent.  The alternative
+  hand-transcribed layer from Piegl & Tiller, "The NURBS Book"
+  (2nd ed.) is DEFERRED until the book is legally obtained (the
+  owner buys it; no self-sourced electronic copy) — same entry to
+  be amended then.
+- geomdl supplies GEOMETRY ONLY: a bicubic (degree 3x3)
+  interpolating B-spline surface through the tabulated offsets grid
+  (stations x waterlines, half-breadths), its evaluation at dense
+  parameters, and knot vectors.  It replaces no whitelisted naval
+  formula; every hydrostatic quantity stays in the table layer
+  (Simpson chain, task 1.4).
+- Formula content implemented here (classical, declared): the
+  plane-curve curvature of a sampled waterline y(x),
+  kappa = |y''| / (1 + y'^2)^(3/2), by central differences on the
+  dense grid — a smoothness VERDICT for the fairness report, not a
+  design output.  The existing difference-based fairness checks
+  (task 2.6) are unchanged and stay the acceptance gate.
+- Anchors (VALIDATION.md): (a) knot reproduction — the surface
+  must return every tabulated offset exactly (gate 1e-6 x B/2);
+  (b) hydrostatics round-trip — the dense re-cut must not change
+  the ship: displacement volume / Cb / LCB / KM at the design
+  draft within the existing anchor tolerances of the tabulated
+  grid; (c) monotone physical-coordinate re-sampling (bisection on
+  the surface's own x(u), z(v) coordinates).
+- Declared approximations: the skin interpolates BELOW the top
+  tabulated waterline only (no extrapolation above deck or beyond
+  AP/FP — refuse, per section 6); curvature verdicts are sampled
+  diagnostics, acceptance stays with the table layer.
+
+
 **Adding a formula:** propose the source, owner approves, this section is
 amended first, implementation second. A formula without a whitelisted
 source must not be merged.

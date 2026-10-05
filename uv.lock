@@ -466,6 +466,14 @@ wheels = [
 ]
 
 [[package]]
+name = "geomdl"
+version = "5.4.0"
+source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
+wheels = [
+    { url = "https://pypi.tuna.tsinghua.edu.cn/packages/0c/7c/0160d6956236bbbd5f2fbe832110cf7237efa4c717bb888817b2a939a537/geomdl-5.4.0-py3-none-any.whl", hash = "sha256:026464f3caa87465928205aa014113f5134846d1f23d501127829cdba36f110f", size = 148012, upload-time = "2025-05-23T05:32:03.193Z" },
+]
+
+[[package]]
 name = "h11"
 version = "0.16.0"
 source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }
@@ -958,10 +966,11 @@ wheels = [
 
 [[package]]
 name = "openhull"
-version = "1.8.0"
+version = "1.10.0"
 source = { editable = "." }
 dependencies = [
     { name = "ezdxf" },
+    { name = "geomdl" },
     { name = "matplotlib" },
     { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }, marker = "python_full_version < '3.12'" },
     { name = "numpy", version = "2.5.3", source = { registry = "https://pypi.tuna.tsinghua.edu.cn/simple" }, marker = "python_full_version >= '3.12'" },
@@ -985,6 +994,7 @@ dev = [
 requires-dist = [
     { name = "capytaine", marker = "extra == 'seakeeping'", specifier = ">=3.0" },
     { name = "ezdxf", specifier = ">=1.4.4" },
+    { name = "geomdl", specifier = ">=5.0" },
     { name = "matplotlib", specifier = ">=3.11.1" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.2,<2" },
     { name = "numpy", specifier = ">=2.4.6" },

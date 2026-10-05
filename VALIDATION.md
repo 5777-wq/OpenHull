@@ -887,6 +887,19 @@ These are features of the current stage, not hidden weaknesses:
 | Scan path | `design_space_scan(..., parent_hull=..., parent_form=...)` threaded through `_evaluate_point`; small-grid jbc scan feasible | scan integration test |
 | Regression | full suite 485 passed (473 + 12 new), ruff clean | `pytest`; `uvx ruff check src tests` |
 
+## v1.10.0 — lines-plan surface skin
+
+| Item | Disposition | Check |
+|---|---|---|
+| §5 entry (2026-10-05) | geomdl (MIT, >=5) as a CORE dependency under the capytaine/ezdxf precedent — geometry only, replaces no whitelisted formula; the classical plane-curve curvature κ = \|y''\|/(1+y'²)^{3/2} declared in the same entry as a diagnostic; the NURBS-Book hand-transcription route deferred until the book is legally obtained | AGENTS.md §5 |
+| Anchor (a) knot reproduction | the bicubic interpolating skin returns every tabulated offset: max error 5.0e-14 m on the packaged Series 60 parent (gate 1e-6·B/2); a fit that moves the table is refused | test_surface.py exact-equality test |
+| Anchor (b) hydrostatics round-trip | dense re-cut does not change the ship: x2 grid 41x53 — ∇ +0.0024 %, Cb +0.0024 %, LCB +0.0038 %Lpp, KM +0.017 %; x4 grid 81x105 — ∇ +0.015 % (gates: ∇ 0.5 %, Cb 0.005, LCB 0.05 %Lpp, KM 1 %) | test_surface.py round-trip test (x2 and x4) |
+| Anchor (c) physical re-sampling | geomdl parameterises non-uniformly (grid knots NOT at uniform parameters, probe 2026-10-05) but x depends only on u and z only on v (3.6e-15 spread) — bisection on the surface's own coordinates, non-monotone spans refused | probe + parameterisation guard tests |
+| Simpson parity & bounds | odd grid counts in, odd out (intervals doubled/quadrupled); negative cubic undershoots at zero rows clipped to [0, B/2] (declared; measured min 0.0 on the parent) | grid shape/parity test |
+| Curvature diagnostics | per-waterline κ and inflection counts; dead keel rows skipped; an injected ±0.45 m zig-zag on the DWL row raises κ >2x and inflections +5 over clean | curvature tests |
+| Drawing integration | dense tables feed `draw_lines_plan`/`save_lines_plan_dxf` unchanged via `raw_offsets_for_drawing` (fractions key); waterline labels thinned to <=9 and fanned at the bow ends — visual-judge verified (labels separated, no stacking) | drawing-chain test + visual check of examples/lines_plan_series60_dense.png |
+| Regression | full suite 505 passed (496 + 9 new), ruff clean | `pytest`; `uvx ruff check src tests` |
+
 ## v1.9.0 — selectable resistance method
 
 | Item | Disposition | Check |
@@ -904,7 +917,7 @@ These are features of the current stage, not hidden weaknesses:
 ## Reproducing
 
 ```bash
-uv run pytest                        # 496 tests (optional-extra tests skip when the extra is absent)
+uv run pytest                        # 505 tests (optional-extra tests skip when the extra is absent)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

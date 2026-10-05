@@ -8,7 +8,7 @@ message: >-
 type: software
 authors:
   - alias: 5777-wq
-version: 1.9.0
+version: 1.10.0
 date-released: "2026-10-05"
 license: MIT
 repository-code: "https://github.com/5777-wq/OpenHull"

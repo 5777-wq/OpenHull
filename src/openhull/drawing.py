@@ -300,6 +300,10 @@ def draw_lines_plan(raw: dict, path: str, *,
                              xytext=(0, 3), textcoords="offset points",
                              fontsize=6.5, color="black", ha="center")
     else:
+        # label thinning (v1.10.0 dense skins): a 53-column dense grid
+        # would stack 52 waterline labels at the bow - keep at most
+        # nine, always including the design waterline itself
+        stride = max(1, -(-(heights.size - 1) // 9))
         for j in range(1, heights.size):
             h = heights[j]
             xq, yq = pchip(x, yw[:, j], factor=8)
@@ -307,10 +311,20 @@ def draw_lines_plan(raw: dict, path: str, *,
             ax_plan.plot(xq, yq, color="black",
                          linewidth=0.9 if not dashed else 0.6,
                          linestyle="-" if not dashed else (0, (3, 2)))
-            y_lab = float(np.nanmax(yq))
             frac = round(h / z_top, 3)
+            if j % stride and abs(frac - 1.0) > 1e-9:
+                continue
+            # label at the waterline's bow end (the polyline branch's
+            # scheme): the fan of ends separates the labels vertically
+            # instead of stacking them all at the deck edge
+            live = yq > 0.0
+            x_lab_j = (min(x_lab, float(xq[live][-1]) - 2.0)
+                       if live.any() else x_lab)
+            y_lab = float(np.interp(x_lab_j, xq, yq))
+            if np.isnan(y_lab) or y_lab <= 0.0:
+                continue
             label = _WL_LABELS.get(frac, f"{frac:.2f}T")
-            ax_plan.annotate(label, (x_lab, y_lab), xytext=(0, 3),
+            ax_plan.annotate(label, (x_lab_j, y_lab), xytext=(0, 3),
                              textcoords="offset points", fontsize=6.5,
                              color="black", ha="center")
     ax_plan.axhline(half, color="black", linewidth=0.5)
