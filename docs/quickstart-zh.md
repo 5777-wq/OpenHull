@@ -103,6 +103,23 @@ KM 目标由任务书自带数推出（kg_m + gm_reference_m）；二者缺一�
 `examples/taskbook_bulk_carrier_jbcparent.yaml`；注册表全貌：
 `openhull.geometry.PARENT_HULL_ALGORITHMS`。
 
+### 8. 选阻力方法（v1.9.0）
+
+任务书 `performance.resistance_method` 可选有效功率方法，默认
+`ayre`（艾亚法，链条与 v1.8 逐字节一致）；`holtrop_mennen`
+（Holtrop-Mennen 1982，论文算例逐位锚定）适合带外或需要第二法
+互核的场合：
+
+```yaml
+performance:
+  resistance_method: holtrop_mennen   # 注册适用带 Fr ≤ 0.55（LWL）
+```
+
+零附体/零球鼻等代默认值全部列进 `propeller_design.resistance.
+defaults_applied`；设计空间扫描暂只支持 ayre（声明 holtrop 会被
+拒绝并说明）。示例任务书：
+`examples/taskbook_bulk_carrier_holtrop.yaml`。
+
 ## 成果示例
 
 仓库 [examples/demo_outputs](https://github.com/5777-wq/OpenHull/tree/main/examples/demo_outputs)

@@ -65,8 +65,8 @@ from .propeller import (
 )
 from .seakeeping import estimate_seakeeping, kwon_speed_loss_percent
 from .resistance import (AYRE_V_SQRT_L_MAX, AYRE_V_SQRT_L_MIN,
-                         C0_FAMILY_BAND, admiralty_corridor,
-                         ayre_effective_power)
+                         C0_FAMILY_BAND, RESISTANCE_ALGORITHMS,
+                         admiralty_corridor, chain_effective_power)
 from .spec import (knots_to_ms, within_band, ShipSpec,
                    SpecValidationError)
 from .stability import gz_curve, intact_stability_criteria, weather_criterion
@@ -77,9 +77,12 @@ from .weight_balance import (solve_weight_balance,
 def _design_propeller_at_service(data, balance, hydro_design):
     """Preliminary propeller design at the task book's service speed.
 
+    The effective power comes from the registry-selected resistance
+    method (`performance.resistance_method`, v1.9.0; default ayre).
     Returns a summary dict, or a dict with skipped=True and the reason
-    when a whitelisted method refuses the operating point (e.g. the
-    Ayre speed-length band does not reach this ship's service speed).
+    when the selected method refuses the operating point (e.g. the
+    Ayre speed-length band does not reach this ship's service speed,
+    or a holtrop_mennen run above its registered Fr ceiling).
     """
     propeller_block = data.get("propeller") or {}
     if propeller_block.get("rpm") is None:
@@ -104,14 +107,16 @@ def _design_propeller_at_service(data, balance, hydro_design):
         (data.get("requirements") or {}).get("service_speed_kn"))
     v_ms = knots_to_ms(service_kn)
     series = b_series_open_water(z, aear)
-    # stage 1: the whitelisted resistance method must reach this
-    # operating point at all (Ayre speed-length band, digitised C0
-    # band) — a refusal here is reported with stage "ayre"
+    # stage 1: the whitelisted resistance method (registry-selected,
+    # `performance.resistance_method`, default ayre) must reach this
+    # operating point at all — a refusal here is reported with the
+    # method id as the stage
     # ONE waterline length for the run: the task book's declared value
     # (constraints.stability.weather_criterion.length_waterline_m) when
     # present, otherwise Ayre's own standard 1.025*Lpp.  Both the
     # effective-power call and the propeller factors below use it, so
-    # the PE and the propeller describe the same ship.
+    # the PE and the propeller describe the same ship — and the same
+    # discipline now covers BOTH registry methods (v1.9.0).
     _weather_block = (
         ((data.get("constraints") or {}).get("stability") or {})
         .get("weather_criterion"))
@@ -120,16 +125,17 @@ def _design_propeller_at_service(data, balance, hydro_design):
         if isinstance(_weather_block, dict) else None)
     run_lwl = (float(declared_lwl) if declared_lwl is not None
                else 1.025 * balance.lpp)
+    method, _method_info = _resistance_selection(data)
     try:
-        ayre_result = ayre_effective_power(
+        power = chain_effective_power(
+            method_id=method,
             displacement_t=balance.displacement_t, speed_kn=service_kn,
             lpp_m=balance.lpp, beam_m=balance.beam,
             draft_m=balance.draft, cb=hydro_design.cb,
-            xc_pct_fwd=hydro_design.lcb, lwl_m=run_lwl, screw="single",
-        )
-        pe_kw = ayre_result.pe_bare_kw
+            lcb_pct_fwd=hydro_design.lcb, lwl_m=run_lwl, screw="single",
+            cm=hydro_design.cm, cwp=hydro_design.cw, cp=hydro_design.cp)
     except SpecValidationError as refuse:
-        skipped = {"skipped": True, "stage": "ayre", "reason": str(refuse)}
+        skipped = {"skipped": True, "stage": method, "reason": str(refuse)}
         # P1-2 first half (review 2026-09-25): the refusal names the
         # violated band; a one-shot back-solve under a DECLARED rule
         # gives the nearest feasible value, so the reader does not start
@@ -171,21 +177,33 @@ def _design_propeller_at_service(data, balance, hydro_design):
                 "rule": "the Ayre speed-length band on the solved Lpp",
             }
         return skipped
+    pe_kw = power.pe_bare_kw
     # P0-1 diagnostic (display only): where the operating point sits in
     # the digitised C0 family, and the Admiralty-coefficient corridor
-    # around the design speed
-    resistance_sensitivity = {
-        "in_c0_peak_zone": ayre_result.in_c0_peak_zone,
-        "c0_family_peak_v_sqrt_l": ayre_result.c0_family_peak_v_sqrt_l,
-        "c0_local_slope_pct_per_0p05":
-            ayre_result.c0_local_slope_pct_per_0p05,
-        "v_sqrt_l": round(ayre_result.v_sqrt_l, 4),
-        "admiralty_corridor": admiralty_corridor(
-            displacement_t=balance.displacement_t, speed_kn=service_kn,
-            lpp_m=balance.lpp, beam_m=balance.beam, draft_m=balance.draft,
-            cb=hydro_design.cb, xc_pct_fwd=hydro_design.lcb,
-            lwl_m=run_lwl),
-    }
+    # around the design speed — Ayre-specific diagnostics; the
+    # holtrop_mennen path declares the skip instead of pretending.
+    if method == "ayre":
+        resistance_sensitivity = {
+            "in_c0_peak_zone": power.detail["in_c0_peak_zone"],
+            "c0_family_peak_v_sqrt_l":
+                power.detail["c0_family_peak_v_sqrt_l"],
+            "c0_local_slope_pct_per_0p05":
+                power.detail["c0_local_slope_pct_per_0p05"],
+            "v_sqrt_l": power.detail["v_sqrt_l"],
+            "admiralty_corridor": admiralty_corridor(
+                displacement_t=balance.displacement_t,
+                speed_kn=service_kn,
+                lpp_m=balance.lpp, beam_m=balance.beam,
+                draft_m=balance.draft,
+                cb=hydro_design.cb, xc_pct_fwd=hydro_design.lcb,
+                lwl_m=run_lwl),
+        }
+    else:
+        resistance_sensitivity = {
+            "note": ("C0-family diagnostics and the Admiralty corridor "
+                     "are Ayre-specific; not computed for "
+                     "holtrop_mennen"),
+        }
     # stage 2: thrust-led propeller design (efficiency-independent
     # thrust, no eta_o fixed point — same route as the scan); the
     # diameter-retry loop is the shared engine (round 9)
@@ -280,6 +298,14 @@ def _design_propeller_at_service(data, balance, hydro_design):
         "cavitation_note": cav_note,
         "cavitation_unchecked": cav_unchecked,
         "cavitation_skipped": cav_skipped,
+        "resistance": {
+            "method": power.method_id,
+            "citation": power.citation,
+            "applicability": power.applicability,
+            "defaults_applied": list(power.defaults_applied),
+            "pe_bare_kw": round(power.pe_bare_kw, 2),
+            "detail": dict(power.detail),
+        },
         "resistance_sensitivity": resistance_sensitivity,
     }
     if cav is not None:
@@ -321,6 +347,7 @@ _TASKBOOK_SCHEMA = {
     "hull_form": {"parent": None,
                   "midship_coefficient_design": None,
                   "lcb_percent_lpp_design": None},
+    "performance": {"resistance_method": None},
     "units": {"length": None, "volume": None, "mass": None,
               "speed": None, "power": None, "angle": None},
     "requirements": {
@@ -639,6 +666,24 @@ def _parent_hull_selection(
     defaults = parent_hull_defaults_applied(algorithm, **kwargs)
     meta = PARENT_HULL_ALGORITHMS[algorithm]
     return algorithm, kwargs, meta, defaults
+
+
+def _resistance_selection(data: dict):
+    """Resolve the `performance` block -> (method_id, registry info).
+
+    Default `ayre` — the pre-v1.9 chain, byte-identical (pinned by the
+    rest of the suite).  Unknown ids are refused naming the registry:
+    the same contract as the parent hull's `hull_form.parent` (v1.8.0).
+    """
+    block = data.get("performance") or {}
+    method = str(block.get("resistance_method", "ayre"))
+    if method not in RESISTANCE_ALGORITHMS:
+        raise SpecValidationError(
+            "performance.resistance_method", method,
+            f"one of: {', '.join(sorted(RESISTANCE_ALGORITHMS))}",
+            "unknown resistance-method id; the registry lists every "
+            "selectable method with its provenance.")
+    return method, RESISTANCE_ALGORITHMS[method]
 
 
 def _table_fractions(step: float) -> tuple[float, ...]:
@@ -1749,6 +1794,19 @@ def _run_optimize(args) -> None:
     spec, declared_draft = _ship_spec_from_taskbook(data)
     parent_algorithm, parent_kwargs, parent_meta, _pdef = (
         _parent_hull_selection(data))
+    resistance_method, _rinfo = _resistance_selection(data)
+    if resistance_method != "ayre":
+        # the scan's per-candidate balance, band guards and reference
+        # classification are Ayre-specific (v1.9.0): refuse rather than
+        # run a different method than the one the task book declares
+        raise SpecValidationError(
+            "performance.resistance_method", resistance_method,
+            "ayre (the scan)",
+            "the design-space scan balances every candidate against "
+            "the Ayre band and digitised C0 family; holtrop_mennen is "
+            "selectable in the single-point run only.  The scan "
+            "refuses rather than silently run a different method "
+            "than declared.")
     hard_mode = _draft_is_hard(data)
     bt_axis = _parse_axis(args.grid_bt)
     if hard_mode and bt_axis[0] != bt_axis[1]:

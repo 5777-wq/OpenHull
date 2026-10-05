@@ -104,11 +104,16 @@ def test_bare_hull_power_is_pe_over_1_08(at_14):
 # ---------------------------------------------------------------------------
 
 
-def test_registry_lists_ayre_implemented_and_holtrop_pending():
+def test_registry_lists_both_resistance_methods_implemented():
+    # v1.9.0: holtrop_mennen is wired behind the registry dispatcher
+    # (`performance.resistance_method`); the dispatcher identities are
+    # pinned in tests/test_holtrop_chain.py
     assert RESISTANCE_ALGORITHMS["ayre"].implemented
-    assert not RESISTANCE_ALGORITHMS["holtrop_mennen"].implemented
+    assert RESISTANCE_ALGORITHMS["holtrop_mennen"].implemented
     assert "ayre" in resistance_algorithms()
+    assert "holtrop_mennen" in resistance_algorithms()
     assert "Ship Theory vol. 1" in RESISTANCE_ALGORITHMS["ayre"].citation
+    assert "1982" in RESISTANCE_ALGORITHMS["holtrop_mennen"].citation
 
 
 def test_jbc_service_speed_is_refused_outside_the_band():

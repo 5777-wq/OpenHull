@@ -887,10 +887,24 @@ These are features of the current stage, not hidden weaknesses:
 | Scan path | `design_space_scan(..., parent_hull=..., parent_form=...)` threaded through `_evaluate_point`; small-grid jbc scan feasible | scan integration test |
 | Regression | full suite 485 passed (473 + 12 new), ruff clean | `pytest`; `uvx ruff check src tests` |
 
+## v1.9.0 — selectable resistance method
+
+| Item | Disposition | Check |
+|---|---|---|
+| Registry (`performance.resistance_method`) | `RESISTANCE_ALGORITHMS` in resistance.py: `ayre` (default, byte-identical chain) + `holtrop_mennen` (implemented=True, the v1.5.0 page-verified module wired behind `chain_effective_power`). Unknown ids refuse naming the registry | registry/refusal unit tests |
+| Dispatcher identities | ayre path == the pre-1.9 `ayre_effective_power(...).pe_bare_kw` verbatim; holtrop path == `holtrop_mennen_power(...).pe_kw` verbatim (same ONE-waterline LWL, displacement converted on 1.025 t/m³) | exact-equality unit tests |
+| Applicability guard | Fr > 0.55 on LWL refused with the registered band and citation (registry applicability data, §5 unchanged — no new formulas) | small-craft Fr ~0.90 refusal test |
+| Declared defaults | zero appendage / transom / bulb / c_stern / Cb-on-LWL each listed in `propeller_design.resistance.defaults_applied` (5 notes), never silent — the v1.8.0 discipline | defaults test |
+| Chain on TB-001H (`examples/taskbook_bulk_carrier_holtrop.yaml`) | P_E 11,103.0 kW at 14.5 kn, Fr 0.1411 (inside the band), 1+k₁ 1.4359, S 19,235.8 m²; propeller designed from the holtrop P_E; `resistance_sensitivity` declares the Ayre-only skip; full chain (stability/freeboard/seakeeping/report) unaffected | `tests/test_holtrop_chain.py` chain fixture |
+| Default-path refusal shape | TB-001 at 14.5 kn still refuses with `stage == "ayre"` (the JBC service speed sits below the speed-length band — the declared demo refusal, unchanged); no resistance block on the skipped path | refusal-shape test |
+| Ayre success path | the lighter in-band task book pins `resistance.method == ayre`, empty defaults, C0-family diagnostics + Admiralty corridor present | success-path test |
+| Scan honesty | a holtrop_mennen task book sent to `optimize` refuses (exit 2) naming `performance.resistance_method` and the scan's Ayre-specific internals — no silent method mixing | scan refusal test |
+| Regression | full suite 496 passed (485 + 11 new), ruff clean | `pytest`; `uvx ruff check src tests` |
+
 ## Reproducing
 
 ```bash
-uv run pytest                        # 485 tests (optional-extra tests skip when the extra is absent)
+uv run pytest                        # 496 tests (optional-extra tests skip when the extra is absent)
 uv run openhull run examples/taskbook_bulk_carrier.yaml --csv > table.csv
 ```
 

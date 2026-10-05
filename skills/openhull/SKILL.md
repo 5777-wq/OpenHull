@@ -221,9 +221,12 @@ feasibility_hint`（可行域提示）；`seakeeping.speed_loss`（Kwon，域外
   白名单外的方法不能实现，如实说明并建议走 Issue 提案流程；**船型
   同理**——当前只校准了散货船（Series 60 母型 + 分项立方重量），
   任务书写 tanker/container 等会被拒绝并说明原因，不要绕过或手改；
-- "能交叉验证阻力吗？" → v1.5.0 起**第二阻力法已入库**：
-  `openhull.holtrop.holtrop_mennen_power(...)`（Python API，
-  Holtrop-Mennen 1982，论文算例全量逐位锚定）——目前仅用于验证与
-  交叉核对，**尚未接入任务书链**（接线与守卫重构是下一增量，照
-  Kwon 库层先行的先例）；主链的功率仍是艾亚法；
+- "能交叉验证阻力吗？" → v1.9.0 起**双阻力法可选**：任务书键
+  `performance.resistance_method` 选 `ayre`（默认，链条与 v1.8 逐字节
+  一致）或 `holtrop_mennen`（`openhull.holtrop.holtrop_mennen_power`，
+  v1.5.0 起论文算例全量逐位锚定；注册适用带 Fr ≤ 0.55 on LWL，越带
+  拒绝；零附体等代默认值全在 `propeller_design.resistance.
+  defaults_applied` 里声明）。设计空间扫描暂只支持 ayre——声明
+  holtrop 的任务书送 scan 会被拒绝并说明原因，如实转述；主链默认
+  仍是艾亚法；
 - 用户想调参数重跑 → 改任务书 YAML 再跑，不要手改 Python。

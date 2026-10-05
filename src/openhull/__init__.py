@@ -60,11 +60,14 @@ from .propulsion import (
 from .resistance import (
     AYRE_V_SQRT_L_MAX,
     AYRE_V_SQRT_L_MIN,
+    HOLTROP_MAX_FROUDE,
     AyreCorrection,
     AyreResult,
+    ChainPowerResult,
     RESISTANCE_ALGORITHMS,
     ResistanceAlgorithmInfo,
     ayre_effective_power,
+    chain_effective_power,
     resistance_algorithms,
 )
 from .main_dimensions import (
@@ -144,8 +147,10 @@ __all__ = [
     "required_b_over_t_at_draft",
     "AYRE_V_SQRT_L_MAX",
     "AYRE_V_SQRT_L_MIN",
+    "HOLTROP_MAX_FROUDE",
     "AyreCorrection",
     "AyreResult",
+    "ChainPowerResult",
     "RESISTANCE_ALGORITHMS",
     "ResistanceAlgorithmInfo",
     "PropulsionFactors",
@@ -190,6 +195,7 @@ __all__ = [
     "bonjean_areas",
     "estimate_main_dimensions",
     "ayre_effective_power",
+    "chain_effective_power",
     "check_fairness",
     "propulsion_factors",
     "solve_service_speed",

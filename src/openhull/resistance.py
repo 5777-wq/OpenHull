@@ -24,9 +24,13 @@ extrapolate (AGENTS.md section 6) — the remaining curves of the
 chart are future data-entry work.
 
 Holtrop & Mennen (1982) is whitelisted and implemented as the library
-module `openhull.holtrop` (v1.5.0, worked-example anchored) for
-validation and cross-check; wiring it into this chain's registry is
-the registered follow-up.
+module `openhull.holtrop` (v1.5.0, worked-example anchored) and is
+selectable in the run chain since v1.9.0 through the task-book key
+`performance.resistance_method`: `chain_effective_power()` is the
+registry-driven dispatcher behind it (default `ayre`, byte-identical
+to the pre-1.9 chain).  The design-space scan keeps its Ayre internals
+and REFUSES a holtrop_mennen task book instead of silently running a
+different method than the one declared.
 """
 
 from __future__ import annotations
@@ -36,16 +40,20 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from .spec import SpecValidationError, knots_to_ms, within_band
+from .holtrop import SEAWATER_DENSITY, holtrop_mennen_power
 
 __all__ = [
     "resistance_algorithms",
     "ayre_effective_power",
+    "chain_effective_power",
     "AyreResult",
     "AyreCorrection",
+    "ChainPowerResult",
     "RESISTANCE_ALGORITHMS",
     "ResistanceAlgorithmInfo",
     "AYRE_V_SQRT_L_MIN",
     "AYRE_V_SQRT_L_MAX",
+    "HOLTROP_MAX_FROUDE",
     "FT_PER_M",
 ]
 
@@ -65,6 +73,12 @@ C0_FAMILY_BAND = (4.88, 6.41)
 #: metric horsepower -> kW, the book's own rounding in Eq. 7-26
 #: (the table 7-8 worked example pins the conversion)
 METRIC_HP_TO_KW = 0.735
+
+#: registry applicability of holtrop_mennen, enforced as a guard band:
+#: "general merchant ships up to Fr 0.55" (Froude on LWL, the module's
+#: own convention).  Guard data, not a formula — the citation travels
+#: with the refusal.
+HOLTROP_MAX_FROUDE = 0.55
 
 
 @dataclass(frozen=True)
@@ -101,10 +115,11 @@ RESISTANCE_ALGORITHMS: dict[str, ResistanceAlgorithmInfo] = {
             "Power Prediction Method', International Shipbuilding "
             "Progress vol. 29 - whitelisted and page-verified; "
             "implemented as the library module openhull.holtrop "
-            "(v1.5.0), not wired into the chain registry yet"
+            "(v1.5.0), selectable in the run chain through "
+            "performance.resistance_method (v1.9.0)"
         ),
         applicability="general merchant ships up to Fr 0.55",
-        implemented=False,
+        implemented=True,
     ),
 }
 
@@ -114,6 +129,100 @@ def resistance_algorithms() -> tuple[str, ...]:
     ids = [k for k, v in RESISTANCE_ALGORITHMS.items() if not v.implemented]
     ids += [k for k, v in RESISTANCE_ALGORITHMS.items() if v.implemented]
     return tuple(ids)
+
+
+@dataclass(frozen=True)
+class ChainPowerResult:
+    """One effective-power call behind the run chain (v1.9.0).
+
+    ``pe_bare_kw`` is the bare-hull effective power at the operating
+    point — Ayre: ``pe_bare_kw`` of the table 7-8 chain; Holtrop-Mennen:
+    ``pe_kw`` under the chain's declared zero appendage / transom /
+    bulb defaults (every substituted default is listed in
+    ``defaults_applied``, never silent — the v1.8.0 parent-hull
+    discipline).  ``detail`` carries JSON-serializable, method-specific
+    diagnostics for the run summary.
+    """
+
+    method_id: str
+    pe_bare_kw: float
+    citation: str
+    applicability: str
+    defaults_applied: tuple[str, ...]
+    detail: dict
+
+
+def chain_effective_power(
+    *, method_id: str, displacement_t: float, speed_kn: float,
+    lpp_m: float, beam_m: float, draft_m: float, cb: float,
+    lcb_pct_fwd: float, lwl_m: float, screw: str,
+    cm: float, cwp: float, cp: float,
+) -> ChainPowerResult:
+    """Registry-driven effective power for the run chain (v1.9.0).
+
+    Dispatches on ``RESISTANCE_ALGORITHMS``: the default ``ayre`` path
+    is the pre-1.9 call verbatim; ``holtrop_mennen`` maps the chain's
+    one-waterline discipline (``lwl_m`` is the SAME declared/1.025*Lpp
+    value the propeller factors use) onto the 1982 method, converts the
+    balance displacement on 1.025 t/m3 seawater, and enforces the
+    registered Fr <= 0.55 band.  Unknown ids are refused naming the
+    registry (the hull_form.parent contract, v1.8.0).
+    """
+    if method_id not in RESISTANCE_ALGORITHMS:
+        raise SpecValidationError(
+            "performance.resistance_method", method_id,
+            f"one of: {', '.join(sorted(RESISTANCE_ALGORITHMS))}",
+            "unknown resistance-method id; the registry lists every "
+            "selectable method with its provenance.")
+    info = RESISTANCE_ALGORITHMS[method_id]
+    if method_id == "holtrop_mennen":
+        volume_m3 = displacement_t * 1000.0 / SEAWATER_DENSITY
+        result = holtrop_mennen_power(
+            speed_kn=speed_kn, lwl_m=lwl_m, lpp_m=lpp_m, beam_m=beam_m,
+            draft_m=draft_m, displacement_volume_m3=volume_m3, cm=cm,
+            cwp=cwp, lcb_pct_lpp=lcb_pct_fwd, cp=cp)
+        if result.froude_number > HOLTROP_MAX_FROUDE:
+            raise SpecValidationError(
+                "froude_number", round(result.froude_number, 4),
+                f"Fr <= {HOLTROP_MAX_FROUDE}",
+                "the registered applicability of holtrop_mennen is "
+                "'general merchant ships up to Fr 0.55' (Froude on "
+                "LWL); outside the declared band the chain refuses "
+                "rather than extrapolate.")
+        return ChainPowerResult(
+            method_id=method_id, pe_bare_kw=result.pe_kw,
+            citation=info.citation, applicability=info.applicability,
+            defaults_applied=(
+                "appendage_area_m2 = 0 (bare hull; the chain carries "
+                "no appendage inputs yet)",
+                "transom_area_m2 = 0 (not carried by the chain yet)",
+                "bulb_area_m2 = 0 (not carried by the chain yet)",
+                "c_stern = 0 (neutral aftbody midpoint)",
+                "cb_waterline derived on LWL (calibre stated in the "
+                "module output)",
+            ),
+            detail={
+                "froude_number": round(result.froude_number, 4),
+                "form_factor_1_plus_k1": round(result.form_factor, 4),
+                "wetted_area_m2": round(result.wetted_area_m2, 1),
+                "r_total_kn": round(result.r_total_kn, 2),
+                "lcb_holtrop_pct_lwl": round(result.lcb_holtrop_pct, 3),
+            })
+    ayre = ayre_effective_power(
+        displacement_t=displacement_t, speed_kn=speed_kn, lpp_m=lpp_m,
+        beam_m=beam_m, draft_m=draft_m, cb=cb, xc_pct_fwd=lcb_pct_fwd,
+        lwl_m=lwl_m, screw=screw)
+    return ChainPowerResult(
+        method_id="ayre", pe_bare_kw=ayre.pe_bare_kw,
+        citation=info.citation, applicability=info.applicability,
+        defaults_applied=(),
+        detail={
+            "v_sqrt_l": round(ayre.v_sqrt_l, 4),
+            "in_c0_peak_zone": ayre.in_c0_peak_zone,
+            "c0_family_peak_v_sqrt_l": ayre.c0_family_peak_v_sqrt_l,
+            "c0_local_slope_pct_per_0p05":
+                ayre.c0_local_slope_pct_per_0p05,
+        })
 
 
 # ---------------------------------------------------------------------------

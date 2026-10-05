@@ -6,6 +6,45 @@ is semantic (MAJOR.MINOR.PATCH).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-10-05
+
+### Added
+
+- **Selectable resistance method (`performance.resistance_method`)** —
+  the constitution §8 registry pattern (v1.8.0's `hull_form.parent`)
+  realised for effective power: the task book selects `ayre` (the
+  default — the pre-1.9 chain, byte-identical, pinned by the rest of
+  the suite) or `holtrop_mennen`, the v1.5.0 page-verified library
+  module, now wired behind the registry dispatcher
+  `chain_effective_power()`.  The Holtrop path keeps the run's
+  ONE-waterline discipline (the same declared / 1.025·Lpp LWL the
+  propeller factors use), converts the balance displacement on
+  1.025 t/m³ seawater, enforces the registered applicability band
+  (Fr ≤ 0.55 on LWL — refused, never extrapolated), and surfaces every
+  substituted zero (appendage / transom / bulb / c_stern / Cb on LWL)
+  in `propeller_design.resistance.defaults_applied` — never silent.
+  The run summary carries a `resistance` provenance block (method /
+  citation / applicability / defaults / P_E / method detail); the
+  Ayre-only C0-family diagnostics and the Admiralty corridor are
+  declared skipped on a holtrop run instead of pretending.  The
+  design-space scan keeps its Ayre internals (per-candidate balance,
+  band guards, reference classification) and REFUSES a holtrop_mennen
+  task book naming the scan's reason, rather than silently running a
+  different method than the one declared.  Unknown ids are refused
+  naming the registry (the v1.8.0 contract).
+- 11 new tests (`tests/test_holtrop_chain.py`): registry provenance,
+  both dispatcher identities (ayre == the pre-1.9 call verbatim,
+  holtrop == the module call verbatim), the Fr guard, unknown-id
+  refusal, chain summary blocks on both methods, the TB-001
+  refusal-shape pin (the JBC service speed sits below the Ayre
+  speed-length band — the declared demo refusal, unchanged), and the
+  scan refusal.
+- Example task book `examples/taskbook_bulk_carrier_holtrop.yaml`
+  (TB-001H).
+- §5 whitelist unchanged: no new formulas — the Holtrop-Mennen entries
+  date from v1.5.0; the Fr ≤ 0.55 band is registry applicability data
+  travelling with the refusal (AGENTS.md §6 discipline).
+
 ## [1.8.0] - 2026-10-04
 
 ### Added
