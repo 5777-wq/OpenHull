@@ -4,9 +4,9 @@
 
 **Design the shell that carries it all.**
 
-由 AI 智能体编排的开源参数化船舶初步设计工具链：一份任务书，自动完成
-主尺度、静水力、IS Code 稳性、阻力与推进、螺旋桨设计、耐波性、失速
-估算、图纸与中文设计报告——**每个数字都溯源到公式白名单**。
+由 AI 智能体编排的开源参数化船舶初步设计工具链：写一份任务书，自动
+完成主尺度、静水力、IS Code 稳性、阻力与推进、螺旋桨设计、耐波性、
+失速估算，直到图纸与中文设计报告；每个数字都能溯源到公式白名单。
 
 [![tests](https://github.com/5777-wq/OpenHull/actions/workflows/tests.yml/badge.svg)](https://github.com/5777-wq/OpenHull/actions/workflows/tests.yml)
 [![release](https://img.shields.io/github/v/release/5777-wq/OpenHull)](https://github.com/5777-wq/OpenHull/releases)
@@ -28,11 +28,11 @@
 | 环节 | 交付物 |
 |---|---|
 | 主尺度与重量 | 诺曼系数迭代的重量浮力平衡、载重量比法估算 |
-| 船型 | 数字化 Series 60 母型 + Lackenby 变换，真实型值表 |
+| 船型 | 母型可选（Series 60 数字化 / 解析 JBC）+ Lackenby 变换，真实型值表 |
 | 静水力 | 静水力表、邦戎曲线、教材版式静水力曲线图 |
 | 稳性 | 大倾角 GZ、IMO 2008 IS Code 2.2 六项衡准 + 恶劣风浪衡准 2.3 |
 | 干舷 | 载重线公约 B 型夏季最小干舷校核（ICLL 1966 转录，任务书链内输出） |
-| 性能 | 艾亚阻力、Holtrop 推进因子、瓦根宁根 B 系列螺旋桨设计 |
+| 性能 | 艾亚 / Holtrop-Mennen 双阻力法可选，推进因子、瓦根宁根 B 系列螺旋桨设计 |
 | 设计空间 | 主尺度比网格扫描：逐级拒绝记录 + 帕累托前沿 |
 | 耐波性 | 书内公式固有周期与谐摇判定；可选 capytaine 零航速 RAO |
 | 失速 | Kwon 方法（蒲福风级、浪向、装载状态） |
@@ -46,7 +46,7 @@
 安装命令行工具（锁定发布标签，可复现、可审计）：
 
 ```bash
-uv tool install "git+https://github.com/5777-wq/OpenHull@v1.6.0"
+uv tool install "git+https://github.com/5777-wq/OpenHull@v1.9.0"
 ```
 
 跑通仓库自带的旗舰示例（JBC 基准船锚定的 15 万载重吨级 Capesize
@@ -58,12 +58,11 @@ openhull run examples/taskbook_bulk_carrier.yaml
 openhull check examples/taskbook_bulk_carrier.yaml
 ```
 
-> 诚实声明：TB-001 是 JBC 在**真实 14.5 kn 服务航速**下的验证船，
-> 该点落在艾亚速度带之外（V/√L ≈ 0.48 < 0.50），所以这个示例的
-> **功率与螺旋桨段会声明式拒绝**——主尺度、静水力、稳性、
-> 总布置照常产出。这是工具"拒绝优于外推"纪律的演示，不是故障。
-> 想首次跑通**含螺旋桨的完整链条**，用技能自带的
-> `minimal_taskbook.yaml`（45,000 t / 16 kn）。
+> 注意：TB-001 是 JBC 在 14.5 kn 服务航速下的验证船，这个点落在
+> 艾亚速度带之外（V/√L ≈ 0.48 < 0.50），所以示例的功率与螺旋桨段
+> 会声明式跳过，主尺度、静水力、稳性、总布置照常产出。这是
+> "拒绝优于外推"纪律的演示，不是故障。想先跑通含螺旋桨的完整
+> 链条，用技能自带的 `minimal_taskbook.yaml`（45,000 t / 16 kn）。
 
 带图纸与报告：
 
@@ -112,15 +111,15 @@ harness 的配置片段见 [docs/mcp.md](docs/mcp.md)。
 
 ## 工程纪律
 
-1. **白名单先行。** 经验公式只有在 [AGENTS.md §5](AGENTS.md) 立账之后
-   才能实现——先改章程再改代码，转录对照原书页面核验。
-2. **验收靠数字。** 书内算例、独立路径互检、公开基准船钉住每一个功能——
-   496 项测试（未装可选扩展时个别用例自动跳过），
-   逐条记录见 [VALIDATION.md](VALIDATION.md)。
-3. **近似必须声明。** 直壁甲板、阻尼区间、被约束的自由度：假定写在哪里，
-   就声明在哪里。
-4. **工具报告，工程师拍板。** 谐摇区是否规避、衡准是否否决方案，是船舶
-   工程师的专业判断——有意保留给人。
+1. **白名单先行。** 经验公式先在 [AGENTS.md §5](AGENTS.md) 立账，
+   再动手实现；改章程在前、改代码在后，转录对照原书页面核验。
+2. **验收靠数字。** 书内算例、独立路径互检、公开基准船钉住每一个
+   功能；496 项测试（未装可选扩展时个别用例自动跳过），逐条记录见
+   [VALIDATION.md](VALIDATION.md)。
+3. **近似必须声明。** 直壁甲板、阻尼区间、被约束的自由度：假定写在
+   哪里，就声明在哪里。
+4. **工具报告，工程师拍板。** 谐摇区是否规避、衡准是否否决方案，
+   这是船舶工程师的专业判断，工具有意保留给人。
 
 ## 验证亮点
 
@@ -160,7 +159,7 @@ harness 的配置片段见 [docs/mcp.md](docs/mcp.md)。
   author       = {5777-wq},
   title        = {OpenHull: agent-orchestrated parametric ship
                   preliminary design},
-  version      = {1.6.0},
+  version      = {1.9.0},
   year         = {2026},
   url          = {https://github.com/5777-wq/OpenHull}
 }

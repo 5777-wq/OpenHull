@@ -31,11 +31,11 @@ runs the whole preliminary-design chain and produces:
 | stage | deliverable |
 |---|---|
 | dimensions & weight | Norman-iterated displacement balance, deadweight-ratio methods |
-| hull form | digitised Series 60 parent + Lackenby transformation, real offsets |
+| hull form | selectable parent (digitised Series 60 / analytic JBC) + Lackenby transformation, real offsets |
 | hydrostatics | tables, Bonjean, textbook-layout hydrostatic curves chart |
 | stability | large-angle GZ, IMO 2008 IS Code 2.2 criteria, severe wind & rolling (2.3) |
 | freeboard | load-line type-B summer minimum check (ICLL 1966 transcription, in the run chain) |
-| performance | Ayre resistance, Holtrop propulsion factors, B-series propeller design |
+| performance | Ayre / Holtrop-Mennen selectable resistance, propulsion factors, B-series propeller design |
 | design space | ratio-grid scan with per-stage refusal records and a Pareto front |
 | seakeeping | textbook natural periods & resonance verdicts; zero-speed RAOs via capytaine (optional) |
 | speed loss | Kwon's method (Beaufort, wave direction, loading condition) |
@@ -51,20 +51,20 @@ regenerates all of them.
 Install the CLI (pinned to the release tag — reproducible, auditable):
 
 ```bash
-uv tool install "git+https://github.com/5777-wq/OpenHull@v1.6.0"
+uv tool install "git+https://github.com/5777-wq/OpenHull@v1.9.0"
 openhull run examples/taskbook_bulk_carrier.yaml
 # optional seconds-level preflight of all guard bands:
 openhull check examples/taskbook_bulk_carrier.yaml
 ```
 
-> Honest note: TB-001 is the JBC validation ship at its REAL 14.5 kn
-> service speed, which sits below the whitelisted Ayre speed band
-> (V/√L ≈ 0.48 < 0.50) — the power & propeller section is therefore
-> DECLINED with a declared refusal while dimensions, hydrostatics,
-> stability and the arrangement compute normally.  That is the
-> refuse-over-extrapolate discipline working, not a failure.  For a
-> first run through the FULL chain including the propeller, use the
-> skill's `minimal_taskbook.yaml` (45,000 t / 16 kn).
+> Note: TB-001 is the JBC validation ship at its 14.5 kn service
+> speed, which sits below the whitelisted Ayre speed band
+> (V/√L ≈ 0.48 < 0.50), so the power & propeller section returns a
+> declared refusal while dimensions, hydrostatics, stability and the
+> arrangement compute normally. That is the refuse-over-extrapolate
+> discipline working, not a failure. For a first run through the full
+> chain including the propeller, use the skill's
+> `minimal_taskbook.yaml` (45,000 t / 16 kn).
 
 From source (development):
 
@@ -172,7 +172,7 @@ If OpenHull contributes to your research, please cite it via
   author       = {5777-wq},
   title        = {OpenHull: agent-orchestrated parametric ship
                   preliminary design},
-  version      = {1.6.0},
+  version      = {1.9.0},
   year         = {2026},
   url          = {https://github.com/5777-wq/OpenHull}
 }
