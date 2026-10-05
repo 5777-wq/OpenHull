@@ -15,7 +15,7 @@ traceable to a formula whitelist**.
 [![license](https://img.shields.io/github/license/5777-wq/OpenHull)](LICENSE)
 [![python](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
 [![docs](https://img.shields.io/website?url=https%3A%2F%2F5777-wq.github.io%2FOpenHull%2F)](https://5777-wq.github.io/OpenHull/)
-[![website](https://img.shields.io/badge/website-%E4%B8%AD%E6%96%87-success)](https://5777-wq.github.io/openhull-site/)
+[![website](https://img.shields.io/badge/website-%E4%B8%AD%E6%96%87-success)](https://openhull.pages.dev/)
 
 **English** | [简体中文](README.md)
 
@@ -144,7 +144,7 @@ chain, dimension scans, RAOs). Install and per-harness snippets:
 
 ## Documentation
 
-- [Website (Chinese portal)](https://5777-wq.github.io/openhull-site/) — the project website
+- [Website (Chinese portal)](https://openhull.pages.dev/) — the project website
 - [Documentation site](https://5777-wq.github.io/OpenHull/) — quick
   start & methods in Chinese, reference pages in English
 - [VALIDATION.md](VALIDATION.md) — the full acceptance record,

@@ -13,7 +13,7 @@
 [![license](https://img.shields.io/github/license/5777-wq/OpenHull)](LICENSE)
 [![python](https://img.shields.io/badge/python-3.11%2B-blue)](pyproject.toml)
 [![docs](https://img.shields.io/website?url=https%3A%2F%2F5777-wq.github.io%2FOpenHull%2F)](https://5777-wq.github.io/OpenHull/)
-[![官网（中文）](https://img.shields.io/badge/%E5%AE%98%E7%BD%91-%E4%B8%AD%E6%96%87-success)](https://5777-wq.github.io/openhull-site/)
+[![官网（中文）](https://img.shields.io/badge/%E5%AE%98%E7%BD%91-%E4%B8%AD%E6%96%87-success)](https://openhull.pages.dev/)
 
 **[English](README.en.md)** | 简体中文
 
@@ -135,7 +135,7 @@ harness 的配置片段见 [docs/mcp.md](docs/mcp.md)。
 
 ## 文档与链接
 
-- [官网（中文门户）](https://5777-wq.github.io/openhull-site/) — 项目主页
+- [官网（中文门户）](https://openhull.pages.dev/) — 项目主页
 - [文档站](https://5777-wq.github.io/OpenHull/) — 快速上手与方法说明（中文）、参考页（英文）
 - [VALIDATION.md](VALIDATION.md) — 完整验收记录，逐条含数字
 - [CHANGELOG.md](CHANGELOG.md) — 版本历史

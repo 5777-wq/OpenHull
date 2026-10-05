@@ -8,7 +8,7 @@
 
 > 🌐 English reference pages: [Validation](validation.md) ·
 > [Changelog](changelog.md) · [Contributing](contributing.md)
-> 🏠 官网主页：[5777-wq.github.io/openhull-site](https://5777-wq.github.io/openhull-site/)
+> 🏠 官网主页：[openhull.pages.dev](https://openhull.pages.dev/)
 > 📦 代码仓库：[github.com/5777-wq/OpenHull](https://github.com/5777-wq/OpenHull)
 
 ## 三步跑通

@@ -15,7 +15,7 @@ capytaine RAO）→ Kwon 失速估算 → 总布置简图（DXF）→ 中文设�
 不适用域会"声明式跳过/拒绝"，绝不编数；谐摇区或衡准是否否决方案属于船舶
 工程师的专业判断——工具只报告，不替用户拍板。
 
-项目主页：https://5777-wq.github.io/openhull-site/ ·
+项目主页：https://openhull.pages.dev/ ·
 文档站：https://5777-wq.github.io/OpenHull/ ·
 仓库：https://github.com/5777-wq/OpenHull
 

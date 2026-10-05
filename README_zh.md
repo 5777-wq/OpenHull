@@ -5,5 +5,5 @@ README 就是中文全功能版，本文件仅作跳转保留（防外部链接�
 
 - 简体中文全功能版：[README.md](README.md)
 - English: [README.en.md](README.en.md)
-- 官网（中文门户）：<https://5777-wq.github.io/openhull-site/>
+- 官网（中文门户）：<https://openhull.pages.dev/>
 - 文档站：<https://5777-wq.github.io/OpenHull/>
