@@ -1,6 +1,7 @@
 """Draw the 116.6m real ship three-view lines plan from the extracted
-tabulated offsets (table116.json), including deck lines, superstructure
-deck and bulwark, and the four longitudinal (profile) lines.
+tabulated offsets (offsets_table.json + principals.json in this
+folder), including deck lines, superstructure deck and bulwark, and
+the four longitudinal (profile) lines.
 
 Layout follows the real drawing (owner's CAD screenshots):
   body plan upper left  : sections 0-6 aft left, 13-20 fwd right,
@@ -10,16 +11,16 @@ Layout follows the real drawing (owner's CAD screenshots):
                           line in plan view
 """
 import json
+from pathlib import Path
 
 import numpy as np
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-table = json.load(open(r"D:/OpenHull/内部文档/tmp_r7/table116.json",
-                       encoding="utf-8"))
-pr = json.load(open(r"D:/OpenHull/内部文档/tmp_r7/principals_116.json",
-                    encoding="utf-8"))
+_here = Path(__file__).resolve().parent
+table = json.load(open(_here / "offsets_table.json", encoding="utf-8"))
+pr = json.load(open(_here / "principals.json", encoding="utf-8"))
 LPP = pr["lpp_m"]
 BEAM = pr["beam_m"]
 half = BEAM / 2.0
@@ -176,7 +177,8 @@ for k, line in enumerate((
 fig.suptitle("116.6 m coastal cargo ship  -  lines plan rebuilt from "
              "the owner's offset table", fontsize=11, color="black",
              y=0.975)
-out = r"D:/OpenHull/内部文档/tmp_r7/lines_116_real.png"
+out = str(_here / "lines_plan.png")
 fig.savefig(out, dpi=300, facecolor="white")
 plt.close(fig)
+print("saved", out)
 print("saved", out)
